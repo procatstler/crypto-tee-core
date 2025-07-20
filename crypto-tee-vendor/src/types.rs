@@ -161,8 +161,21 @@ pub struct Signature {
     pub algorithm: Algorithm,
     
     /// Signature bytes
-    #[allow(dead_code)]
     pub data: Vec<u8>,
+}
+
+impl Signature {
+    /// Get the signature data
+    pub fn as_bytes(&self) -> &[u8] {
+        &self.data
+    }
+    
+    /// Convert to bytes, consuming the signature
+    pub fn into_bytes(mut self) -> Vec<u8> {
+        let data = std::mem::take(&mut self.data);
+        std::mem::forget(self); // Prevent Drop from running
+        data
+    }
 }
 
 impl Zeroize for Signature {
