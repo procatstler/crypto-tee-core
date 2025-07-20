@@ -89,9 +89,8 @@ mod tests {
                 vendor_handle: VendorKeyHandle {
                     id: format!("test-{}", alias),
                     algorithm: Algorithm::Ed25519,
-                    vendor: "test".to_string(),
                     hardware_backed: false,
-                    vendor_data: None,
+                    attestation: None,
                 },
                 platform: "test".to_string(),
                 requires_auth: false,

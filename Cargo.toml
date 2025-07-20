@@ -48,10 +48,12 @@ lto = true
 codegen-units = 1
 opt-level = 3
 strip = true
+panic = "abort"
 
 [profile.dev]
 opt-level = 0
 debug = true
+debug-assertions = true
 
 [profile.test]
 opt-level = 0

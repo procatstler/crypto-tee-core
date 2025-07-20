@@ -37,9 +37,8 @@ mod platform_tests {
         let vendor_handle = VendorKeyHandle {
             id: "test-key".to_string(),
             algorithm: Algorithm::Ed25519,
-            vendor: "test-vendor".to_string(),
             hardware_backed: false,
-            vendor_data: None,
+            attestation: None,
         };
         
         // Wrap and unwrap should preserve the handle
