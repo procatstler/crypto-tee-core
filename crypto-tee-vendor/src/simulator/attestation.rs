@@ -3,9 +3,9 @@
 //! Simulates hardware attestation mechanisms for various TEE platforms,
 //! including certificate chain validation, hardware verification, and nonce-based challenges.
 
-use super::*;
 use crate::error::{VendorResult, VendorError};
 use crate::types::*;
+use ring::rand::SecureRandom;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};

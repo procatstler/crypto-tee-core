@@ -68,26 +68,23 @@ impl Default for KeyUsage {
 /// Vendor-specific parameters
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VendorParams {
-    Samsung(SamsungParams),
-    Apple(AppleParams),
-    Qualcomm(QualcommParams),
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct SamsungParams {
-    pub use_knox_vault: bool,
-    pub require_user_auth: bool,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct AppleParams {
-    pub use_secure_enclave: bool,
-    pub access_control: Option<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QualcommParams {
-    pub qsee_app_id: Option<String>,
+    /// Samsung Knox specific parameters
+    #[cfg(feature = "samsung")]
+    Samsung(super::samsung::KnoxParams),
+    
+    /// Apple Secure Enclave specific parameters
+    #[cfg(feature = "apple")]
+    Apple(super::apple::SecureEnclaveParams),
+    
+    /// Qualcomm QSEE specific parameters
+    #[cfg(feature = "qualcomm")]
+    Qualcomm(super::qualcomm::QSEEParams),
+    
+    /// Generic parameters
+    Generic {
+        hardware_backed: bool,
+        require_auth: bool,
+    },
 }
 
 /// Handle to a key stored in the vendor TEE
@@ -99,59 +96,56 @@ pub struct VendorKeyHandle {
     /// Algorithm used by this key
     pub algorithm: Algorithm,
     
-    /// Vendor that created this key
-    pub vendor: String,
-    
     /// Whether this key is hardware-backed
     pub hardware_backed: bool,
     
-    /// Opaque vendor-specific data
-    #[serde(skip)]
-    pub vendor_data: Option<Vec<u8>>,
+    /// Attestation data (if available)
+    pub attestation: Option<Attestation>,
 }
 
 /// Vendor capabilities
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VendorCapabilities {
-    /// Vendor name
-    pub name: String,
-    
-    /// Vendor version
-    pub version: String,
-    
     /// Supported algorithms
     pub algorithms: Vec<Algorithm>,
     
-    /// Hardware security features
-    pub features: VendorFeatures,
-    
-    /// Maximum key count
-    pub max_keys: Option<u32>,
-}
-
-/// Hardware security features
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct VendorFeatures {
+    /// Whether keys are hardware-backed
     pub hardware_backed: bool,
-    pub secure_key_import: bool,
-    pub secure_key_export: bool,
+    
+    /// Whether attestation is supported
     pub attestation: bool,
-    pub strongbox: bool,
-    pub biometric_bound: bool,
-    pub secure_deletion: bool,
+    
+    /// Maximum number of keys
+    pub max_keys: u32,
 }
 
 /// Attestation information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Attestation {
-    /// Attestation format (vendor-specific)
-    pub format: String,
+    /// Attestation format
+    pub format: AttestationFormat,
     
     /// Attestation data
     pub data: Vec<u8>,
     
     /// Certificate chain
     pub certificates: Vec<Vec<u8>>,
+}
+
+/// Attestation format types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum AttestationFormat {
+    /// Android Key Attestation
+    AndroidKey,
+    
+    /// Apple DeviceCheck
+    AppleDeviceCheck,
+    
+    /// FIDO U2F
+    FidoU2F,
+    
+    /// Custom format
+    Custom(String),
 }
 
 /// Signature format

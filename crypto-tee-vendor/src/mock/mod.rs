@@ -36,8 +36,6 @@ impl Default for MockVendor {
 impl MockVendor {
     pub fn new(name: &str) -> Self {
         let capabilities = VendorCapabilities {
-            name: name.to_string(),
-            version: "1.0.0".to_string(),
             algorithms: vec![
                 Algorithm::Rsa2048,
                 Algorithm::Rsa3072,
@@ -46,16 +44,9 @@ impl MockVendor {
                 Algorithm::EcdsaP384,
                 Algorithm::Ed25519,
             ],
-            features: VendorFeatures {
-                hardware_backed: false,
-                secure_key_import: true,
-                secure_key_export: true,
-                attestation: true,
-                strongbox: false,
-                biometric_bound: false,
-                secure_deletion: true,
-            },
-            max_keys: Some(1000),
+            hardware_backed: false,
+            attestation: true,
+            max_keys: 1000,
         };
 
         Self {
@@ -112,9 +103,8 @@ impl VendorTEE for MockVendor {
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
-            vendor: self.name.clone(),
             hardware_backed: false,
-            vendor_data: None,
+            attestation: None,
         };
 
         let mock_key = MockKey {
@@ -228,7 +218,7 @@ impl VendorTEE for MockVendor {
         info!("Getting mock attestation");
         
         Ok(Attestation {
-            format: "mock-attestation".to_string(),
+            format: AttestationFormat::Custom("mock-attestation".to_string()),
             data: b"mock-attestation-data".to_vec(),
             certificates: vec![b"mock-certificate".to_vec()],
         })
@@ -243,7 +233,7 @@ impl VendorTEE for MockVendor {
         }
 
         Ok(Attestation {
-            format: "mock-key-attestation".to_string(),
+            format: AttestationFormat::Custom("mock-key-attestation".to_string()),
             data: format!("mock-attestation-for-{}", key.id).into_bytes(),
             certificates: vec![b"mock-key-certificate".to_vec()],
         })
@@ -271,9 +261,8 @@ impl VendorTEE for MockVendor {
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
-            vendor: self.name.clone(),
             hardware_backed: false,
-            vendor_data: None,
+            attestation: None,
         };
 
         let mock_key = MockKey {

@@ -125,22 +125,13 @@ impl AppleTEESimulator {
         let config = self.secure_enclave_config.lock().unwrap();
         
         VendorCapabilities {
-            name: "Apple Secure Enclave".to_string(),
-            version: config.ios_version.clone(),
             algorithms: vec![
                 Algorithm::EcdsaP256, // Secure Enclave primarily supports P-256
                 Algorithm::Ed25519,   // Software fallback
             ],
-            features: VendorFeatures {
-                hardware_backed: true,
-                secure_key_import: false, // Secure Enclave doesn't allow key import
-                secure_key_export: false, // Keys cannot be exported
-                attestation: config.app_attest_enabled,
-                strongbox: true, // Secure Enclave is equivalent to StrongBox
-                biometric_bound: config.biometric_auth_available,
-                secure_deletion: true,
-            },
-            max_keys: Some(32), // Conservative estimate for Secure Enclave
+            hardware_backed: true,
+            attestation: config.app_attest_enabled,
+            max_keys: 32, // Conservative estimate for Secure Enclave
         }
     }
 }
@@ -174,7 +165,6 @@ impl VendorTEE for AppleTEESimulator {
 
         // Use base implementation but modify handle
         let mut handle = self.base.generate_key(params).await?;
-        handle.vendor = "Apple Secure Enclave".to_string();
         handle.id = format!("se_{}", handle.id);
 
         Ok(handle)

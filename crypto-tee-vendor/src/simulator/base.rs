@@ -269,19 +269,10 @@ impl VendorTEE for GenericTEESimulator {
         self.simulate_delay(OperationType::Verification).await;
         
         let capabilities = VendorCapabilities {
-            name: "Generic TEE Simulator".to_string(),
-            version: "1.0.0".to_string(),
             algorithms: vec![Algorithm::Ed25519, Algorithm::EcdsaP256],
-            features: VendorFeatures {
-                hardware_backed: true,
-                secure_key_import: true,
-                secure_key_export: false,
-                attestation: true,
-                strongbox: true,
-                biometric_bound: false,
-                secure_deletion: true,
-            },
-            max_keys: Some(32),
+            hardware_backed: true,
+            attestation: true,
+            max_keys: 32,
         };
 
         self.update_stats(true, start.elapsed());
@@ -312,9 +303,8 @@ impl VendorTEE for GenericTEESimulator {
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
-            vendor: "GenericTEESimulator".to_string(),
             hardware_backed: params.hardware_backed,
-            vendor_data: None,
+            attestation: None,
         };
 
         // Create simulated key
@@ -369,9 +359,8 @@ impl VendorTEE for GenericTEESimulator {
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
-            vendor: "GenericTEESimulator".to_string(),
             hardware_backed: params.hardware_backed,
-            vendor_data: None,
+            attestation: None,
         };
 
         let simulated_key = SimulatedKey {
@@ -476,7 +465,7 @@ impl VendorTEE for GenericTEESimulator {
         self.simulate_delay(OperationType::Verification).await;
 
         let attestation = Attestation {
-            format: "generic_simulation".to_string(),
+            format: AttestationFormat::Custom("generic_simulation".to_string()),
             data: b"SIMULATED_ATTESTATION_DATA".to_vec(),
             certificates: vec![
                 b"SIMULATED_ROOT_CERT".to_vec(),
@@ -502,7 +491,7 @@ impl VendorTEE for GenericTEESimulator {
         }
 
         let attestation = Attestation {
-            format: "key_attestation_simulation".to_string(),
+            format: AttestationFormat::Custom("key_attestation_simulation".to_string()),
             data: format!("SIMULATED_KEY_ATTESTATION_{}", key.id).into_bytes(),
             certificates: vec![
                 b"SIMULATED_ROOT_CERT".to_vec(),

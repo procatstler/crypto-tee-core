@@ -137,11 +137,7 @@ impl SamsungTEESimulator {
 
     /// Get Knox-specific capabilities
     fn get_knox_capabilities(&self) -> VendorCapabilities {
-        let config = self.knox_config.lock().unwrap();
-        
         VendorCapabilities {
-            name: "Samsung Knox TEE".to_string(),
-            version: config.knox_version.clone(),
             algorithms: vec![
                 Algorithm::Ed25519,
                 Algorithm::EcdsaP256,
@@ -149,16 +145,9 @@ impl SamsungTEESimulator {
                 Algorithm::Rsa2048,
                 Algorithm::Rsa3072,
             ],
-            features: VendorFeatures {
-                hardware_backed: true,
-                secure_key_import: true,
-                secure_key_export: false, // Knox Vault keys cannot be exported
-                attestation: true,
-                strongbox: config.knox_vault_enabled,
-                biometric_bound: true,
-                secure_deletion: true,
-            },
-            max_keys: Some(64), // Knox Vault supports more keys
+            hardware_backed: true,
+            attestation: true,
+            max_keys: 64, // Knox Vault supports more keys
         }
     }
 }
@@ -188,13 +177,12 @@ impl VendorTEE for SamsungTEESimulator {
 
         // Use base implementation but modify handle to indicate Knox
         let mut handle = self.base.generate_key(params).await?;
-        handle.vendor = "Samsung Knox".to_string();
         handle.id = format!("knox_{}", handle.id);
 
         // Update vault utilization
         {
             let mut state = self.vault_state.lock().unwrap();
-            let max_keys = self.get_knox_capabilities().max_keys.unwrap_or(64) as f32;
+            let max_keys = self.get_knox_capabilities().max_keys as f32;
             // This is a simplified calculation - in reality we'd track actual usage
             state.vault_utilization = (state.vault_utilization * max_keys + 1.0) / max_keys;
         }
@@ -212,7 +200,6 @@ impl VendorTEE for SamsungTEESimulator {
         }
 
         let mut handle = self.base.import_key(key_data, params).await?;
-        handle.vendor = "Samsung Knox".to_string();
         handle.id = format!("knox_imported_{}", handle.id);
 
         Ok(handle)
