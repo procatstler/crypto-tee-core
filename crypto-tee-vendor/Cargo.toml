@@ -27,9 +27,9 @@ tokio = { workspace = true }
 default = []
 software-fallback = []
 simulator = []
-samsung = ["simulator"]
-apple = ["simulator"]
-qualcomm = ["simulator"]
+samsung = ["simulator", "jni", "ndk"]
+apple = ["simulator", "core-foundation", "security-framework"]
+qualcomm = ["simulator", "jni", "ndk"]
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "android")'.dependencies]

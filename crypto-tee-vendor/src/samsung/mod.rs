@@ -1,70 +1,79 @@
-//! Samsung Knox TEE implementation
+//! Samsung Knox TEE Implementation
 //! 
-//! This module provides integration with Samsung Knox Vault and TrustZone
-//! features available on Samsung Galaxy devices.
+//! This module provides the actual implementation for Samsung Knox TEE,
+//! integrating with Samsung's Knox SDK through JNI on Android devices.
 
-use async_trait::async_trait;
+#[cfg(target_os = "android")]
+pub mod knox;
 
-use crate::{
-    error::{VendorError, VendorResult},
-    traits::VendorTEE,
-    types::*,
-};
+#[cfg(target_os = "android")]
+pub mod jni_bridge;
 
-pub struct KnoxVendor {
-    // Knox-specific fields will be added here
-}
+#[cfg(target_os = "android")]
+pub mod knox_vault;
 
-impl KnoxVendor {
-    pub fn new() -> Self {
-        Self {}
+#[cfg(target_os = "android")]
+pub mod trustzone;
+
+#[cfg(not(target_os = "android"))]
+pub mod stub;
+
+use crate::error::VendorResult;
+use crate::traits::VendorTEE;
+use crate::types::*;
+
+/// Get Samsung Knox TEE implementation
+pub fn get_samsung_tee() -> VendorResult<Box<dyn VendorTEE>> {
+    #[cfg(target_os = "android")]
+    {
+        // Check if Knox is available on the device
+        if knox::is_knox_available()? {
+            Ok(Box::new(knox::SamsungKnoxTEE::new()?))
+        } else {
+            Err(crate::error::VendorError::NotSupported(
+                "Samsung Knox is not available on this device".to_string()
+            ))
+        }
+    }
+    
+    #[cfg(not(target_os = "android"))]
+    {
+        // Return stub implementation for non-Android platforms
+        Ok(Box::new(stub::SamsungKnoxStub::new()))
     }
 }
 
-#[async_trait]
-impl VendorTEE for KnoxVendor {
-    async fn probe(&self) -> VendorResult<VendorCapabilities> {
-        // TODO: Implement Knox detection and capability query
-        Err(VendorError::NotAvailable)
-    }
+/// Samsung Knox specific vendor parameters
+#[derive(Debug, Clone)]
+pub struct KnoxParams {
+    /// Use Knox Vault for key storage
+    pub use_knox_vault: bool,
+    
+    /// Require user authentication for key usage
+    pub require_user_auth: bool,
+    
+    /// User authentication validity duration in seconds
+    pub auth_validity_seconds: Option<u32>,
+    
+    /// Use TrustZone for cryptographic operations
+    pub use_trustzone: bool,
+    
+    /// Enable Knox attestation
+    pub enable_attestation: bool,
+    
+    /// Knox container ID (if using Knox workspace)
+    pub container_id: Option<u32>,
+}
 
-    async fn generate_key(&self, _params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
-        // TODO: Implement Knox key generation
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn delete_key(&self, _key: &VendorKeyHandle) -> VendorResult<()> {
-        // TODO: Implement Knox key deletion
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn sign(&self, _key: &VendorKeyHandle, _data: &[u8]) -> VendorResult<Signature> {
-        // TODO: Implement Knox signing
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn verify(
-        &self,
-        _key: &VendorKeyHandle,
-        _data: &[u8],
-        _signature: &Signature,
-    ) -> VendorResult<bool> {
-        // TODO: Implement Knox verification
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn get_attestation(&self) -> VendorResult<Attestation> {
-        // TODO: Implement Knox attestation
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn get_key_attestation(&self, _key: &VendorKeyHandle) -> VendorResult<Attestation> {
-        // TODO: Implement Knox key attestation
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
-        // TODO: Implement Knox key listing
-        Err(VendorError::NotAvailable)
+impl Default for KnoxParams {
+    fn default() -> Self {
+        Self {
+            use_knox_vault: true,
+            require_user_auth: false,
+            auth_validity_seconds: None,
+            use_trustzone: true,
+            enable_attestation: true,
+            container_id: None,
+        }
     }
 }

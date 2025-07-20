@@ -1,0 +1,36 @@
+// Android build configuration for Samsung Knox TEE integration
+
+android {
+    defaultConfig {
+        ndk {
+            abiFilters 'arm64-v8a', 'armeabi-v7a'
+        }
+        
+        externalNativeBuild {
+            cmake {
+                cppFlags ""
+                arguments "-DANDROID_STL=c++_shared"
+            }
+        }
+    }
+    
+    externalNativeBuild {
+        cmake {
+            path "CMakeLists.txt"
+        }
+    }
+    
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['src/main/jniLibs']
+        }
+    }
+}
+
+dependencies {
+    // Samsung Knox SDK
+    implementation 'com.samsung.android.knox:knox-sdk:3.9'
+    
+    // Required for Knox attestation
+    implementation 'com.samsung.android.knox:knox-attestation:1.0.0'
+}
