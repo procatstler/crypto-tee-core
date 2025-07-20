@@ -15,7 +15,10 @@
       "Bash(cargo:*)",
       "WebFetch(domain:docs.rs)",
       "Bash(rustc:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(grep:*)",
+      "Bash(chmod:*)",
+      "Bash(./scripts/security_scan.sh:*)"
     ],
     "deny": []
   }

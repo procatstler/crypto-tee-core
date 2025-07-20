@@ -7,7 +7,7 @@ use tokio::runtime::Runtime;
 
 /// Benchmark key generation performance
 fn bench_key_generation(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
+    let rt = Runtime::new().expect("Benchmark operation should succeed");
     
     let mut group = c.benchmark_group("key_generation");
     
@@ -23,7 +23,7 @@ fn bench_key_generation(c: &mut Criterion) {
             &algorithm,
             |b, &algorithm| {
                 b.to_async(&rt).iter(|| async {
-                    let crypto_tee = CryptoTEEBuilder::new().build().await.unwrap();
+                    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Benchmark operation should succeed");
                     let alias = format!("bench_key_{:?}_{}", algorithm, rand::random::<u32>());
                     
                     let options = KeyOptions {
@@ -52,13 +52,13 @@ fn bench_key_generation(c: &mut Criterion) {
 
 /// Benchmark signing performance
 fn bench_signing(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
+    let rt = Runtime::new().expect("Benchmark operation should succeed");
     
     let mut group = c.benchmark_group("signing");
     
     // Setup: Create keys for each algorithm
     let setup = rt.block_on(async {
-        let crypto_tee = CryptoTEEBuilder::new().build().await.unwrap();
+        let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Benchmark operation should succeed");
         let mut keys = Vec::new();
         
         let algorithms = vec![
@@ -77,7 +77,7 @@ fn bench_signing(c: &mut Criterion) {
                 metadata: None,
             };
             
-            crypto_tee.generate_key(&alias, options).await.unwrap();
+            crypto_tee.generate_key(&alias, options).await.expect("Benchmark operation should succeed");
             keys.push((alias, algorithm));
         }
         
@@ -93,7 +93,7 @@ fn bench_signing(c: &mut Criterion) {
             |b, (alias, _algorithm)| {
                 b.to_async(&rt).iter(|| async {
                     let test_data = b"Performance test data for signing benchmark";
-                    crypto_tee.sign(alias, test_data, None).await.unwrap()
+                    crypto_tee.sign(alias, test_data, None).await.expect("Benchmark operation should succeed")
                 });
             }
         );
@@ -111,13 +111,13 @@ fn bench_signing(c: &mut Criterion) {
 
 /// Benchmark verification performance
 fn bench_verification(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
+    let rt = Runtime::new().expect("Benchmark operation should succeed");
     
     let mut group = c.benchmark_group("verification");
     
     // Setup: Create keys and signatures
     let setup = rt.block_on(async {
-        let crypto_tee = CryptoTEEBuilder::new().build().await.unwrap();
+        let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Benchmark operation should succeed");
         let mut test_data = Vec::new();
         
         let algorithms = vec![
@@ -135,9 +135,9 @@ fn bench_verification(c: &mut Criterion) {
                 metadata: None,
             };
             
-            crypto_tee.generate_key(&alias, options).await.unwrap();
+            crypto_tee.generate_key(&alias, options).await.expect("Benchmark operation should succeed");
             let message = b"Performance test data for verification benchmark";
-            let signature = crypto_tee.sign(&alias, message, None).await.unwrap();
+            let signature = crypto_tee.sign(&alias, message, None).await.expect("Benchmark operation should succeed");
             
             test_data.push((alias, algorithm, message.to_vec(), signature));
         }
@@ -153,7 +153,7 @@ fn bench_verification(c: &mut Criterion) {
             &(alias.clone(), message.clone(), signature.clone()),
             |b, (alias, message, signature)| {
                 b.to_async(&rt).iter(|| async {
-                    crypto_tee.verify(alias, message, signature, None).await.unwrap()
+                    crypto_tee.verify(alias, message, signature, None).await.expect("Benchmark operation should succeed")
                 });
             }
         );
@@ -171,13 +171,13 @@ fn bench_verification(c: &mut Criterion) {
 
 /// Benchmark concurrent operations
 fn bench_concurrent_signing(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
+    let rt = Runtime::new().expect("Benchmark operation should succeed");
     
     let mut group = c.benchmark_group("concurrent_signing");
     
     // Setup
     let setup = rt.block_on(async {
-        let crypto_tee = CryptoTEEBuilder::new().build().await.unwrap();
+        let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Benchmark operation should succeed");
         let alias = "concurrent_bench_key";
         let options = KeyOptions {
             algorithm: Algorithm::Ed25519, // Use fastest algorithm
@@ -187,7 +187,7 @@ fn bench_concurrent_signing(c: &mut Criterion) {
             metadata: None,
         };
         
-        crypto_tee.generate_key(alias, options).await.unwrap();
+        crypto_tee.generate_key(alias, options).await.expect("Benchmark operation should succeed");
         crypto_tee
     });
     
@@ -224,13 +224,13 @@ fn bench_concurrent_signing(c: &mut Criterion) {
 
 /// Benchmark data size impact
 fn bench_data_sizes(c: &mut Criterion) {
-    let rt = Runtime::new().unwrap();
+    let rt = Runtime::new().expect("Benchmark operation should succeed");
     
     let mut group = c.benchmark_group("data_sizes");
     
     // Setup
     let setup = rt.block_on(async {
-        let crypto_tee = CryptoTEEBuilder::new().build().await.unwrap();
+        let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Benchmark operation should succeed");
         let alias = "size_bench_key";
         let options = KeyOptions {
             algorithm: Algorithm::Ed25519,
@@ -240,7 +240,7 @@ fn bench_data_sizes(c: &mut Criterion) {
             metadata: None,
         };
         
-        crypto_tee.generate_key(alias, options).await.unwrap();
+        crypto_tee.generate_key(alias, options).await.expect("Benchmark operation should succeed");
         crypto_tee
     });
     
@@ -254,7 +254,7 @@ fn bench_data_sizes(c: &mut Criterion) {
             &test_data,
             |b, test_data| {
                 b.to_async(&rt).iter(|| async {
-                    setup.sign("size_bench_key", test_data, None).await.unwrap()
+                    setup.sign("size_bench_key", test_data, None).await.expect("Benchmark operation should succeed")
                 });
             }
         );

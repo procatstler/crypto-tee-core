@@ -38,28 +38,28 @@ impl JniBridge {
         require_auth: bool,
         auth_validity_duration: Option<u32>,
     ) -> VendorResult<()> {
-        debug!("Generating key through JNI: alias={}, algorithm={}", alias, algorithm);
+        debug!("Generating key through JNI: [REDACTED]");
         
         // In a real implementation, this would call into Java/Kotlin code
         // that uses Android Keystore with QSEE backing
         
         // For now, we'll simulate the operation
-        info!("Key generated in QSEE: {}", alias);
+        info!("Key generated in QSEE: [REDACTED]");
         Ok(())
     }
     
     /// Delete key from Android Keystore
     pub async fn delete_key(&self, alias: &str) -> VendorResult<()> {
-        debug!("Deleting key through JNI: {}", alias);
+        debug!("Deleting key through JNI: [REDACTED]");
         
         // In a real implementation, this would call Android Keystore
-        info!("Key deleted from QSEE: {}", alias);
+        info!("Key deleted from QSEE: [REDACTED]");
         Ok(())
     }
     
     /// Sign data using key in QSEE
     pub async fn sign(&self, alias: &str, data: &[u8]) -> VendorResult<Vec<u8>> {
-        debug!("Signing data through JNI with key: {}", alias);
+        debug!("Signing data through JNI with key: [REDACTED]");
         
         // In a real implementation, this would use Android Keystore
         // For now, return mock signature
@@ -69,7 +69,7 @@ impl JniBridge {
     
     /// Verify signature using key in QSEE
     pub async fn verify(&self, alias: &str, data: &[u8], signature: &[u8]) -> VendorResult<bool> {
-        debug!("Verifying signature through JNI with key: {}", alias);
+        debug!("Verifying signature through JNI with key: [REDACTED]");
         
         // In a real implementation, this would use Android Keystore
         Ok(true) // Mock verification
@@ -77,7 +77,7 @@ impl JniBridge {
     
     /// Get key attestation certificate chain
     pub async fn get_key_attestation(&self, alias: &str) -> VendorResult<Vec<u8>> {
-        debug!("Getting key attestation through JNI for: {}", alias);
+        debug!("Getting key attestation through JNI for: [REDACTED]");
         
         // In a real implementation, this would get attestation from Android Keystore
         let mock_attestation = b"QSEE_KEY_ATTESTATION".to_vec();
@@ -122,8 +122,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGenerateKe
         }
     };
     
-    debug!("Native generate key: alias={}, algorithm={}, size={}", 
-           alias_str, algorithm_str, key_size);
+    debug!("Native generate key: [REDACTED]");
     
     // Generate key using Android Keystore with QSEE backing
     1 // Success
@@ -152,7 +151,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
         }
     };
     
-    debug!("Native sign: alias={}, data_len={}", alias_str, data_vec.len());
+    debug!("Native sign: [REDACTED], data_len={}", data_vec.len());
     
     // Sign using Android Keystore
     // Return signature
@@ -181,7 +180,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
     
-    debug!("Native verify: alias={}", alias_str);
+    debug!("Native verify: [REDACTED]");
     
     // Verify using Android Keystore
     1 // Success
@@ -201,7 +200,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGetAttesta
         }
     };
     
-    debug!("Native get attestation: alias={}", alias_str);
+    debug!("Native get attestation: [REDACTED]");
     
     // Get attestation from Android Keystore
     match env.byte_array_from_slice(b"QSEE_ATTESTATION") {

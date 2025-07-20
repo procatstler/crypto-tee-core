@@ -42,11 +42,11 @@ mod platform_tests {
         };
         
         // Wrap and unwrap should preserve the handle
-        let wrapped = platform.wrap_key_handle(vendor_handle.clone()).await.unwrap();
+        let wrapped = platform.wrap_key_handle(vendor_handle.clone()).await.expect("Platform test should succeed");
         assert_eq!(wrapped.vendor_handle.id, vendor_handle.id);
         assert_eq!(wrapped.platform, platform.name());
         
-        let unwrapped = platform.unwrap_key_handle(&wrapped).await.unwrap();
+        let unwrapped = platform.unwrap_key_handle(&wrapped).await.expect("Platform test should succeed");
         assert_eq!(unwrapped.id, vendor_handle.id);
     }
 }

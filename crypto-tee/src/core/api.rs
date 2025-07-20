@@ -239,7 +239,7 @@ impl CryptoTEE for CryptoTEEImpl {
         data: &[u8],
         _options: Option<SignOptions>,
     ) -> CryptoTEEResult<Vec<u8>> {
-        debug!("Signing data with key: {}", alias);
+        debug!("Signing data with key: [REDACTED]");
 
         let mut key_manager = self.key_manager.write().await;
         let key_handle = key_manager.get_key_mut(alias)?;
@@ -264,7 +264,7 @@ impl CryptoTEE for CryptoTEEImpl {
         signature: &[u8],
         _options: Option<SignOptions>,
     ) -> CryptoTEEResult<bool> {
-        debug!("Verifying signature with key: {}", alias);
+        debug!("Verifying signature with key: [REDACTED]");
 
         let key_manager = self.key_manager.read().await;
         let key_handle = key_manager.get_key(alias)?;

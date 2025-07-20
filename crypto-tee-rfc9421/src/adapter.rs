@@ -39,11 +39,11 @@ impl Rfc9421Adapter {
         message: &HttpMessage,
         params: SignatureParams,
     ) -> Rfc9421Result<SignatureOutput> {
-        info!("Signing HTTP message with key: {}", params.key_id);
+        info!("Signing HTTP message with key: [REDACTED]");
 
         // Build signature base
         let signature_base = self.build_signature_base(message, &params)?;
-        debug!("Signature base: {}", signature_base);
+        debug!("Signature base generated ({} bytes)", signature_base.len());
 
         // Sign with CryptoTEE
         let signature_bytes = self.crypto_tee

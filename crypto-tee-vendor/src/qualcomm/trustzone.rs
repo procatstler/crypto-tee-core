@@ -41,12 +41,12 @@ impl TrustZoneApp {
     
     /// Load a TrustZone application
     pub async fn load_app(&self, app_name: &str) -> VendorResult<u32> {
-        debug!("Loading TrustZone app: {}", app_name);
+        debug!("Loading TrustZone app: [REDACTED]");
         
         // Check if already loaded
         let apps = self.loaded_apps.lock().unwrap();
         if let Some(handle) = apps.get(app_name) {
-            debug!("App already loaded: {} (ID: {})", app_name, handle.app_id);
+            debug!("App already loaded: [REDACTED] (ID: {})", handle.app_id);
             return Ok(handle.app_id);
         }
         drop(apps);
@@ -97,7 +97,7 @@ impl TrustZoneApp {
         // Cache the info
         *self.hardware_info.lock().unwrap() = Some(info.clone());
         
-        debug!("Hardware info: {:?}", info);
+        debug!("Hardware info queried successfully");
         Ok(info)
     }
     
@@ -127,7 +127,7 @@ impl TrustZoneApp {
         command: u32,
         data: &[u8],
     ) -> VendorResult<Vec<u8>> {
-        debug!("Sending command {} to app {}", command, app_name);
+        debug!("Sending command {} to app: [REDACTED]", command);
         
         // Get app handle
         let apps = self.loaded_apps.lock().unwrap();
@@ -151,7 +151,7 @@ impl TrustZoneApp {
     
     /// Unload TrustZone app
     pub async fn unload_app(&self, app_name: &str) -> VendorResult<()> {
-        debug!("Unloading TrustZone app: {}", app_name);
+        debug!("Unloading TrustZone app: [REDACTED]");
         
         self.loaded_apps.lock().unwrap().remove(app_name);
         

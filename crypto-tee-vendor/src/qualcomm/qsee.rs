@@ -98,7 +98,7 @@ impl QualcommQSEE {
             max_key_size: 4096,
         };
         
-        debug!("QSEE capabilities: {:?}", capabilities);
+        debug!("QSEE capabilities queried successfully");
         Ok(capabilities)
     }
     
@@ -129,7 +129,7 @@ impl QualcommQSEE {
         params: &KeyGenParams,
         qsee_params: &QSEEParams,
     ) -> VendorResult<VendorKeyHandle> {
-        debug!("Generating key with params: {:?}", params);
+        debug!("Generating key with algorithm: {:?}", params.algorithm);
         
         // Validate algorithm support
         let caps = self.capabilities.lock().unwrap();
@@ -219,7 +219,7 @@ impl VendorTEE for QualcommQSEE {
     }
 
     async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
-        debug!("Deleting key: {}", key.id);
+        debug!("Deleting key: [REDACTED]");
         
         // Delete through JNI bridge
         self.jni_bridge.delete_key(&key.id).await?;
@@ -231,7 +231,7 @@ impl VendorTEE for QualcommQSEE {
     }
 
     async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
-        debug!("Signing data with key: {}", key.id);
+        debug!("Signing data with key: [REDACTED]");
         
         // Get key data
         let keys = self.keys.lock().unwrap();
@@ -259,7 +259,7 @@ impl VendorTEE for QualcommQSEE {
         data: &[u8],
         signature: &Signature,
     ) -> VendorResult<bool> {
-        debug!("Verifying signature with key: {}", key.id);
+        debug!("Verifying signature with key: [REDACTED]");
         
         // Verify through JNI bridge
         self.jni_bridge.verify(&key.id, data, &signature.data).await
@@ -279,7 +279,7 @@ impl VendorTEE for QualcommQSEE {
     }
 
     async fn get_key_attestation(&self, key: &VendorKeyHandle) -> VendorResult<Attestation> {
-        debug!("Getting key attestation for: {}", key.id);
+        debug!("Getting key attestation for: [REDACTED]");
         
         // Get key attestation through JNI bridge
         let cert_chain = self.jni_bridge.get_key_attestation(&key.id).await?;
@@ -292,7 +292,7 @@ impl VendorTEE for QualcommQSEE {
     }
 
     async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
-        debug!("Listing all keys");
+        debug!("Listing stored keys");
         
         let keys = self.keys.lock().unwrap();
         let handles: Vec<VendorKeyHandle> = keys.iter().map(|(id, data)| {
