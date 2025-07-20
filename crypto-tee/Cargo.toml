@@ -24,7 +24,13 @@ tokio = { workspace = true, features = ["sync"] }
 tokio = { workspace = true }
 mockall = { workspace = true }
 proptest = { workspace = true }
-criterion = { workspace = true }
+criterion = { workspace = true, features = ["html_reports", "async_tokio"] }
+futures = "0.3"
+rand = "0.8"
+
+[[bench]]
+name = "performance_tests"
+harness = false
 
 [features]
 default = ["software-fallback"]
