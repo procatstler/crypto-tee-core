@@ -9,6 +9,9 @@ pub mod types;
 pub mod traits;
 pub mod mock;
 
+#[cfg(feature = "simulator")]
+pub mod simulator;
+
 #[cfg(feature = "samsung")]
 pub mod samsung;
 
@@ -25,3 +28,7 @@ pub use traits::VendorTEE;
 // Re-export mock for testing
 #[cfg(any(test, feature = "software-fallback"))]
 pub use mock::MockVendor;
+
+// Re-export simulator components
+#[cfg(feature = "simulator")]
+pub use simulator::{TEESimulator, SimulatorFactory, SimulationConfig, SimulatorType};

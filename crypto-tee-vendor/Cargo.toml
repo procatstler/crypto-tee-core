@@ -16,7 +16,8 @@ zeroize = { workspace = true }
 async-trait = { workspace = true }
 ring = { workspace = true }
 uuid = { version = "1.6", features = ["v4"] }
-tokio = { workspace = true, features = ["sync"] }
+tokio = { workspace = true, features = ["sync", "time"] }
+rand = "0.8"
 
 [dev-dependencies]
 mockall = { workspace = true }
@@ -25,9 +26,10 @@ tokio = { workspace = true }
 [features]
 default = []
 software-fallback = []
-samsung = []
-apple = []
-qualcomm = []
+simulator = []
+samsung = ["simulator"]
+apple = ["simulator"]
+qualcomm = ["simulator"]
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "android")'.dependencies]
