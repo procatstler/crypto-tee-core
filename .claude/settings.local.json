@@ -5,7 +5,10 @@
       "Bash(mkdir:*)",
       "Bash(mv:*)",
       "Bash(ls:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(cargo test)",
+      "Bash(cargo test:*)"
     ],
     "deny": []
   }

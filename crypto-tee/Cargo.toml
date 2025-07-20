@@ -41,7 +41,3 @@ full = [
     "platform-ios",
     "platform-linux"
 ]
-
-[[bench]]
-name = "key_operations"
-harness = false

@@ -36,12 +36,9 @@ mockall = "0.12"
 proptest = "1.4"
 criterion = "0.5"
 
-# Platform specific
-[target.'cfg(target_os = "android")'.workspace.dependencies]
+# Platform specific dependencies
 jni = "0.21"
 ndk = "0.8"
-
-[target.'cfg(target_os = "ios")'.workspace.dependencies]
 core-foundation = "0.9"
 security-framework = "2.9"
 
