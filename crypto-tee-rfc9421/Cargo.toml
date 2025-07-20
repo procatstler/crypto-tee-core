@@ -9,6 +9,7 @@ description = "RFC 9421 HTTP Message Signatures implementation for CryptoTEE"
 
 [dependencies]
 crypto-tee = { path = "../crypto-tee" }
+crypto-tee-vendor = { path = "../crypto-tee-vendor" }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
@@ -18,8 +19,10 @@ async-trait = { workspace = true }
 # HTTP and crypto
 http = "1.0"
 base64 = "0.21"
-chrono = "0.4"
+chrono = { version = "0.4", features = ["serde"] }
 url = "2.5"
+sage_crypto_core = { git = "https://github.com/SAGE-X-project/rs-sage-core.git", default-features = false }
+serde_json = { workspace = true }
 
 [dev-dependencies]
 mockall = { workspace = true }
