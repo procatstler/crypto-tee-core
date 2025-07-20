@@ -1,0 +1,27 @@
+[package]
+name = "crypto-tee-rfc9421"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "RFC 9421 HTTP Message Signatures implementation for CryptoTEE"
+
+[dependencies]
+crypto-tee = { path = "../crypto-tee" }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+async-trait = { workspace = true }
+
+# HTTP and crypto
+http = "1.0"
+base64 = "0.21"
+chrono = "0.4"
+url = "2.5"
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio = { workspace = true }
+httparse = "1.8"

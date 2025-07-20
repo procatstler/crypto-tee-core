@@ -1,0 +1,47 @@
+[package]
+name = "crypto-tee"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+documentation.workspace = true
+description = "Core CryptoTEE API - Hardware-backed key management and cryptographic operations"
+
+[dependencies]
+crypto-tee-vendor = { path = "../crypto-tee-vendor" }
+crypto-tee-platform = { path = "../crypto-tee-platform" }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+zeroize = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true }
+mockall = { workspace = true }
+proptest = { workspace = true }
+criterion = { workspace = true }
+
+[features]
+default = ["software-fallback"]
+software-fallback = ["crypto-tee-vendor/software-fallback"]
+vendor-samsung = ["crypto-tee-vendor/samsung"]
+vendor-apple = ["crypto-tee-vendor/apple"]
+vendor-qualcomm = ["crypto-tee-vendor/qualcomm"]
+platform-android = ["crypto-tee-platform/android"]
+platform-ios = ["crypto-tee-platform/ios"]
+platform-linux = ["crypto-tee-platform/linux"]
+full = [
+    "vendor-samsung",
+    "vendor-apple", 
+    "vendor-qualcomm",
+    "platform-android",
+    "platform-ios",
+    "platform-linux"
+]
+
+[[bench]]
+name = "key_operations"
+harness = false

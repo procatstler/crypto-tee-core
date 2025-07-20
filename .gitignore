@@ -1,0 +1,35 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Project specific
+*.key
+*.pem
+*.p12
+/tmp/
+/build/
+
+# Documentation
+/docs/_build/
+/docs/_site/
+
+# Testing
+tarpaulin-report.html
+cobertura.xml
+coverage/
+
+# Benchmarks
+/benches/results/

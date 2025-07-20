@@ -1,0 +1,35 @@
+[package]
+name = "crypto-tee-platform"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Platform-specific adapters for CryptoTEE"
+
+[dependencies]
+crypto-tee-vendor = { path = "../crypto-tee-vendor" }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+async-trait = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = []
+android = ["jni", "ndk"]
+ios = ["core-foundation", "security-framework"]
+linux = []
+
+# Platform-specific dependencies
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { workspace = true, optional = true }
+ndk = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+core-foundation = { workspace = true, optional = true }
+security-framework = { workspace = true, optional = true }

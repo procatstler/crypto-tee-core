@@ -1,0 +1,37 @@
+[package]
+name = "crypto-tee-vendor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Vendor-specific TEE implementations for CryptoTEE"
+
+[dependencies]
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+zeroize = { workspace = true }
+async-trait = { workspace = true }
+ring = { workspace = true }
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio = { workspace = true }
+
+[features]
+default = []
+software-fallback = []
+samsung = []
+apple = []
+qualcomm = []
+
+# Platform-specific dependencies
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { workspace = true, optional = true }
+ndk = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+core-foundation = { workspace = true, optional = true }
+security-framework = { workspace = true, optional = true }
