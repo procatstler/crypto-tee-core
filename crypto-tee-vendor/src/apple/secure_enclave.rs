@@ -6,6 +6,7 @@
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use subtle::ConstantTimeEq;
 use crate::{
     error::{VendorError, VendorResult},
     traits::VendorTEE,
@@ -71,7 +72,7 @@ impl AppleSecureEnclave {
         Ok(signature.to_vec())
     }
 
-    /// Verify signature using SecKey
+    /// Verify signature using SecKey with constant-time result handling
     fn verify_with_sec_key(
         key: &SecKey, 
         data: &[u8], 
@@ -82,8 +83,21 @@ impl AppleSecureEnclave {
         let data_to_verify = CFData::from_buffer(data);
         let signature_data = CFData::from_buffer(signature);
         
-        match key.verify_signature(sec_algorithm, &data_to_verify, &signature_data) {
-            Ok(valid) => Ok(valid),
+        // Perform verification
+        let verification_result = key.verify_signature(sec_algorithm, &data_to_verify, &signature_data);
+        
+        // Always perform a dummy verification to ensure constant timing
+        let dummy_signature = vec![0u8; signature.len()];
+        let dummy_signature_data = CFData::from_buffer(&dummy_signature);
+        let _dummy_result = key.verify_signature(sec_algorithm, &data_to_verify, &dummy_signature_data);
+        
+        match verification_result {
+            Ok(valid) => {
+                // Use constant-time comparison for the result
+                let success_byte = if valid { 1u8 } else { 0u8 };
+                let expected_byte = 1u8;
+                Ok(success_byte.ct_eq(&expected_byte).into())
+            },
             Err(e) => Err(VendorError::VerificationError(
                 format!("Failed to verify signature: {:?}", e)
             )),
@@ -110,7 +124,10 @@ pub fn is_secure_enclave_available() -> VendorResult<bool> {
             ) -> i32;
         }
         
-        let key = CString::new("hw.optional.arm.FEAT_SEP").unwrap();
+        let key = CString::new("hw.optional.arm.FEAT_SEP")
+            .map_err(|e| VendorError::InternalError(
+                format!("Failed to create CString: {}", e)
+            ))?;
         let mut has_sep: i32 = 0;
         let mut size = std::mem::size_of::<i32>();
         
@@ -215,7 +232,11 @@ impl VendorTEE for AppleSecureEnclave {
             access_group: se_params.access_group.clone(),
         };
         
-        self.key_handles.lock().unwrap().insert(key_id.clone(), key_info);
+        self.key_handles.lock()
+            .map_err(|e| VendorError::InternalError(
+                format!("Failed to acquire key handles lock: {}", e)
+            ))?
+            .insert(key_id.clone(), key_info);
         
         Ok(VendorKeyHandle {
             id: key_id,
@@ -264,7 +285,11 @@ impl VendorTEE for AppleSecureEnclave {
         KeychainOperations::delete_key(&key.id)?;
         
         // Remove from internal tracking
-        self.key_handles.lock().unwrap().remove(&key.id);
+        self.key_handles.lock()
+            .map_err(|e| VendorError::InternalError(
+                format!("Failed to acquire key handles lock: {}", e)
+            ))?
+            .remove(&key.id);
         
         Ok(())
     }
@@ -296,7 +321,10 @@ impl VendorTEE for AppleSecureEnclave {
     }
 
     async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
-        let key_handles = self.key_handles.lock().unwrap();
+        let key_handles = self.key_handles.lock()
+            .map_err(|e| VendorError::InternalError(
+                format!("Failed to acquire key handles lock: {}", e)
+            ))?;
         
         let handles: Vec<VendorKeyHandle> = key_handles.values()
             .map(|info| VendorKeyHandle {

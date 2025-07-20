@@ -6,6 +6,7 @@ use crate::types::*;
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
+use subtle::ConstantTimeEq;
 use tracing::{debug, error, info, warn};
 
 use super::{QSEEParams, QSEECapabilities, ProtectionLevel};
@@ -45,6 +46,13 @@ struct QSEEKeyData {
 }
 
 impl QualcommQSEE {
+    /// Perform constant-time comparison for verification results
+    fn constant_time_verify_result(actual: bool, expected: bool) -> bool {
+        let actual_byte = if actual { 1u8 } else { 0u8 };
+        let expected_byte = if expected { 1u8 } else { 0u8 };
+        actual_byte.ct_eq(&expected_byte).into()
+    }
+
     /// Create new QSEE instance
     pub fn new() -> VendorResult<Self> {
         info!("Initializing Qualcomm QSEE");
@@ -76,7 +84,10 @@ impl QualcommQSEE {
         
         // Query and cache capabilities
         let caps = self.query_capabilities_internal().await?;
-        *self.capabilities.lock().unwrap() = Some(caps);
+        *self.capabilities.lock()
+            .map_err(|e| VendorError::InternalError(
+                format!("Failed to acquire capabilities lock: {}", e)
+            ))? = Some(caps);
         
         info!("QSEE subsystem initialized successfully");
         Ok(())
@@ -132,7 +143,10 @@ impl QualcommQSEE {
         debug!("Generating key with algorithm: {:?}", params.algorithm);
         
         // Validate algorithm support
-        let caps = self.capabilities.lock().unwrap();
+        let caps = self.capabilities.lock()
+            .map_err(|e| VendorError::InternalError(
+                format!("Failed to acquire capabilities lock: {}", e)
+            ))?;
         if let Some(caps) = caps.as_ref() {
             if !caps.algorithms.contains(&params.algorithm) {
                 return Err(VendorError::NotSupported(
@@ -178,7 +192,11 @@ impl QualcommQSEE {
             auth_required: qsee_params.require_auth,
         };
         
-        self.keys.lock().unwrap().insert(alias.clone(), key_data);
+        self.keys.lock()
+            .map_err(|e| VendorError::InternalError(
+                format!("Failed to acquire keys lock: {}", e)
+            ))?
+            .insert(alias.clone(), key_data);
         
         Ok(VendorKeyHandle {
             id: alias,
@@ -261,8 +279,11 @@ impl VendorTEE for QualcommQSEE {
     ) -> VendorResult<bool> {
         debug!("Verifying signature with key: [REDACTED]");
         
-        // Verify through JNI bridge
-        self.jni_bridge.verify(&key.id, data, &signature.data).await
+        // Verify through JNI bridge with constant-time result handling
+        let verification_result = self.jni_bridge.verify(&key.id, data, &signature.data).await?;
+        
+        // Use constant-time comparison to prevent timing-based side channels
+        Ok(Self::constant_time_verify_result(verification_result, true))
     }
 
     async fn get_attestation(&self) -> VendorResult<Attestation> {

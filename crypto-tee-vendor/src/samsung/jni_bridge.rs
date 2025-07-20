@@ -9,6 +9,7 @@ use jni::{
     JNIEnv, JavaVM,
 };
 use std::sync::{Arc, Mutex};
+use subtle::ConstantTimeEq;
 use crate::error::{VendorError, VendorResult};
 
 /// JNI context for Knox operations
@@ -19,6 +20,13 @@ pub struct KnoxJniContext {
 }
 
 impl KnoxJniContext {
+    /// Perform constant-time comparison for verification results
+    fn constant_time_verify_result(result: bool) -> bool {
+        let result_byte = if result { 1u8 } else { 0u8 };
+        let expected_byte = 1u8;
+        result_byte.ct_eq(&expected_byte).into()
+    }
+
     /// Create new JNI context
     pub fn new(jvm: Arc<JavaVM>) -> Self {
         Self {

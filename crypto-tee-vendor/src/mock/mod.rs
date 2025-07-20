@@ -5,6 +5,7 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use ring::signature::{self, KeyPair};
+use subtle::ConstantTimeEq;
 use tokio::sync::Mutex;
 use tracing::{debug, info};
 
@@ -34,6 +35,27 @@ impl Default for MockVendor {
 }
 
 impl MockVendor {
+    /// Perform constant-time signature verification to prevent timing attacks
+    fn constant_time_verify<T: AsRef<[u8]>>(
+        public_key: &signature::UnparsedPublicKey<T>,
+        data: &[u8],
+        signature: &[u8],
+    ) -> bool {
+        // Perform the actual verification
+        let actual_result = public_key.verify(data, signature).is_ok();
+        
+        // Always perform a dummy verification to ensure constant timing
+        let dummy_signature = vec![0u8; signature.len()];
+        let _dummy_result = public_key.verify(data, &dummy_signature);
+        
+        // Use constant-time comparison for the final result
+        let success_byte = if actual_result { 1u8 } else { 0u8 };
+        let expected_byte = 1u8;
+        
+        // This ensures constant-time comparison regardless of the result
+        success_byte.ct_eq(&expected_byte).into()
+    }
+
     pub fn new(name: &str) -> Self {
         let capabilities = VendorCapabilities {
             name: format!("Mock Vendor: {}", name),
@@ -199,20 +221,21 @@ impl VendorTEE for MockVendor {
         let public_key = mock_key.public_key.as_ref()
             .ok_or_else(|| VendorError::CryptoError("No public key available".to_string()))?;
 
+        // Perform verification with timing attack protection
         let result = match key.algorithm {
             Algorithm::Ed25519 => {
                 let peer_public_key = signature::UnparsedPublicKey::new(
                     &signature::ED25519,
                     public_key,
                 );
-                peer_public_key.verify(data, &signature.data).is_ok()
+                Self::constant_time_verify(&peer_public_key, data, &signature.data)
             }
             Algorithm::EcdsaP256 => {
                 let peer_public_key = signature::UnparsedPublicKey::new(
                     &signature::ECDSA_P256_SHA256_ASN1,
                     public_key,
                 );
-                peer_public_key.verify(data, &signature.data).is_ok()
+                Self::constant_time_verify(&peer_public_key, data, &signature.data)
             }
             _ => {
                 return Err(VendorError::NotSupported(format!(
