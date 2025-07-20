@@ -3,16 +3,49 @@
 //! This crate provides the platform layer (L2) that bridges between
 //! the core CryptoTEE API and platform-specific security APIs.
 
-pub fn platform_name() -> &'static str {
+pub mod error;
+pub mod traits;
+pub mod types;
+pub mod fallback;
+
+#[cfg(test)]
+mod tests;
+
+#[cfg(feature = "android")]
+pub mod android;
+
+#[cfg(feature = "ios")]
+pub mod ios;
+
+#[cfg(feature = "linux")]
+pub mod linux;
+
+pub use error::{PlatformError, PlatformResult};
+pub use traits::PlatformTEE;
+pub use types::*;
+
+// Re-export fallback for testing
+pub use fallback::FallbackPlatform;
+
+/// Detect and load the appropriate platform implementation
+pub fn load_platform() -> Box<dyn PlatformTEE> {
     #[cfg(target_os = "android")]
-    return "Android";
+    {
+        Box::new(android::AndroidPlatform::new())
+    }
     
     #[cfg(target_os = "ios")]
-    return "iOS";
+    {
+        Box::new(ios::IOSPlatform::new())
+    }
     
     #[cfg(target_os = "linux")]
-    return "Linux";
+    {
+        Box::new(linux::LinuxPlatform::new())
+    }
     
     #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "linux")))]
-    return "Unknown";
+    {
+        Box::new(fallback::FallbackPlatform::new())
+    }
 }

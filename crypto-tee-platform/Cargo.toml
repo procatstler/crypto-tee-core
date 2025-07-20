@@ -8,11 +8,12 @@ repository.workspace = true
 description = "Platform-specific adapters for CryptoTEE"
 
 [dependencies]
-crypto-tee-vendor = { path = "../crypto-tee-vendor" }
+crypto-tee-vendor = { path = "../crypto-tee-vendor", features = ["software-fallback"] }
 thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 async-trait = { workspace = true }
 
 [dev-dependencies]
