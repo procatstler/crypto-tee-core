@@ -5,15 +5,10 @@
 
 use crate::error::{VendorError, VendorResult};
 use core_foundation::{
-    base::TCFType,
     string::CFString,
 };
 
-#[cfg(target_os = "ios")]
-use security_framework::os::ios::keychain_item::SecAccessControl;
-
-#[cfg(target_os = "macos")]
-use security_framework::os::macos::access_control::SecAccessControl;
+use security_framework::access_control::SecAccessControl;
 
 /// Biometric authentication types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

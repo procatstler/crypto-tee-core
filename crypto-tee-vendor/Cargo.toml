@@ -28,7 +28,7 @@ default = []
 software-fallback = []
 simulator = []
 samsung = ["simulator", "jni", "ndk"]
-apple = ["simulator", "core-foundation", "security-framework"]
+apple = ["simulator", "core-foundation", "security-framework", "security-framework-sys", "objc"]
 qualcomm = ["simulator", "jni", "ndk"]
 
 # Platform-specific dependencies
@@ -39,9 +39,11 @@ ndk = { workspace = true, optional = true }
 [target.'cfg(target_os = "ios")'.dependencies]
 core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
+security-framework-sys = { workspace = true, optional = true }
 objc = { version = "0.2", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
+security-framework-sys = { workspace = true, optional = true }
 objc = { version = "0.2", optional = true }

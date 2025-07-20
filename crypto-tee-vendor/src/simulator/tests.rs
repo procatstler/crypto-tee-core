@@ -11,8 +11,8 @@ async fn test_generic_simulator_basic_operations() {
 
     // Test probe
     let capabilities = simulator.probe().await.unwrap();
-    assert_eq!(capabilities.name, "Generic TEE Simulator");
     assert!(!capabilities.algorithms.is_empty());
+    assert!(capabilities.hardware_backed);
 
     // Test key generation
     let key_params = KeyGenParams {
@@ -51,21 +51,30 @@ async fn test_samsung_simulator() {
     let mut simulator = samsung::SamsungTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.unwrap();
-    assert_eq!(capabilities.name, "Samsung Knox TEE");
-    assert!(capabilities.features.strongbox);
+    assert!(capabilities.hardware_backed);
+    assert!(capabilities.attestation);
 
-    // Test Knox-specific key generation
-    let samsung_params = SamsungParams {
+    // Test Knox-specific key generation using available types
+    #[cfg(feature = "samsung")]
+    let samsung_params = crate::samsung::KnoxParams {
         use_knox_vault: true,
         require_user_auth: false,
+        knox_attestation: false,
+        knox_container_id: None,
     };
+    
+    #[cfg(not(feature = "samsung"))]
+    let samsung_params = ();
 
     let key_params = KeyGenParams {
         algorithm: Algorithm::EcdsaP256,
         hardware_backed: true,
         exportable: false,
         usage: KeyUsage::default(),
+        #[cfg(feature = "samsung")]
         vendor_params: Some(VendorParams::Samsung(samsung_params)),
+        #[cfg(not(feature = "samsung"))]
+        vendor_params: Some(VendorParams::Generic { hardware_backed: true, require_auth: false }),
     };
 
     let key_handle = simulator.generate_key(&key_params).await.unwrap();

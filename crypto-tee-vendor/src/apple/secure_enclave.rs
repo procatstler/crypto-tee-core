@@ -14,10 +14,8 @@ use crate::{
 use super::{SecureEnclaveParams, keychain::KeychainOperations};
 use security_framework::{
     key::{SecKey, Algorithm as SecAlgorithm},
-    os::macos::keychain_item::SecKeychainItem,
 };
 use core_foundation::{
-    base::TCFType,
     data::CFData,
 };
 
@@ -183,7 +181,7 @@ impl VendorTEE for AppleSecureEnclave {
                 biometric_bound: true,
                 secure_deletion: true,
             },
-            max_keys: Some(50), // Approximate limit
+            max_keys: 50, // Approximate limit
         })
     }
 

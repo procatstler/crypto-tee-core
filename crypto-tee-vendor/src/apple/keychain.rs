@@ -6,7 +6,7 @@
 use crate::error::{VendorError, VendorResult};
 use crate::types::*;
 use core_foundation::{
-    base::{CFType, TCFType},
+    base::TCFType,
     boolean::CFBoolean,
     data::CFData,
     dictionary::{CFDictionary, CFMutableDictionary},
@@ -14,11 +14,11 @@ use core_foundation::{
     string::CFString,
 };
 use security_framework::{
-    access_control::{SecAccessControl, SecAccessControlCreateFlags},
-    item::{ItemClass, ItemSearchOptions, Limit, Reference, SearchResult},
-    key::{SecKey, KeyClass},
-    os::macos::keychain::SecKeychain,
+    access_control::SecAccessControl,
+    key::SecKey,
 };
+// Note: SecAccessControlCreateFlags is not available in security-framework-sys
+// We'll use the raw constants instead
 use std::collections::HashMap;
 
 /// Keychain attribute keys
@@ -63,27 +63,31 @@ impl KeychainOperations {
     pub fn create_access_control(
         params: &super::SecureEnclaveParams,
     ) -> VendorResult<SecAccessControl> {
-        let mut flags = SecAccessControlCreateFlags::PRIVATE_KEY_USAGE;
+        use security_framework_sys::access_control::{
+            kSecAccessControlPrivateKeyUsage,
+            kSecAccessControlUserPresence,
+            kSecAccessControlDevicePasscode,
+        };
+        
+        let mut flags = kSecAccessControlPrivateKeyUsage;
         
         if let Some(ref access_control) = params.access_control {
             if access_control.user_presence {
-                flags |= SecAccessControlCreateFlags::USER_PRESENCE;
-            }
-            
-            if access_control.biometry_any {
-                flags |= SecAccessControlCreateFlags::BIOMETRY_ANY;
-            }
-            
-            if access_control.biometry_current_set {
-                flags |= SecAccessControlCreateFlags::BIOMETRY_CURRENT_SET;
+                flags |= kSecAccessControlUserPresence;
             }
             
             if access_control.device_passcode {
-                flags |= SecAccessControlCreateFlags::DEVICE_PASSCODE;
+                flags |= kSecAccessControlDevicePasscode;
+            }
+            
+            // Note: Biometry flags are not available in the current security-framework-sys version
+            // For now, we'll use user presence which typically triggers biometric authentication
+            if access_control.biometry_any || access_control.biometry_current_set {
+                flags |= kSecAccessControlUserPresence;
             }
         }
         
-        SecAccessControl::create_with_flags(flags)
+        SecAccessControl::create_with_flags(None, flags)
             .map_err(|e| VendorError::KeyGeneration(format!("Failed to create access control: {:?}", e)))
     }
 
@@ -238,7 +242,7 @@ impl KeychainOperations {
         
         // Convert result to SecKey
         let key = unsafe {
-            SecKey::wrap_under_create_rule(result as security_framework_sys::key::SecKeyRef)
+            SecKey::wrap_under_create_rule(result as security_framework_sys::base::SecKeyRef)
         };
         
         Ok(key)

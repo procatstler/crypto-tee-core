@@ -98,18 +98,17 @@ impl CryptoTEE for CryptoTEEImpl {
         let caps = vendor.probe().await?;
         
         let mut capabilities = vec![
-            format!("vendor: {}", caps.name),
-            format!("version: {}", caps.version),
+            format!("max_keys: {}", caps.max_keys),
         ];
 
         for algo in &caps.algorithms {
             capabilities.push(format!("algorithm: {:?}", algo));
         }
 
-        if caps.features.hardware_backed {
+        if caps.hardware_backed {
             capabilities.push("feature: hardware-backed".to_string());
         }
-        if caps.features.attestation {
+        if caps.attestation {
             capabilities.push("feature: attestation".to_string());
         }
 

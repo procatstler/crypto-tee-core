@@ -22,11 +22,16 @@ impl CryptoKitOperations {
         #[cfg(any(target_os = "ios", target_os = "macos"))]
         {
             // CryptoKit requires iOS 13+ or macOS 10.15+
-            if #[cfg(target_os = "ios")] {
+            #[cfg(target_os = "ios")]
+            {
                 Self::check_ios_version(13, 0)
-            } else if #[cfg(target_os = "macos")] {
+            }
+            #[cfg(target_os = "macos")]
+            {
                 Self::check_macos_version(10, 15)
-            } else {
+            }
+            #[cfg(not(any(target_os = "ios", target_os = "macos")))]
+            {
                 false
             }
         }

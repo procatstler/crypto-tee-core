@@ -106,6 +106,12 @@ pub struct VendorKeyHandle {
 /// Vendor capabilities
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct VendorCapabilities {
+    /// Vendor name
+    pub name: String,
+    
+    /// Vendor version
+    pub version: String,
+    
     /// Supported algorithms
     pub algorithms: Vec<Algorithm>,
     
@@ -117,6 +123,34 @@ pub struct VendorCapabilities {
     
     /// Maximum number of keys
     pub max_keys: u32,
+    
+    /// Vendor features
+    pub features: VendorFeatures,
+}
+
+/// Vendor-specific features
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct VendorFeatures {
+    /// Whether keys are hardware-backed
+    pub hardware_backed: bool,
+    
+    /// Whether secure key import is supported
+    pub secure_key_import: bool,
+    
+    /// Whether secure key export is supported
+    pub secure_key_export: bool,
+    
+    /// Whether attestation is supported
+    pub attestation: bool,
+    
+    /// Whether strongbox security level is supported
+    pub strongbox: bool,
+    
+    /// Whether biometric-bound keys are supported
+    pub biometric_bound: bool,
+    
+    /// Whether secure deletion is supported
+    pub secure_deletion: bool,
 }
 
 /// Attestation information

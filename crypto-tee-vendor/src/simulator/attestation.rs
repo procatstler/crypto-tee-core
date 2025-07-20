@@ -5,6 +5,7 @@
 
 use crate::error::{VendorResult, VendorError};
 use crate::types::*;
+use super::{DeviceIdentity, SecurityLevel, SimulatedAttestation};
 use ring::rand::SecureRandom;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
