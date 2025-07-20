@@ -59,6 +59,10 @@ impl BiometricContext {
         use objc::{class, msg_send, sel, sel_impl};
         use objc::runtime::Object;
         
+        // SAFETY: This is safe because:
+        // 1. LAContext is a standard LocalAuthentication framework class
+        // 2. Null pointer checking is performed after allocation
+        // 3. objc crate maintains Objective-C runtime safety
         unsafe {
             let la_context_class = class!(LAContext);
             let context: *mut Object = msg_send![la_context_class, new];

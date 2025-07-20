@@ -469,5 +469,9 @@ pub unsafe fn init_jni(jvm: *mut jni::sys::JavaVM) {
 
 /// Get JNI context
 pub fn get_jni_context() -> Option<Arc<JavaVM>> {
+    // SAFETY: This is safe because:
+    // 1. GLOBAL_JVM is a static variable properly initialized via JNI_OnLoad
+    // 2. Access is read-only (clone operation)
+    // 3. Arc provides thread-safe reference counting
     unsafe { GLOBAL_JVM.clone() }
 }

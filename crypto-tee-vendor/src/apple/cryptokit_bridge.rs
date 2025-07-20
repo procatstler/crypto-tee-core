@@ -46,6 +46,10 @@ impl CryptoKitOperations {
     fn check_ios_version(major: u32, minor: u32) -> bool {
         use objc::runtime::Class;
         
+        // SAFETY: This is safe because:
+        // 1. NSProcessInfo is a standard iOS system class that always exists
+        // 2. Class::get returns None for non-existent classes, unwrap is safe here
+        // 3. Objective-C runtime guarantees are maintained by objc crate
         unsafe {
             let process_info_class = Class::get("NSProcessInfo").unwrap();
             let process_info: *mut Object = msg_send![process_info_class, processInfo];
@@ -89,6 +93,10 @@ impl CryptoKitOperations {
 
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     fn generate_p256_key() -> VendorResult<CryptoKitKey> {
+        // SAFETY: This is safe because:
+        // 1. P256 is a CryptoKit class available on iOS 13+/macOS 10.15+
+        // 2. Error handling is properly implemented with ok_or_else
+        // 3. Objective-C runtime safety is maintained by objc crate
         unsafe {
             let p256_class = objc::runtime::Class::get("P256")
                 .ok_or_else(|| VendorError::NotSupported("P256 class not found".to_string()))?;
@@ -115,6 +123,7 @@ impl CryptoKitOperations {
 
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     fn generate_p384_key() -> VendorResult<CryptoKitKey> {
+        // SAFETY: P384 CryptoKit operations with proper error handling
         unsafe {
             let p384_class = objc::runtime::Class::get("P384")
                 .ok_or_else(|| VendorError::NotSupported("P384 class not found".to_string()))?;
@@ -141,6 +150,7 @@ impl CryptoKitOperations {
 
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     fn generate_ed25519_key() -> VendorResult<CryptoKitKey> {
+        // SAFETY: Ed25519 CryptoKit operations with proper error handling
         unsafe {
             let curve25519_class = objc::runtime::Class::get("Curve25519")
                 .ok_or_else(|| VendorError::NotSupported("Curve25519 class not found".to_string()))?;
@@ -168,6 +178,7 @@ impl CryptoKitOperations {
     /// Sign data using CryptoKit key
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     pub fn sign(key: &CryptoKitKey, data: &[u8]) -> VendorResult<Vec<u8>> {
+        // SAFETY: CryptoKit signing operation with validated inputs
         unsafe {
             // Create NSData from bytes
             let data_class = objc::runtime::Class::get("NSData").unwrap();
