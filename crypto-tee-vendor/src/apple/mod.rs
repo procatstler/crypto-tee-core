@@ -1,70 +1,130 @@
-//! Apple Secure Enclave implementation
+//! Apple Secure Enclave Implementation
 //! 
-//! This module provides integration with Apple's Secure Enclave
-//! available on iOS and macOS devices with Apple Silicon.
+//! This module provides the actual implementation for Apple Secure Enclave,
+//! integrating with iOS/macOS Security Framework and CryptoKit.
 
-use async_trait::async_trait;
+#[cfg(any(target_os = "ios", target_os = "macos"))]
+pub mod secure_enclave;
 
-use crate::{
-    error::{VendorError, VendorResult},
-    traits::VendorTEE,
-    types::*,
-};
+#[cfg(any(target_os = "ios", target_os = "macos"))]
+pub mod keychain;
 
-pub struct SecureEnclaveVendor {
-    // Secure Enclave specific fields will be added here
-}
+#[cfg(any(target_os = "ios", target_os = "macos"))]
+pub mod biometric;
 
-impl SecureEnclaveVendor {
-    pub fn new() -> Self {
-        Self {}
+#[cfg(any(target_os = "ios", target_os = "macos"))]
+pub mod cryptokit_bridge;
+
+#[cfg(not(any(target_os = "ios", target_os = "macos")))]
+pub mod stub;
+
+use crate::error::VendorResult;
+use crate::traits::VendorTEE;
+use crate::types::*;
+
+/// Get Apple Secure Enclave implementation
+pub fn get_apple_tee() -> VendorResult<Box<dyn VendorTEE>> {
+    #[cfg(any(target_os = "ios", target_os = "macos"))]
+    {
+        // Check if Secure Enclave is available
+        if secure_enclave::is_secure_enclave_available()? {
+            Ok(Box::new(secure_enclave::AppleSecureEnclave::new()?))
+        } else {
+            Err(crate::error::VendorError::NotSupported(
+                "Secure Enclave is not available on this device".to_string()
+            ))
+        }
+    }
+    
+    #[cfg(not(any(target_os = "ios", target_os = "macos")))]
+    {
+        // Return stub implementation for non-Apple platforms
+        Ok(Box::new(stub::AppleSecureEnclaveStub::new()))
     }
 }
 
-#[async_trait]
-impl VendorTEE for SecureEnclaveVendor {
-    async fn probe(&self) -> VendorResult<VendorCapabilities> {
-        // TODO: Implement Secure Enclave detection
-        Err(VendorError::NotAvailable)
-    }
+/// Apple Secure Enclave specific parameters
+#[derive(Debug, Clone)]
+pub struct SecureEnclaveParams {
+    /// Use Secure Enclave for key operations
+    pub use_secure_enclave: bool,
+    
+    /// Require Touch ID or Face ID for key usage
+    pub require_biometric: bool,
+    
+    /// Require device passcode for key usage
+    pub require_passcode: bool,
+    
+    /// Access control flags
+    pub access_control: Option<AccessControl>,
+    
+    /// Keychain access group
+    pub access_group: Option<String>,
+    
+    /// Key label in keychain
+    pub label: Option<String>,
+    
+    /// Application tag for the key
+    pub application_tag: Option<Vec<u8>>,
+}
 
-    async fn generate_key(&self, _params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
-        // TODO: Implement Secure Enclave key generation via Keychain
-        Err(VendorError::NotAvailable)
-    }
+/// Access control options for Secure Enclave keys
+#[derive(Debug, Clone)]
+pub struct AccessControl {
+    /// Require user presence (any authentication)
+    pub user_presence: bool,
+    
+    /// Require biometric authentication
+    pub biometry_any: bool,
+    
+    /// Require current biometric set
+    pub biometry_current_set: bool,
+    
+    /// Require device passcode
+    pub device_passcode: bool,
+    
+    /// Key usage constraints
+    pub constraints: Vec<AccessConstraint>,
+}
 
-    async fn delete_key(&self, _key: &VendorKeyHandle) -> VendorResult<()> {
-        // TODO: Implement Secure Enclave key deletion
-        Err(VendorError::NotAvailable)
-    }
+/// Access constraints for key usage
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AccessConstraint {
+    /// Key can only be used while device is unlocked
+    DeviceUnlocked,
+    
+    /// Key can only be used after first unlock
+    AfterFirstUnlock,
+    
+    /// Key is always accessible
+    Always,
+    
+    /// Key requires authentication for each use
+    UserAuthentication,
+}
 
-    async fn sign(&self, _key: &VendorKeyHandle, _data: &[u8]) -> VendorResult<Signature> {
-        // TODO: Implement Secure Enclave signing
-        Err(VendorError::NotAvailable)
+impl Default for SecureEnclaveParams {
+    fn default() -> Self {
+        Self {
+            use_secure_enclave: true,
+            require_biometric: false,
+            require_passcode: false,
+            access_control: None,
+            access_group: None,
+            label: None,
+            application_tag: None,
+        }
     }
+}
 
-    async fn verify(
-        &self,
-        _key: &VendorKeyHandle,
-        _data: &[u8],
-        _signature: &Signature,
-    ) -> VendorResult<bool> {
-        // TODO: Implement Secure Enclave verification
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn get_attestation(&self) -> VendorResult<Attestation> {
-        // TODO: Implement Secure Enclave attestation
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn get_key_attestation(&self, _key: &VendorKeyHandle) -> VendorResult<Attestation> {
-        // TODO: Implement Secure Enclave key attestation
-        Err(VendorError::NotAvailable)
-    }
-
-    async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
-        // TODO: Implement Secure Enclave key listing
-        Err(VendorError::NotAvailable)
+impl Default for AccessControl {
+    fn default() -> Self {
+        Self {
+            user_presence: false,
+            biometry_any: false,
+            biometry_current_set: false,
+            device_passcode: false,
+            constraints: vec![AccessConstraint::DeviceUnlocked],
+        }
     }
 }

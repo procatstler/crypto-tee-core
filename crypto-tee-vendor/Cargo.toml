@@ -39,3 +39,9 @@ ndk = { workspace = true, optional = true }
 [target.'cfg(target_os = "ios")'.dependencies]
 core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
+objc = { version = "0.2", optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = { workspace = true, optional = true }
+security-framework = { workspace = true, optional = true }
+objc = { version = "0.2", optional = true }
