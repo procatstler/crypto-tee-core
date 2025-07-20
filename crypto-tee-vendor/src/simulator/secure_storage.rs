@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
 use ring::{aead, digest, rand};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Secure storage simulator
 #[derive(Debug)]
@@ -102,7 +103,7 @@ pub struct BackupConfig {
 }
 
 /// Encrypted key data
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
 struct EncryptedKeyData {
     /// Encrypted key material
     encrypted_data: Vec<u8>,

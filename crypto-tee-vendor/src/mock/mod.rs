@@ -8,6 +8,7 @@ use ring::signature::{self, KeyPair};
 use subtle::ConstantTimeEq;
 use tokio::sync::Mutex;
 use tracing::{debug, info};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use crate::{
     error::{VendorError, VendorResult},
@@ -22,7 +23,9 @@ pub struct MockVendor {
     capabilities: VendorCapabilities,
 }
 
+#[derive(Zeroize, ZeroizeOnDrop)]
 struct MockKey {
+    #[zeroize(skip)]
     handle: VendorKeyHandle,
     private_key: Vec<u8>,
     public_key: Option<Vec<u8>>,

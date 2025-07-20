@@ -8,6 +8,7 @@ use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use subtle::ConstantTimeEq;
 use tracing::{debug, error, info, warn};
+use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::{QSEEParams, QSEECapabilities, ProtectionLevel};
 use super::jni_bridge::JniBridge;
@@ -36,12 +37,18 @@ pub struct QualcommQSEE {
     capabilities: Arc<Mutex<Option<QSEECapabilities>>>,
 }
 
+#[derive(Zeroize, ZeroizeOnDrop)]
 struct QSEEKeyData {
+    #[zeroize(skip)]
     algorithm: Algorithm,
+    #[zeroize(skip)]
     protection_level: ProtectionLevel,
+    #[zeroize(skip)]
     hardware_backed: bool,
     alias: String,
+    #[zeroize(skip)]
     created_at: std::time::SystemTime,
+    #[zeroize(skip)]
     auth_required: bool,
 }
 

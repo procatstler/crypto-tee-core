@@ -7,6 +7,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use subtle::ConstantTimeEq;
+use zeroize::{Zeroize, ZeroizeOnDrop};
 use crate::{
     error::{VendorError, VendorResult},
     traits::VendorTEE,
@@ -26,11 +27,14 @@ pub struct AppleSecureEnclave {
 }
 
 /// Information about a Secure Enclave key
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Zeroize, ZeroizeOnDrop)]
 struct SecureEnclaveKeyInfo {
     key_id: String,
+    #[zeroize(skip)]
     algorithm: Algorithm,
+    #[zeroize(skip)]
     created_at: std::time::SystemTime,
+    #[zeroize(skip)]
     requires_biometric: bool,
     access_group: Option<String>,
 }
