@@ -142,6 +142,8 @@ impl SamsungTEESimulator {
     /// Get Knox-specific capabilities
     fn get_knox_capabilities(&self) -> VendorCapabilities {
         VendorCapabilities {
+            name: "Samsung Knox Simulator".to_string(),
+            version: "3.9".to_string(),
             algorithms: vec![
                 Algorithm::Ed25519,
                 Algorithm::EcdsaP256,
@@ -151,6 +153,15 @@ impl SamsungTEESimulator {
             ],
             hardware_backed: true,
             attestation: true,
+            features: VendorFeatures {
+                hardware_backed: true,
+                secure_key_import: true,
+                secure_key_export: false,
+                attestation: true,
+                strongbox: true,
+                biometric_bound: true,
+                secure_deletion: true,
+            },
             max_keys: 64, // Knox Vault supports more keys
         }
     }

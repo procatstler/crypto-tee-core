@@ -9,9 +9,9 @@ use crate::types::*;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 use objc::rc::StrongPtr;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
-use objc::runtime::{Object, Sel};
+use objc::runtime::Object;
 #[cfg(any(target_os = "ios", target_os = "macos"))]
-use objc::{class, msg_send, sel, sel_impl};
+use objc::{msg_send, sel, sel_impl};
 
 /// CryptoKit operations wrapper
 pub struct CryptoKitOperations;

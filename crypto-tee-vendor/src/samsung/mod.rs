@@ -20,7 +20,7 @@ pub mod stub;
 
 use crate::error::VendorResult;
 use crate::traits::VendorTEE;
-use crate::types::*;
+// use crate::types::*; // Currently unused
 
 /// Get Samsung Knox TEE implementation
 pub fn get_samsung_tee() -> VendorResult<Box<dyn VendorTEE>> {

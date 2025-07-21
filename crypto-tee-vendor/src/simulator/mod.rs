@@ -13,8 +13,7 @@ pub mod secure_storage;
 
 use crate::error::VendorResult;
 use crate::traits::VendorTEE;
-use crate::types::*;
-use std::sync::Arc;
+// Imports managed per-module to avoid unused warnings
 
 #[cfg(test)]
 mod tests;

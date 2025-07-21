@@ -6,7 +6,7 @@
 use crate::error::{VendorError, VendorResult};
 use core_foundation::string::CFString;
 
-use security_framework::access_control::SecAccessControl;
+// use security_framework::access_control::SecAccessControl; // Currently unused
 
 /// Biometric authentication types
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

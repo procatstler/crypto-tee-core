@@ -10,7 +10,7 @@ use core_foundation::{
     boolean::CFBoolean,
     data::CFData,
     dictionary::{CFDictionary, CFMutableDictionary},
-    number::CFNumber,
+    // number::CFNumber, // Currently unused
     string::CFString,
 };
 use security_framework::{access_control::SecAccessControl, key::SecKey};

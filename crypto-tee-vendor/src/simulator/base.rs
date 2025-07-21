@@ -289,9 +289,20 @@ impl VendorTEE for GenericTEESimulator {
         self.simulate_delay(OperationType::Verification).await;
 
         let capabilities = VendorCapabilities {
+            name: "Generic TEE Simulator".to_string(),
+            version: "1.0".to_string(),
             algorithms: vec![Algorithm::Ed25519, Algorithm::EcdsaP256],
             hardware_backed: true,
             attestation: true,
+            features: VendorFeatures {
+                hardware_backed: true,
+                secure_key_import: true,
+                secure_key_export: false,
+                attestation: true,
+                strongbox: false,
+                biometric_bound: false,
+                secure_deletion: true,
+            },
             max_keys: 32,
         };
 

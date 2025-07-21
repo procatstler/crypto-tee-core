@@ -132,11 +132,23 @@ impl AppleTEESimulator {
         // In a real implementation, this would be cached or configured differently
 
         VendorCapabilities {
+            name: "Apple Secure Enclave Simulator".to_string(),
+            version: "1.0".to_string(),
             algorithms: vec![
                 Algorithm::EcdsaP256, // Secure Enclave primarily supports P-256
                 Algorithm::Ed25519,   // Software fallback
             ],
             hardware_backed: true,
+            attestation: true,
+            features: VendorFeatures {
+                hardware_backed: true,
+                secure_key_import: false,
+                secure_key_export: false,
+                attestation: true,
+                strongbox: true,
+                biometric_bound: true,
+                secure_deletion: true,
+            },
             attestation: true, // Default to true for Secure Enclave
             max_keys: 32,      // Conservative estimate for Secure Enclave
         }

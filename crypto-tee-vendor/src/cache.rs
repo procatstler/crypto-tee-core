@@ -220,7 +220,8 @@ impl KeyHandleCache {
 pub struct MemoryPool {
     small_buffers: Arc<RwLock<Vec<Vec<u8>>>>, // For signatures, typically 64-256 bytes
     medium_buffers: Arc<RwLock<Vec<Vec<u8>>>>, // For public keys, typically 32-128 bytes
-    large_buffers: Arc<RwLock<Vec<Vec<u8>>>>, // For large data, 1KB+
+    #[allow(dead_code)]
+    large_buffers: Arc<RwLock<Vec<Vec<u8>>>>, // For large data, 1KB+ (planned for future use)
 }
 
 impl MemoryPool {

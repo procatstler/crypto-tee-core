@@ -14,7 +14,7 @@ use subtle::ConstantTimeEq;
 
 /// JNI context for Knox operations
 pub struct KnoxJniContext {
-    jvm: Arc<JavaVM>,
+    pub jvm: Arc<JavaVM>,
     knox_crypto_class: Arc<Mutex<Option<JClass<'static>>>>,
     context: Arc<Mutex<Option<JObject<'static>>>>,
 }

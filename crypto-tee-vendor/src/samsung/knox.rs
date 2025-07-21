@@ -115,6 +115,8 @@ impl VendorTEE for SamsungKnoxTEE {
                 Algorithm::Rsa3072,
                 Algorithm::Rsa4096,
             ],
+            hardware_backed: true,
+            attestation: true,
             features: VendorFeatures {
                 hardware_backed: true,
                 secure_key_import: true,
@@ -124,7 +126,7 @@ impl VendorTEE for SamsungKnoxTEE {
                 biometric_bound: true,
                 secure_deletion: true,
             },
-            max_keys: Some(100),
+            max_keys: 100,
         })
     }
 
@@ -228,7 +230,7 @@ impl VendorTEE for SamsungKnoxTEE {
     async fn get_attestation(&self) -> VendorResult<Attestation> {
         // Knox device attestation
         Ok(Attestation {
-            format: "knox_device_attestation".to_string(),
+            format: AttestationFormat::Custom("knox_device_attestation".to_string()),
             data: vec![],         // Would contain actual attestation data
             certificates: vec![], // Would contain certificate chain
         })
@@ -244,7 +246,7 @@ impl VendorTEE for SamsungKnoxTEE {
         let cert_chain = self.jni_context.get_attestation(&env, &key.id)?;
 
         Ok(Attestation {
-            format: "knox_key_attestation".to_string(),
+            format: AttestationFormat::AndroidKey,
             data: vec![], // Attestation extension data would be extracted from certificates
             certificates: cert_chain,
         })

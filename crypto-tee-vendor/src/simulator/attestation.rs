@@ -7,7 +7,7 @@ use super::{DeviceIdentity, SecurityLevel, SimulatedAttestation};
 use crate::error::{VendorError, VendorResult};
 use crate::types::*;
 use ring::rand::SecureRandom;
-use ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair};
+use ring::signature::{EcdsaKeyPair, Ed25519KeyPair};
 use ring::{digest, rand, signature};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};

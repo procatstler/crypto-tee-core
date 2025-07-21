@@ -228,6 +228,8 @@ impl QualcommTEESimulator {
     /// Get Qualcomm-specific capabilities
     fn get_qualcomm_capabilities(&self) -> VendorCapabilities {
         VendorCapabilities {
+            name: "Qualcomm QSEE Simulator".to_string(),
+            version: "1.0".to_string(),
             algorithms: vec![
                 Algorithm::Ed25519,
                 Algorithm::EcdsaP256,
@@ -240,6 +242,15 @@ impl QualcommTEESimulator {
             ],
             hardware_backed: true,
             attestation: true,
+            features: VendorFeatures {
+                hardware_backed: true,
+                secure_key_import: true,
+                secure_key_export: false,
+                attestation: true,
+                strongbox: true,
+                biometric_bound: true,
+                secure_deletion: true,
+            },
             max_keys: 128, // QSEE can handle more keys
         }
     }
