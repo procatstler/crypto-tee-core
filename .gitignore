@@ -15,12 +15,30 @@ Cargo.lock
 .DS_Store
 Thumbs.db
 
+# Claude
+.claude/
+*.claude
+
+# Local configuration
+*.local
+*.local.*
+settings.local.json
+
+# Build artifacts
+/build/
+/dist/
+/out/
+performance_analysis
+*.so
+*.dylib
+*.dll
+
 # Project specific
 *.key
 *.pem
 *.p12
 /tmp/
-/build/
+/temp/
 
 # Documentation
 /docs/_build/
@@ -30,6 +48,19 @@ Thumbs.db
 tarpaulin-report.html
 cobertura.xml
 coverage/
+.coverage
 
 # Benchmarks
 /benches/results/
+/bench-results/
+*.bench
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
