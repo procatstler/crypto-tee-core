@@ -298,6 +298,85 @@ let signature = crypto_tee.sign(
 }
 ```
 
+## Vendor-Specific Features
+
+### Apple Secure Enclave
+
+```rust
+use crypto_tee::vendors::apple::SecureEnclaveParams;
+
+// Create key with Secure Enclave specific settings
+let se_key = crypto_tee.generate_key_with_vendor_params(
+    "secure-enclave-key",
+    KeyOptions {
+        algorithm: Algorithm::EcdsaP256,
+        hardware_backed: true,
+        require_auth: true,
+        ..Default::default()
+    },
+    VendorParams::Apple(SecureEnclaveParams {
+        require_biometric: true,
+        label: Some("My Secure Key".to_string()),
+        access_group: Some("com.myapp.keys".to_string()),
+        ..Default::default()
+    }),
+).await?;
+
+// Get hardware attestation
+let attestation = crypto_tee.get_key_attestation("secure-enclave-key").await?;
+assert_eq!(attestation.format, AttestationFormat::AppleDeviceCheck);
+```
+
+### Samsung Knox
+
+```rust
+use crypto_tee::vendors::samsung::KnoxParams;
+
+// Create key in Knox Vault
+let knox_key = crypto_tee.generate_key_with_vendor_params(
+    "knox-vault-key",
+    KeyOptions {
+        algorithm: Algorithm::EcdsaP256,
+        hardware_backed: true,
+        ..Default::default()
+    },
+    VendorParams::Samsung(KnoxParams {
+        use_knox_vault: true,          // Store in Knox Vault
+        require_user_auth: true,       // Require biometric/PIN
+        auth_validity_seconds: Some(300), // 5-minute auth timeout
+        use_trustzone: true,           // Use TrustZone TEE
+        enable_attestation: true,      // Enable key attestation
+        container_id: None,            // Default container
+    }),
+).await?;
+
+// Knox attestation includes certificate chain
+let attestation = crypto_tee.get_key_attestation("knox-vault-key").await?;
+assert_eq!(attestation.format, AttestationFormat::AndroidKey);
+```
+
+### Platform Detection
+
+```rust
+// Check platform capabilities
+let platform_info = crypto_tee.get_platform_info().await?;
+println!("Platform: {}", platform_info.name);
+println!("Version: {}", platform_info.version);
+
+// Check vendor capabilities
+let vendors = crypto_tee.list_available_vendors().await?;
+for vendor in vendors {
+    println!("Vendor: {} (Hardware: {})", vendor.name, vendor.hardware_backed);
+    println!("Algorithms: {:?}", vendor.algorithms);
+    println!("Features: {:?}", vendor.features);
+}
+
+// Select specific vendor
+let vendor = crypto_tee.get_vendor("Samsung Knox").await?;
+let caps = vendor.probe().await?;
+println!("Knox version: {}", caps.version);
+```
+
 ## Plugin System
 
 ### Creating a Plugin

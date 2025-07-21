@@ -69,11 +69,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 | Platform | Vendor | Hardware Security | Authentication | Status |
 |----------|--------|-------------------|----------------|--------|
-| macOS/iOS | Apple | Secure Enclave | Touch/Face ID | ✅ Stable |
-| Samsung Android | Knox | TrustZone | Fingerprint | ✅ Stable |
-| Android 6+ | AOSP | Keystore/StrongBox | Fingerprint | ✅ Stable |
-| Linux | Software | None | PIN | ✅ Stable |
-| Windows | Software | None | PIN | ✅ Stable |
+| macOS/iOS | Apple | Secure Enclave | Touch/Face ID | ✅ Complete |
+| Samsung Android | Knox | TrustZone + Knox Vault | Fingerprint + Knox | ✅ Complete |
+| Qualcomm Android | QSEE | TrustZone | Fingerprint | 🚧 In Progress |
+| Android 6+ | AOSP | Keystore/StrongBox | Fingerprint | ✅ Complete |
+| Linux | OP-TEE/SGX | Hardware TEE | PIN/Biometric | ✅ Complete |
+| Windows | Software | None | PIN | ✅ Complete |
 | Web/WASM | Software | None | None | 🚧 Beta |
 
 ## Architecture
@@ -136,6 +137,29 @@ let secure_key = crypto_tee.generate_key(
 let signature = crypto_tee.sign("secure-key", data, None).await?;
 ```
 
+### Samsung Knox Vault
+
+```rust
+use crypto_tee::vendors::samsung::KnoxParams;
+
+// Create key in Knox Vault for maximum security
+let knox_key = crypto_tee.generate_key_with_vendor_params(
+    "knox-key",
+    KeyOptions {
+        algorithm: Algorithm::EcdsaP256,
+        hardware_backed: true,
+        ..Default::default()
+    },
+    VendorParams::Samsung(KnoxParams {
+        use_knox_vault: true,
+        require_user_auth: true,
+        use_trustzone: true,
+        enable_attestation: true,
+        ..Default::default()
+    }),
+).await?;
+```
+
 ### HTTP Message Signatures (RFC 9421)
 
 ```rust
@@ -150,18 +174,23 @@ See the [examples directory](examples/) for more:
 - [Basic key management](examples/basic_key_management.rs)
 - [Signing and verification](examples/signing_verification.rs)
 - [HTTP signatures](examples/http_signatures.rs)
+- [Apple Secure Enclave](examples/apple_secure_enclave.rs)
+- [Samsung Knox Vault](examples/samsung_knox_vault.rs)
 - [Multi-platform usage](examples/multi_platform.rs)
 - [Plugin development](examples/plugin_development.rs)
 - [Authentication flows](examples/auth_required.rs)
 
 ## Security Features
 
-- **Hardware-backed keys** - Private keys never leave the secure hardware
-- **Biometric authentication** - Protect operations with Touch/Face ID or fingerprint
-- **Attestation** - Cryptographic proof that keys are hardware-protected
+- **Hardware-backed keys** - Private keys never leave the secure hardware (Apple Secure Enclave, Samsung Knox Vault)
+- **Biometric authentication** - Protect operations with Touch/Face ID, fingerprint, or Knox authentication
+- **Hardware attestation** - Cryptographic proof that keys are hardware-protected with certificate chains
 - **Constant-time operations** - Protection against timing side-channel attacks
 - **Automatic zeroization** - Sensitive data is cleared from memory after use
 - **Non-extractable keys** - Prevent key export for maximum security
+- **Knox Vault integration** - Samsung's highest security tier with hardware isolation
+- **TrustZone support** - ARM TrustZone integration on Android devices
+- **Platform detection** - Automatic selection of best available security features
 
 ## Performance
 

@@ -20,9 +20,9 @@ This directory contains examples demonstrating how to use the CryptoTEE library 
 
 ### Platform-Specific Examples
 
-- **[apple_secure_enclave.rs](apple_secure_enclave.rs)** - Apple Secure Enclave features
-- **[samsung_knox.rs](samsung_knox.rs)** - Samsung Knox integration
-- **[android_keystore.rs](android_keystore.rs)** - Android Keystore usage
+- **[apple_secure_enclave.rs](apple_secure_enclave.rs)** - Apple Secure Enclave features (macOS/iOS)
+- **[samsung_knox_vault.rs](samsung_knox_vault.rs)** - Samsung Knox Vault integration (Samsung Android)
+- **[android_keystore.rs](android_keystore.rs)** - Android Keystore usage (AOSP)
 
 ## Running Examples
 
@@ -38,8 +38,8 @@ For platform-specific examples, enable the appropriate features:
 # Apple Secure Enclave (macOS/iOS)
 cargo run --example apple_secure_enclave --features apple
 
-# Samsung Knox (Samsung devices)
-cargo run --example samsung_knox --features samsung
+# Samsung Knox Vault (Samsung devices)
+cargo run --example samsung_knox_vault --features samsung
 
 # Software fallback (any platform)
 cargo run --example basic_key_management --features software-fallback
