@@ -3,14 +3,18 @@
 //! This module provides integration with Linux keyring and
 //! OP-TEE where available.
 
+mod system_info;
+
 use async_trait::async_trait;
 use crypto_tee_vendor::{VendorKeyHandle, VendorTEE};
 
 use crate::{
     error::{PlatformError, PlatformResult},
     traits::{PlatformKeyHandle, PlatformTEE},
-    types::{AuthMethod, AuthResult, PlatformConfig},
+    types::{AuthResult, PlatformConfig},
 };
+
+use self::system_info::{get_linux_distro, detect_tee_implementations, get_security_level};
 
 pub struct LinuxPlatform {
     config: PlatformConfig,
@@ -30,24 +34,91 @@ impl PlatformTEE for LinuxPlatform {
 
     fn version(&self) -> &str {
         // Get kernel version
-        std::env::consts::OS
+        match get_linux_distro() {
+            Ok(distro) => Box::leak(Box::new(format!("{}-{}", distro.name, distro.kernel_version))),
+            Err(_) => "linux-unknown",
+        }
     }
 
     async fn detect_vendors(&self) -> Vec<Box<dyn VendorTEE>> {
-        // TODO: Detect OP-TEE availability via /dev/tee*
-        vec![]
+        // Detect available TEE implementations
+        let mut vendors: Vec<Box<dyn VendorTEE>> = vec![];
+        
+        match detect_tee_implementations() {
+            Ok(tee_infos) => {
+                for tee_info in tee_infos {
+                    if tee_info.available {
+                        match tee_info.name.as_str() {
+                            "OP-TEE" => {
+                                // In real implementation, load OP-TEE client from separate crate
+                                // For now, use mock vendor
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("linux_op_tee")));
+                            }
+                            "Intel SGX" => {
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("intel_sgx")));
+                            }
+                            "AMD SEV" => {
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("amd_sev")));
+                            }
+                            "Software TPM" => {
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("software_tpm")));
+                            }
+                            _ => {}
+                        }
+                    }
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Failed to detect TEE implementations: {}", e);
+            }
+        }
+        
+        // Always provide software fallback
+        if vendors.is_empty() {
+            vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("linux_software")));
+        }
+        
+        vendors
     }
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
-        // TODO: Select OP-TEE if available, otherwise software fallback
-        Err(PlatformError::NotSupported(
-            "Linux platform implementation not yet available".to_string(),
-        ))
+        // Select best available vendor based on security level
+        let vendors = self.detect_vendors().await;
+        
+        if vendors.is_empty() {
+            return Err(PlatformError::NotSupported(
+                "No TEE vendors available on Linux".to_string(),
+            ));
+        }
+        
+        // Priority order: OP-TEE > Intel SGX > AMD SEV > TPM > Software
+        let priority_order = ["op_tee", "intel_sgx", "amd_sev", "tpm", "software"];
+        
+        for priority_name in &priority_order {
+            for vendor in &vendors {
+                let caps = vendor.probe().await?;
+                if caps.name.to_lowercase().contains(priority_name) && caps.hardware_backed {
+                    return Ok(vendor.clone());
+                }
+            }
+        }
+        
+        // Fallback to first available vendor
+        Ok(vendors.into_iter().next().unwrap())
     }
 
-    async fn get_vendor(&self, _name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
-        // TODO: Get OP-TEE or software vendor
-        Err(PlatformError::NotSupported("Linux vendor access not yet implemented".to_string()))
+    async fn get_vendor(&self, name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
+        // Get specific vendor
+        let vendors = self.detect_vendors().await;
+        
+        for vendor in vendors {
+            let caps = vendor.probe().await?;
+            if caps.name.to_lowercase().contains(&name.to_lowercase()) {
+                return Ok(vendor);
+            }
+        }
+        
+        Err(PlatformError::NotSupported(format!("Vendor '{}' not available on Linux", name)))
     }
 
     async fn authenticate(&self, _challenge: &[u8]) -> PlatformResult<AuthResult> {
@@ -55,9 +126,10 @@ impl PlatformTEE for LinuxPlatform {
         // Could integrate with PAM or PolicyKit
         Ok(AuthResult {
             success: true,
-            method: AuthMethod::Password,
-            session_token: None,
-            valid_until: None,
+            method: "password".to_string(),
+            timestamp: std::time::SystemTime::now(),
+            validity_duration: Some(std::time::Duration::from_secs(3600)), // 1 hour
+            metadata: None,
         })
     }
 

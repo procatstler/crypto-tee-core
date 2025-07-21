@@ -44,6 +44,9 @@ core-foundation = "0.9"
 security-framework = "2.9"
 security-framework-sys = "2.9"
 
+# Additional dependencies
+base64 = "0.21"
+
 [profile.release]
 lto = true
 codegen-units = 1

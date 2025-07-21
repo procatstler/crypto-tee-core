@@ -3,6 +3,9 @@
 //! This module provides integration with iOS Keychain Services and
 //! Secure Enclave through platform APIs.
 
+mod local_authentication;
+mod system_info;
+
 use async_trait::async_trait;
 use crypto_tee_vendor::{VendorKeyHandle, VendorTEE};
 
@@ -11,6 +14,9 @@ use crate::{
     traits::{PlatformKeyHandle, PlatformTEE},
     types::{AuthResult, PlatformConfig},
 };
+
+use self::local_authentication::{LAContextBuilder, LAPolicy, is_biometric_available};
+use self::system_info::{get_ios_version, is_secure_enclave_available, get_security_level};
 
 pub struct IOSPlatform {
     config: PlatformConfig,
@@ -29,30 +35,83 @@ impl PlatformTEE for IOSPlatform {
     }
 
     fn version(&self) -> &str {
-        // TODO: Get actual iOS version
-        "ios-15.0"
+        // Get actual iOS version
+        match get_ios_version() {
+            Ok(version) => Box::leak(Box::new(format!("ios-{}.{}", version.major, version.minor))),
+            Err(_) => "ios-unknown",
+        }
     }
 
     async fn detect_vendors(&self) -> Vec<Box<dyn VendorTEE>> {
-        // TODO: Detect Secure Enclave availability
-        vec![]
+        // Detect Secure Enclave availability
+        let mut vendors: Vec<Box<dyn VendorTEE>> = vec![];
+        
+        if is_secure_enclave_available().unwrap_or(false) {
+            // In real implementation, load Apple Secure Enclave vendor from separate crate
+            // For now, use mock vendor
+            vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("apple_secure_enclave")));
+        }
+        
+        // Always provide software fallback through Keychain
+        vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("ios_keychain")));
+        
+        vendors
     }
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
-        // TODO: Select Secure Enclave if available
-        Err(PlatformError::NotSupported(
-            "iOS platform implementation not yet available".to_string(),
-        ))
+        // Select Secure Enclave if available
+        let vendors = self.detect_vendors().await;
+        
+        if vendors.is_empty() {
+            return Err(PlatformError::NotSupported(
+                "No vendors available on iOS".to_string(),
+            ));
+        }
+        
+        // Prefer Secure Enclave over Keychain
+        for vendor in vendors {
+            let caps = vendor.probe().await?;
+            if caps.name.contains("secure_enclave") {
+                return Ok(vendor);
+            }
+        }
+        
+        // Fallback to first available (Keychain)
+        Ok(vendors.into_iter().next().unwrap())
     }
 
-    async fn get_vendor(&self, _name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
-        // TODO: Get Secure Enclave vendor
-        Err(PlatformError::NotSupported("iOS vendor access not yet implemented".to_string()))
+    async fn get_vendor(&self, name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
+        // Get specific vendor
+        let vendors = self.detect_vendors().await;
+        
+        for vendor in vendors {
+            let caps = vendor.probe().await?;
+            if caps.name.to_lowercase().contains(&name.to_lowercase()) {
+                return Ok(vendor);
+            }
+        }
+        
+        Err(PlatformError::NotSupported(format!("Vendor '{}' not available on iOS", name)))
     }
 
-    async fn authenticate(&self, _challenge: &[u8]) -> PlatformResult<AuthResult> {
-        // TODO: Implement LAContext biometric authentication
-        Err(PlatformError::NotSupported("iOS authentication not yet implemented".to_string()))
+    async fn authenticate(&self, challenge: &[u8]) -> PlatformResult<AuthResult> {
+        // Implement LAContext biometric authentication
+        if !is_biometric_available()? {
+            return Err(PlatformError::AuthFailed("Biometric authentication not available".to_string()));
+        }
+        
+        let policy = if self.config.require_biometric_only {
+            LAPolicy::BiometryOnly
+        } else {
+            LAPolicy::BiometryOrPasscode
+        };
+        
+        let result = LAContextBuilder::new("Authenticate to access secure key")
+            .fallback_to_passcode(!self.config.require_biometric_only)
+            .authenticate(Some(challenge))
+            .await?;
+            
+        Ok(result)
     }
 
     async fn requires_authentication(&self) -> bool {
