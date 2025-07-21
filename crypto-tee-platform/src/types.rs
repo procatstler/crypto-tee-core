@@ -7,13 +7,13 @@ use serde::{Deserialize, Serialize};
 pub struct AuthResult {
     /// Whether authentication was successful
     pub success: bool,
-    
+
     /// Authentication method used
     pub method: AuthMethod,
-    
+
     /// Optional session token
     pub session_token: Option<Vec<u8>>,
-    
+
     /// Time until re-authentication is required
     pub valid_until: Option<std::time::SystemTime>,
 }
@@ -34,16 +34,16 @@ pub enum AuthMethod {
 pub struct PlatformConfig {
     /// Require user authentication for key usage
     pub require_auth: bool,
-    
+
     /// Authentication validity duration in seconds
     pub auth_validity_seconds: Option<u32>,
-    
+
     /// Allow biometric authentication
     pub allow_biometric: bool,
-    
+
     /// Require strong biometric (e.g., Face ID vs Touch ID)
     pub require_strong_biometric: bool,
-    
+
     /// Platform-specific options
     pub platform_options: Option<PlatformOptions>,
 }
@@ -72,10 +72,10 @@ pub enum PlatformOptions {
 pub struct AndroidOptions {
     /// Use Android Keystore
     pub use_keystore: bool,
-    
+
     /// Require unlocked device
     pub require_unlocked: bool,
-    
+
     /// Use StrongBox if available
     pub prefer_strongbox: bool,
 }
@@ -84,10 +84,10 @@ pub struct AndroidOptions {
 pub struct IOSOptions {
     /// Use Keychain Services
     pub use_keychain: bool,
-    
+
     /// Keychain access group
     pub access_group: Option<String>,
-    
+
     /// Require device passcode
     pub require_passcode: bool,
 }
@@ -96,7 +96,7 @@ pub struct IOSOptions {
 pub struct LinuxOptions {
     /// Use system keyring
     pub use_keyring: bool,
-    
+
     /// Keyring backend
     pub keyring_backend: Option<String>,
 }

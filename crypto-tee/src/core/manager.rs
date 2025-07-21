@@ -14,38 +14,27 @@ pub struct KeyManager {
 
 impl KeyManager {
     pub fn new() -> Self {
-        Self {
-            keys: HashMap::new(),
-        }
+        Self { keys: HashMap::new() }
     }
 
     pub fn add_key(&mut self, alias: &str, handle: KeyHandle) -> CryptoTEEResult<()> {
         if self.keys.contains_key(alias) {
-            return Err(CryptoTEEError::InvalidKeyAlias(format!(
-                "Key '{}' already exists",
-                alias
-            )));
+            return Err(CryptoTEEError::InvalidKeyAlias(format!("Key '{}' already exists", alias)));
         }
         self.keys.insert(alias.to_string(), handle);
         Ok(())
     }
 
     pub fn get_key(&self, alias: &str) -> CryptoTEEResult<&KeyHandle> {
-        self.keys
-            .get(alias)
-            .ok_or_else(|| CryptoTEEError::KeyNotFound(alias.to_string()))
+        self.keys.get(alias).ok_or_else(|| CryptoTEEError::KeyNotFound(alias.to_string()))
     }
 
     pub fn get_key_mut(&mut self, alias: &str) -> CryptoTEEResult<&mut KeyHandle> {
-        self.keys
-            .get_mut(alias)
-            .ok_or_else(|| CryptoTEEError::KeyNotFound(alias.to_string()))
+        self.keys.get_mut(alias).ok_or_else(|| CryptoTEEError::KeyNotFound(alias.to_string()))
     }
 
     pub fn remove_key(&mut self, alias: &str) -> CryptoTEEResult<KeyHandle> {
-        self.keys
-            .remove(alias)
-            .ok_or_else(|| CryptoTEEError::KeyNotFound(alias.to_string()))
+        self.keys.remove(alias).ok_or_else(|| CryptoTEEError::KeyNotFound(alias.to_string()))
     }
 
     pub fn exists(&self, alias: &str) -> bool {
@@ -89,8 +78,9 @@ mod tests {
                 vendor_handle: VendorKeyHandle {
                     id: format!("test-{}", alias),
                     algorithm: Algorithm::Ed25519,
+                    vendor: "test".to_string(),
                     hardware_backed: false,
-                    attestation: None,
+                    vendor_data: None,
                 },
                 platform: "test".to_string(),
                 requires_auth: false,
@@ -112,22 +102,22 @@ mod tests {
     #[test]
     fn test_key_manager_operations() {
         let mut manager = KeyManager::new();
-        
+
         // Add key
         let handle = create_test_handle("test-key");
         manager.add_key("test-key", handle).unwrap();
         assert!(manager.exists("test-key"));
         assert_eq!(manager.count(), 1);
-        
+
         // Get key
         let retrieved = manager.get_key("test-key").unwrap();
         assert_eq!(retrieved.alias, "test-key");
-        
+
         // List keys
         let keys = manager.list_keys();
         assert_eq!(keys.len(), 1);
         assert_eq!(keys[0].alias, "test-key");
-        
+
         // Remove key
         let removed = manager.remove_key("test-key").unwrap();
         assert_eq!(removed.alias, "test-key");
@@ -138,15 +128,15 @@ mod tests {
     #[test]
     fn test_key_manager_errors() {
         let mut manager = KeyManager::new();
-        
+
         // Get non-existent key
         assert!(manager.get_key("missing").is_err());
-        
+
         // Add duplicate key
         let handle = create_test_handle("test-key");
         manager.add_key("test-key", handle.clone()).unwrap();
         assert!(manager.add_key("test-key", handle).is_err());
-        
+
         // Remove non-existent key
         assert!(manager.remove_key("missing").is_err());
     }

@@ -4,8 +4,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use crypto_tee_platform::{load_platform, PlatformConfig, PlatformTEE};
-use crypto_tee_vendor::VendorTEE;
 use crypto_tee_vendor::types::Signature;
+use crypto_tee_vendor::VendorTEE;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
 
@@ -96,8 +96,10 @@ impl CryptoTEE for CryptoTEEImpl {
     async fn list_capabilities(&self) -> CryptoTEEResult<Vec<String>> {
         let vendor = self.vendor.read().await;
         let caps = vendor.probe().await?;
-        
+
         let mut capabilities = vec![
+            format!("vendor: {}", caps.name),
+            format!("version: {}", caps.version),
             format!("max_keys: {}", caps.max_keys),
         ];
 
@@ -157,10 +159,7 @@ impl CryptoTEE for CryptoTEEImpl {
         };
 
         // Store in key manager
-        self.key_manager
-            .write()
-            .await
-            .add_key(alias, key_handle.clone())?;
+        self.key_manager.write().await.add_key(alias, key_handle.clone())?;
 
         Ok(key_handle)
     }
@@ -207,10 +206,7 @@ impl CryptoTEE for CryptoTEEImpl {
             },
         };
 
-        self.key_manager
-            .write()
-            .await
-            .add_key(alias, key_handle.clone())?;
+        self.key_manager.write().await.add_key(alias, key_handle.clone())?;
 
         Ok(key_handle)
     }
@@ -223,9 +219,7 @@ impl CryptoTEE for CryptoTEEImpl {
 
         // Delete from vendor
         let vendor = self.vendor.read().await;
-        vendor
-            .delete_key(&key_handle.platform_handle.vendor_handle)
-            .await?;
+        vendor.delete_key(&key_handle.platform_handle.vendor_handle).await?;
 
         // Remove from key manager
         key_manager.remove_key(alias)?;
@@ -250,9 +244,7 @@ impl CryptoTEE for CryptoTEEImpl {
 
         // Sign through vendor
         let vendor = self.vendor.read().await;
-        let signature = vendor
-            .sign(&key_handle.platform_handle.vendor_handle, data)
-            .await?;
+        let signature = vendor.sign(&key_handle.platform_handle.vendor_handle, data).await?;
 
         Ok(signature.into_bytes())
     }
@@ -270,14 +262,9 @@ impl CryptoTEE for CryptoTEEImpl {
         let key_handle = key_manager.get_key(alias)?;
 
         let vendor = self.vendor.read().await;
-        let sig = Signature {
-            algorithm: key_handle.metadata.algorithm,
-            data: signature.to_vec(),
-        };
+        let sig = Signature { algorithm: key_handle.metadata.algorithm, data: signature.to_vec() };
 
-        let result = vendor
-            .verify(&key_handle.platform_handle.vendor_handle, data, &sig)
-            .await?;
+        let result = vendor.verify(&key_handle.platform_handle.vendor_handle, data, &sig).await?;
 
         Ok(result)
     }
@@ -309,10 +296,7 @@ pub struct CryptoTEEBuilder {
 
 impl CryptoTEEBuilder {
     pub fn new() -> Self {
-        Self {
-            platform_config: None,
-            vendor_name: None,
-        }
+        Self { platform_config: None, vendor_name: None }
     }
 
     pub fn with_platform_config(mut self, config: PlatformConfig) -> Self {

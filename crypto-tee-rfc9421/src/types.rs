@@ -1,8 +1,8 @@
 //! RFC 9421 types and data structures
 
-use std::collections::HashMap;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// HTTP signature algorithm as defined in RFC 9421
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -193,8 +193,8 @@ pub fn map_algorithm(algo: crypto_tee_vendor::types::Algorithm) -> Option<Signat
         crypto_tee_vendor::types::Algorithm::EcdsaP256 => Some(SignatureAlgorithm::EcdsaP256Sha256),
         crypto_tee_vendor::types::Algorithm::EcdsaP384 => Some(SignatureAlgorithm::EcdsaP384Sha384),
         crypto_tee_vendor::types::Algorithm::Ed25519 => Some(SignatureAlgorithm::Ed25519),
-        crypto_tee_vendor::types::Algorithm::Rsa2048 
-        | crypto_tee_vendor::types::Algorithm::Rsa3072 
+        crypto_tee_vendor::types::Algorithm::Rsa2048
+        | crypto_tee_vendor::types::Algorithm::Rsa3072
         | crypto_tee_vendor::types::Algorithm::Rsa4096 => Some(SignatureAlgorithm::RsaPssSha256),
         _ => None,
     }

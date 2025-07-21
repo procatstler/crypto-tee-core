@@ -1,5 +1,5 @@
 //! Apple Secure Enclave Implementation
-//! 
+//!
 //! This module provides the actual implementation for Apple Secure Enclave,
 //! integrating with iOS/macOS Security Framework and CryptoKit.
 
@@ -31,11 +31,11 @@ pub fn get_apple_tee() -> VendorResult<Box<dyn VendorTEE>> {
             Ok(Box::new(secure_enclave::AppleSecureEnclave::new()?))
         } else {
             Err(crate::error::VendorError::NotSupported(
-                "Secure Enclave is not available on this device".to_string()
+                "Secure Enclave is not available on this device".to_string(),
             ))
         }
     }
-    
+
     #[cfg(not(any(target_os = "ios", target_os = "macos")))]
     {
         // Return stub implementation for non-Apple platforms
@@ -44,45 +44,45 @@ pub fn get_apple_tee() -> VendorResult<Box<dyn VendorTEE>> {
 }
 
 /// Apple Secure Enclave specific parameters
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct SecureEnclaveParams {
     /// Use Secure Enclave for key operations
     pub use_secure_enclave: bool,
-    
+
     /// Require Touch ID or Face ID for key usage
     pub require_biometric: bool,
-    
+
     /// Require device passcode for key usage
     pub require_passcode: bool,
-    
+
     /// Access control flags
     pub access_control: Option<AccessControl>,
-    
+
     /// Keychain access group
     pub access_group: Option<String>,
-    
+
     /// Key label in keychain
     pub label: Option<String>,
-    
+
     /// Application tag for the key
     pub application_tag: Option<Vec<u8>>,
 }
 
 /// Access control options for Secure Enclave keys
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct AccessControl {
     /// Require user presence (any authentication)
     pub user_presence: bool,
-    
+
     /// Require biometric authentication
     pub biometry_any: bool,
-    
+
     /// Require current biometric set
     pub biometry_current_set: bool,
-    
+
     /// Require device passcode
     pub device_passcode: bool,
-    
+
     /// Key usage constraints
     pub constraints: Vec<AccessConstraint>,
 }
@@ -92,13 +92,13 @@ pub struct AccessControl {
 pub enum AccessConstraint {
     /// Key can only be used while device is unlocked
     DeviceUnlocked,
-    
+
     /// Key can only be used after first unlock
     AfterFirstUnlock,
-    
+
     /// Key is always accessible
     Always,
-    
+
     /// Key requires authentication for each use
     UserAuthentication,
 }

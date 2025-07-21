@@ -1,14 +1,14 @@
 //! Stub implementation of Apple Secure Enclave for non-Apple platforms
-//! 
+//!
 //! This provides a placeholder implementation that returns appropriate errors
 //! when Secure Enclave is not available on the platform.
 
-use async_trait::async_trait;
 use crate::{
     error::{VendorError, VendorResult},
     traits::VendorTEE,
     types::*,
 };
+use async_trait::async_trait;
 
 /// Stub implementation for Apple Secure Enclave
 pub struct AppleSecureEnclaveStub;
@@ -29,7 +29,11 @@ impl VendorTEE for AppleSecureEnclaveStub {
         Err(VendorError::NotAvailable)
     }
 
-    async fn import_key(&self, _key_data: &[u8], _params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
+    async fn import_key(
+        &self,
+        _key_data: &[u8],
+        _params: &KeyGenParams,
+    ) -> VendorResult<VendorKeyHandle> {
         Err(VendorError::NotAvailable)
     }
 

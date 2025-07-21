@@ -35,31 +35,31 @@ pub enum VendorError {
 
     #[error("Internal vendor error: {0}")]
     InternalError(String),
-    
+
     #[error("Key generation failed: {0}")]
     KeyGeneration(String),
-    
+
     #[error("Signing operation failed: {0}")]
     SigningError(String),
-    
+
     #[error("Key corrupted: {0}")]
     KeyCorrupted(String),
-    
+
     #[error("Authentication failed: {0}")]
     AuthenticationFailed(String),
-    
+
     #[error("Permission denied: {0}")]
     PermissionDenied(String),
-    
+
     #[error("Configuration error: {0}")]
     ConfigurationError(String),
-    
+
     #[error("Not initialized: {0}")]
     NotInitialized(String),
-    
+
     #[error("Security violation: {0}")]
     SecurityViolation(String),
-    
+
     #[error("Attestation failed: {0}")]
     AttestationFailed(String),
 

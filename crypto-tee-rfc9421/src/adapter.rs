@@ -1,9 +1,9 @@
 //! RFC 9421 adapter implementation
 
-use std::sync::Arc;
-use crypto_tee::{CryptoTEE, CryptoTEEBuilder};
-use tracing::{debug, info};
 use base64::prelude::*;
+use crypto_tee::{CryptoTEE, CryptoTEEBuilder};
+use std::sync::Arc;
+use tracing::{debug, info};
 
 use crate::{
     error::{Rfc9421Error, Rfc9421Result},
@@ -18,14 +18,10 @@ pub struct Rfc9421Adapter {
 impl Rfc9421Adapter {
     /// Create a new RFC 9421 adapter
     pub async fn new() -> Rfc9421Result<Self> {
-        let crypto_tee = CryptoTEEBuilder::new()
-            .build()
-            .await
-            .map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
-        
-        Ok(Self {
-            crypto_tee: Arc::new(crypto_tee),
-        })
+        let crypto_tee =
+            CryptoTEEBuilder::new().build().await.map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
+
+        Ok(Self { crypto_tee: Arc::new(crypto_tee) })
     }
 
     /// Create adapter with existing CryptoTEE instance
@@ -46,7 +42,8 @@ impl Rfc9421Adapter {
         debug!("Signature base generated ({} bytes)", signature_base.len());
 
         // Sign with CryptoTEE
-        let signature_bytes = self.crypto_tee
+        let signature_bytes = self
+            .crypto_tee
             .sign(&params.key_id, signature_base.as_bytes(), None)
             .await
             .map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
@@ -54,11 +51,7 @@ impl Rfc9421Adapter {
         // Encode signature
         let signature = base64::prelude::BASE64_STANDARD.encode(&signature_bytes);
 
-        Ok(SignatureOutput {
-            signature,
-            signature_input: signature_base,
-            params,
-        })
+        Ok(SignatureOutput { signature, signature_input: signature_base, params })
     }
 
     /// Verify an HTTP message signature
@@ -74,11 +67,13 @@ impl Rfc9421Adapter {
         let signature_base = self.build_signature_base(message, params)?;
 
         // Decode signature
-        let signature_bytes = base64::prelude::BASE64_STANDARD.decode(signature)
+        let signature_bytes = base64::prelude::BASE64_STANDARD
+            .decode(signature)
             .map_err(|e| Rfc9421Error::InvalidParameters(format!("Invalid base64: {}", e)))?;
 
         // Verify with CryptoTEE
-        let valid = self.crypto_tee
+        let valid = self
+            .crypto_tee
             .verify(&params.key_id, signature_base.as_bytes(), &signature_bytes, None)
             .await
             .map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
@@ -101,7 +96,8 @@ impl Rfc9421Adapter {
         info!("Using sage-core for RFC 9421 signing");
 
         // Get key info from CryptoTEE
-        let _key_info = self.crypto_tee
+        let _key_info = self
+            .crypto_tee
             .get_key_info(&params.key_id)
             .await
             .map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
@@ -156,45 +152,57 @@ impl Rfc9421Adapter {
     ) -> Rfc9421Result<String> {
         match component {
             SignatureComponent::Method => {
-                let method = message.method.as_ref()
+                let method = message
+                    .method
+                    .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing method".to_string()))?;
                 Ok(format!("\"@method\": {}", method.to_uppercase()))
-            },
+            }
             SignatureComponent::TargetUri => {
-                let uri = message.uri.as_ref()
+                let uri = message
+                    .uri
+                    .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing URI".to_string()))?;
                 Ok(format!("\"@target-uri\": {}", uri))
-            },
+            }
             SignatureComponent::Authority => {
-                let uri = message.uri.as_ref()
+                let uri = message
+                    .uri
+                    .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing URI".to_string()))?;
                 let url = url::Url::parse(uri)
                     .map_err(|e| Rfc9421Error::InvalidMessage(format!("Invalid URI: {}", e)))?;
-                let authority = url.host_str()
+                let authority = url
+                    .host_str()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing host".to_string()))?;
                 Ok(format!("\"@authority\": {}", authority))
-            },
+            }
             SignatureComponent::Path => {
-                let uri = message.uri.as_ref()
+                let uri = message
+                    .uri
+                    .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing URI".to_string()))?;
                 let url = url::Url::parse(uri)
                     .map_err(|e| Rfc9421Error::InvalidMessage(format!("Invalid URI: {}", e)))?;
                 Ok(format!("\"@path\": {}", url.path()))
-            },
+            }
             SignatureComponent::Status => {
-                let status = message.status
+                let status = message
+                    .status
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing status".to_string()))?;
                 Ok(format!("\"@status\": {}", status))
-            },
+            }
             SignatureComponent::Header(name) => {
-                let values = message.headers.get(name)
-                    .ok_or_else(|| Rfc9421Error::InvalidMessage(format!("Missing header: {}", name)))?;
+                let values = message.headers.get(name).ok_or_else(|| {
+                    Rfc9421Error::InvalidMessage(format!("Missing header: {}", name))
+                })?;
                 let value = values.join(", ");
                 Ok(format!("\"{}\": {}", name.to_lowercase(), value))
-            },
-            _ => Err(Rfc9421Error::InvalidParameters(
-                format!("Component {:?} not implemented", component)
-            )),
+            }
+            _ => Err(Rfc9421Error::InvalidParameters(format!(
+                "Component {:?} not implemented",
+                component
+            ))),
         }
     }
 
@@ -203,7 +211,9 @@ impl Rfc9421Adapter {
         let mut parts = Vec::new();
 
         // Covered components
-        let components: Vec<String> = params.covered_components.iter()
+        let components: Vec<String> = params
+            .covered_components
+            .iter()
             .map(|c| match c {
                 SignatureComponent::Method => "\"@method\"".to_string(),
                 SignatureComponent::TargetUri => "\"@target-uri\"".to_string(),
@@ -261,15 +271,13 @@ mod tests {
             body: None,
         };
 
-        let params = SignatureInputBuilder::new(
-            "test-key".to_string(),
-            SignatureAlgorithm::Ed25519,
-        )
-        .add_component(SignatureComponent::Method)
-        .add_component(SignatureComponent::Path)
-        .add_component(SignatureComponent::Header("content-type".to_string()))
-        .created(Utc::now())
-        .build();
+        let params =
+            SignatureInputBuilder::new("test-key".to_string(), SignatureAlgorithm::Ed25519)
+                .add_component(SignatureComponent::Method)
+                .add_component(SignatureComponent::Path)
+                .add_component(SignatureComponent::Header("content-type".to_string()))
+                .created(Utc::now())
+                .build();
 
         // This test would need a mock CryptoTEE implementation
         // For now, we're just testing that the code compiles

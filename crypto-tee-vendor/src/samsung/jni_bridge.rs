@@ -1,8 +1,9 @@
 //! JNI Bridge for Samsung Knox SDK
-//! 
+//!
 //! This module provides the JNI interface to communicate with Samsung Knox SDK
 //! Java APIs from Rust code.
 
+use crate::error::{VendorError, VendorResult};
 use jni::{
     objects::{JClass, JObject, JString, JValue},
     sys::{jboolean, jbyteArray, jint, jobject},
@@ -10,7 +11,6 @@ use jni::{
 };
 use std::sync::{Arc, Mutex};
 use subtle::ConstantTimeEq;
-use crate::error::{VendorError, VendorResult};
 
 /// JNI context for Knox operations
 pub struct KnoxJniContext {
@@ -39,40 +39,45 @@ impl KnoxJniContext {
     /// Initialize Knox SDK classes
     pub fn initialize(&self, env: &JNIEnv, context: JObject) -> VendorResult<()> {
         // Load Knox SDK classes
-        let knox_crypto_class = env.find_class("com/samsung/android/knox/keystore/KnoxKeyGenParameterSpec")
-            .map_err(|e| VendorError::InitializationError(format!("Failed to find Knox class: {}", e)))?;
-        
+        let knox_crypto_class =
+            env.find_class("com/samsung/android/knox/keystore/KnoxKeyGenParameterSpec").map_err(
+                |e| VendorError::InitializationError(format!("Failed to find Knox class: {}", e)),
+            )?;
+
         // Store references
-        let knox_crypto_class = env.new_global_ref(knox_crypto_class)
-            .map_err(|e| VendorError::InitializationError(format!("Failed to create global ref: {}", e)))?;
-        
-        let context = env.new_global_ref(context)
-            .map_err(|e| VendorError::InitializationError(format!("Failed to create context ref: {}", e)))?;
-        
+        let knox_crypto_class = env.new_global_ref(knox_crypto_class).map_err(|e| {
+            VendorError::InitializationError(format!("Failed to create global ref: {}", e))
+        })?;
+
+        let context = env.new_global_ref(context).map_err(|e| {
+            VendorError::InitializationError(format!("Failed to create context ref: {}", e))
+        })?;
+
         *self.knox_crypto_class.lock().unwrap() = Some(knox_crypto_class.as_obj().into());
         *self.context.lock().unwrap() = Some(context.as_obj());
-        
+
         Ok(())
     }
 
     /// Check if Knox is available
     pub fn is_knox_available(&self, env: &JNIEnv) -> VendorResult<bool> {
-        let knox_version_class = env.find_class("com/samsung/android/knox/EnterpriseDeviceManager")
+        let knox_version_class = env
+            .find_class("com/samsung/android/knox/EnterpriseDeviceManager")
             .map_err(|_| VendorError::NotAvailable)?;
-        
-        let version_method = env.get_static_method_id(
-            knox_version_class,
-            "getAPILevel",
-            "()I"
-        ).map_err(|_| VendorError::NotAvailable)?;
-        
-        let api_level = env.call_static_method_unchecked(
-            knox_version_class,
-            version_method,
-            &[],
-            jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int)
-        ).map_err(|_| VendorError::NotAvailable)?;
-        
+
+        let version_method = env
+            .get_static_method_id(knox_version_class, "getAPILevel", "()I")
+            .map_err(|_| VendorError::NotAvailable)?;
+
+        let api_level = env
+            .call_static_method_unchecked(
+                knox_version_class,
+                version_method,
+                &[],
+                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
+            )
+            .map_err(|_| VendorError::NotAvailable)?;
+
         match api_level {
             JValue::Int(level) => Ok(level >= 30), // Knox 3.0 or higher
             _ => Ok(false),
@@ -88,278 +93,317 @@ impl KnoxJniContext {
         key_size: i32,
         use_knox_vault: bool,
     ) -> VendorResult<()> {
-        let alias_jstring = env.new_string(alias)
+        let alias_jstring = env
+            .new_string(alias)
             .map_err(|e| VendorError::KeyGeneration(format!("Failed to create string: {}", e)))?;
-        
+
         // Create KnoxKeyGenParameterSpec.Builder
-        let builder_class = env.find_class("com/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder")
-            .map_err(|e| VendorError::KeyGeneration(format!("Failed to find Builder class: {}", e)))?;
-        
-        let builder_constructor = env.get_method_id(
-            builder_class,
-            "<init>",
-            "(Ljava/lang/String;I)V"
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find constructor: {}", e)))?;
-        
+        let builder_class = env
+            .find_class("com/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder")
+            .map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to find Builder class: {}", e))
+            })?;
+
+        let builder_constructor =
+            env.get_method_id(builder_class, "<init>", "(Ljava/lang/String;I)V").map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to find constructor: {}", e))
+            })?;
+
         let purposes = 12; // Sign | Verify
-        let builder = env.new_object_unchecked(
-            builder_class,
-            builder_constructor,
-            &[
-                JValue::Object(alias_jstring.into()),
-                JValue::Int(purposes),
-            ]
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to create builder: {}", e)))?;
-        
+        let builder = env
+            .new_object_unchecked(
+                builder_class,
+                builder_constructor,
+                &[JValue::Object(alias_jstring.into()), JValue::Int(purposes)],
+            )
+            .map_err(|e| VendorError::KeyGeneration(format!("Failed to create builder: {}", e)))?;
+
         // Set key algorithm
         let set_algorithm_method = env.get_method_id(
             builder_class,
             "setKeyAlgorithm",
             "(Ljava/lang/String;)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;"
         ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find setKeyAlgorithm: {}", e)))?;
-        
-        let algorithm_jstring = env.new_string(algorithm)
-            .map_err(|e| VendorError::KeyGeneration(format!("Failed to create algorithm string: {}", e)))?;
-        
+
+        let algorithm_jstring = env.new_string(algorithm).map_err(|e| {
+            VendorError::KeyGeneration(format!("Failed to create algorithm string: {}", e))
+        })?;
+
         env.call_method_unchecked(
             builder,
             set_algorithm_method,
             jni::signature::ReturnType::Object,
-            &[JValue::Object(algorithm_jstring.into())]
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to set algorithm: {}", e)))?;
-        
+            &[JValue::Object(algorithm_jstring.into())],
+        )
+        .map_err(|e| VendorError::KeyGeneration(format!("Failed to set algorithm: {}", e)))?;
+
         // Set key size
-        let set_key_size_method = env.get_method_id(
-            builder_class,
-            "setKeySize",
-            "(I)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;"
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find setKeySize: {}", e)))?;
-        
+        let set_key_size_method = env
+            .get_method_id(
+                builder_class,
+                "setKeySize",
+                "(I)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
+            )
+            .map_err(|e| VendorError::KeyGeneration(format!("Failed to find setKeySize: {}", e)))?;
+
         env.call_method_unchecked(
             builder,
             set_key_size_method,
             jni::signature::ReturnType::Object,
-            &[JValue::Int(key_size)]
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to set key size: {}", e)))?;
-        
+            &[JValue::Int(key_size)],
+        )
+        .map_err(|e| VendorError::KeyGeneration(format!("Failed to set key size: {}", e)))?;
+
         // Set Knox Vault if requested
         if use_knox_vault {
-            let set_knox_vault_method = env.get_method_id(
-                builder_class,
-                "setUseKnoxVault",
-                "(Z)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;"
-            ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find setUseKnoxVault: {}", e)))?;
-            
+            let set_knox_vault_method = env
+                .get_method_id(
+                    builder_class,
+                    "setUseKnoxVault",
+                    "(Z)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
+                )
+                .map_err(|e| {
+                    VendorError::KeyGeneration(format!("Failed to find setUseKnoxVault: {}", e))
+                })?;
+
             env.call_method_unchecked(
                 builder,
                 set_knox_vault_method,
                 jni::signature::ReturnType::Object,
-                &[JValue::Bool(1)]
-            ).map_err(|e| VendorError::KeyGeneration(format!("Failed to set Knox Vault: {}", e)))?;
+                &[JValue::Bool(1)],
+            )
+            .map_err(|e| VendorError::KeyGeneration(format!("Failed to set Knox Vault: {}", e)))?;
         }
-        
+
         // Build spec
-        let build_method = env.get_method_id(
-            builder_class,
-            "build",
-            "()Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec;"
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find build method: {}", e)))?;
-        
-        let spec = env.call_method_unchecked(
-            builder,
-            build_method,
-            jni::signature::ReturnType::Object,
-            &[]
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to build spec: {}", e)))?;
-        
+        let build_method = env
+            .get_method_id(
+                builder_class,
+                "build",
+                "()Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec;",
+            )
+            .map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to find build method: {}", e))
+            })?;
+
+        let spec = env
+            .call_method_unchecked(builder, build_method, jni::signature::ReturnType::Object, &[])
+            .map_err(|e| VendorError::KeyGeneration(format!("Failed to build spec: {}", e)))?;
+
         // Generate key using KeyGenerator
-        let key_generator_class = env.find_class("javax/crypto/KeyGenerator")
-            .map_err(|e| VendorError::KeyGeneration(format!("Failed to find KeyGenerator: {}", e)))?;
-        
-        let get_instance_method = env.get_static_method_id(
-            key_generator_class,
-            "getInstance",
-            "(Ljava/lang/String;Ljava/lang/String;)Ljavax/crypto/KeyGenerator;"
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find getInstance: {}", e)))?;
-        
-        let provider_jstring = env.new_string("AndroidKeyStore")
-            .map_err(|e| VendorError::KeyGeneration(format!("Failed to create provider string: {}", e)))?;
-        
-        let key_generator = env.call_static_method_unchecked(
-            key_generator_class,
-            get_instance_method,
-            &[
-                JValue::Object(algorithm_jstring.into()),
-                JValue::Object(provider_jstring.into()),
-            ],
-            jni::signature::ReturnType::Object
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to get KeyGenerator instance: {}", e)))?;
-        
+        let key_generator_class = env.find_class("javax/crypto/KeyGenerator").map_err(|e| {
+            VendorError::KeyGeneration(format!("Failed to find KeyGenerator: {}", e))
+        })?;
+
+        let get_instance_method = env
+            .get_static_method_id(
+                key_generator_class,
+                "getInstance",
+                "(Ljava/lang/String;Ljava/lang/String;)Ljavax/crypto/KeyGenerator;",
+            )
+            .map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to find getInstance: {}", e))
+            })?;
+
+        let provider_jstring = env.new_string("AndroidKeyStore").map_err(|e| {
+            VendorError::KeyGeneration(format!("Failed to create provider string: {}", e))
+        })?;
+
+        let key_generator = env
+            .call_static_method_unchecked(
+                key_generator_class,
+                get_instance_method,
+                &[
+                    JValue::Object(algorithm_jstring.into()),
+                    JValue::Object(provider_jstring.into()),
+                ],
+                jni::signature::ReturnType::Object,
+            )
+            .map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to get KeyGenerator instance: {}", e))
+            })?;
+
         // Initialize and generate key
-        let init_method = env.get_method_id(
-            key_generator_class,
-            "init",
-            "(Ljava/security/spec/AlgorithmParameterSpec;)V"
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find init method: {}", e)))?;
-        
+        let init_method = env
+            .get_method_id(
+                key_generator_class,
+                "init",
+                "(Ljava/security/spec/AlgorithmParameterSpec;)V",
+            )
+            .map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to find init method: {}", e))
+            })?;
+
         if let JValue::Object(spec_obj) = spec {
             env.call_method_unchecked(
                 key_generator.l().unwrap(),
                 init_method,
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                &[JValue::Object(spec_obj)]
-            ).map_err(|e| VendorError::KeyGeneration(format!("Failed to init key generator: {}", e)))?;
+                &[JValue::Object(spec_obj)],
+            )
+            .map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to init key generator: {}", e))
+            })?;
         }
-        
-        let generate_key_method = env.get_method_id(
-            key_generator_class,
-            "generateKey",
-            "()Ljavax/crypto/SecretKey;"
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find generateKey: {}", e)))?;
-        
+
+        let generate_key_method = env
+            .get_method_id(key_generator_class, "generateKey", "()Ljavax/crypto/SecretKey;")
+            .map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to find generateKey: {}", e))
+            })?;
+
         env.call_method_unchecked(
             key_generator.l().unwrap(),
             generate_key_method,
             jni::signature::ReturnType::Object,
-            &[]
-        ).map_err(|e| VendorError::KeyGeneration(format!("Failed to generate key: {}", e)))?;
-        
+            &[],
+        )
+        .map_err(|e| VendorError::KeyGeneration(format!("Failed to generate key: {}", e)))?;
+
         Ok(())
     }
 
     /// Sign data using Knox key
-    pub fn sign_data(
-        &self,
-        env: &JNIEnv,
-        alias: &str,
-        data: &[u8],
-    ) -> VendorResult<Vec<u8>> {
+    pub fn sign_data(&self, env: &JNIEnv, alias: &str, data: &[u8]) -> VendorResult<Vec<u8>> {
         // Load key from Android KeyStore
-        let keystore_class = env.find_class("java/security/KeyStore")
+        let keystore_class = env
+            .find_class("java/security/KeyStore")
             .map_err(|e| VendorError::SigningError(format!("Failed to find KeyStore: {}", e)))?;
-        
-        let get_instance_method = env.get_static_method_id(
-            keystore_class,
-            "getInstance",
-            "(Ljava/lang/String;)Ljava/security/KeyStore;"
-        ).map_err(|e| VendorError::SigningError(format!("Failed to find getInstance: {}", e)))?;
-        
-        let provider_jstring = env.new_string("AndroidKeyStore")
-            .map_err(|e| VendorError::SigningError(format!("Failed to create provider string: {}", e)))?;
-        
-        let keystore = env.call_static_method_unchecked(
-            keystore_class,
-            get_instance_method,
-            &[JValue::Object(provider_jstring.into())],
-            jni::signature::ReturnType::Object
-        ).map_err(|e| VendorError::SigningError(format!("Failed to get KeyStore instance: {}", e)))?;
-        
+
+        let get_instance_method = env
+            .get_static_method_id(
+                keystore_class,
+                "getInstance",
+                "(Ljava/lang/String;)Ljava/security/KeyStore;",
+            )
+            .map_err(|e| VendorError::SigningError(format!("Failed to find getInstance: {}", e)))?;
+
+        let provider_jstring = env.new_string("AndroidKeyStore").map_err(|e| {
+            VendorError::SigningError(format!("Failed to create provider string: {}", e))
+        })?;
+
+        let keystore = env
+            .call_static_method_unchecked(
+                keystore_class,
+                get_instance_method,
+                &[JValue::Object(provider_jstring.into())],
+                jni::signature::ReturnType::Object,
+            )
+            .map_err(|e| {
+                VendorError::SigningError(format!("Failed to get KeyStore instance: {}", e))
+            })?;
+
         // Load keystore
-        let load_method = env.get_method_id(
-            keystore_class,
-            "load",
-            "(Ljava/security/KeyStore$LoadStoreParameter;)V"
-        ).map_err(|e| VendorError::SigningError(format!("Failed to find load method: {}", e)))?;
-        
+        let load_method = env
+            .get_method_id(keystore_class, "load", "(Ljava/security/KeyStore$LoadStoreParameter;)V")
+            .map_err(|e| VendorError::SigningError(format!("Failed to find load method: {}", e)))?;
+
         env.call_method_unchecked(
             keystore.l().unwrap(),
             load_method,
             jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-            &[JValue::Object(JObject::null())]
-        ).map_err(|e| VendorError::SigningError(format!("Failed to load keystore: {}", e)))?;
-        
+            &[JValue::Object(JObject::null())],
+        )
+        .map_err(|e| VendorError::SigningError(format!("Failed to load keystore: {}", e)))?;
+
         // Get key
-        let get_key_method = env.get_method_id(
-            keystore_class,
-            "getKey",
-            "(Ljava/lang/String;[C)Ljava/security/Key;"
-        ).map_err(|e| VendorError::SigningError(format!("Failed to find getKey: {}", e)))?;
-        
-        let alias_jstring = env.new_string(alias)
-            .map_err(|e| VendorError::SigningError(format!("Failed to create alias string: {}", e)))?;
-        
-        let key = env.call_method_unchecked(
-            keystore.l().unwrap(),
-            get_key_method,
-            jni::signature::ReturnType::Object,
-            &[
-                JValue::Object(alias_jstring.into()),
-                JValue::Object(JObject::null())
-            ]
-        ).map_err(|e| VendorError::SigningError(format!("Failed to get key: {}", e)))?;
-        
+        let get_key_method = env
+            .get_method_id(keystore_class, "getKey", "(Ljava/lang/String;[C)Ljava/security/Key;")
+            .map_err(|e| VendorError::SigningError(format!("Failed to find getKey: {}", e)))?;
+
+        let alias_jstring = env.new_string(alias).map_err(|e| {
+            VendorError::SigningError(format!("Failed to create alias string: {}", e))
+        })?;
+
+        let key = env
+            .call_method_unchecked(
+                keystore.l().unwrap(),
+                get_key_method,
+                jni::signature::ReturnType::Object,
+                &[JValue::Object(alias_jstring.into()), JValue::Object(JObject::null())],
+            )
+            .map_err(|e| VendorError::SigningError(format!("Failed to get key: {}", e)))?;
+
         // Create signature object
-        let signature_class = env.find_class("java/security/Signature")
-            .map_err(|e| VendorError::SigningError(format!("Failed to find Signature class: {}", e)))?;
-        
-        let get_signature_method = env.get_static_method_id(
-            signature_class,
-            "getInstance",
-            "(Ljava/lang/String;)Ljava/security/Signature;"
-        ).map_err(|e| VendorError::SigningError(format!("Failed to find getInstance: {}", e)))?;
-        
-        let algorithm_jstring = env.new_string("SHA256withECDSA")
-            .map_err(|e| VendorError::SigningError(format!("Failed to create algorithm string: {}", e)))?;
-        
-        let signature = env.call_static_method_unchecked(
-            signature_class,
-            get_signature_method,
-            &[JValue::Object(algorithm_jstring.into())],
-            jni::signature::ReturnType::Object
-        ).map_err(|e| VendorError::SigningError(format!("Failed to get Signature instance: {}", e)))?;
-        
+        let signature_class = env.find_class("java/security/Signature").map_err(|e| {
+            VendorError::SigningError(format!("Failed to find Signature class: {}", e))
+        })?;
+
+        let get_signature_method = env
+            .get_static_method_id(
+                signature_class,
+                "getInstance",
+                "(Ljava/lang/String;)Ljava/security/Signature;",
+            )
+            .map_err(|e| VendorError::SigningError(format!("Failed to find getInstance: {}", e)))?;
+
+        let algorithm_jstring = env.new_string("SHA256withECDSA").map_err(|e| {
+            VendorError::SigningError(format!("Failed to create algorithm string: {}", e))
+        })?;
+
+        let signature = env
+            .call_static_method_unchecked(
+                signature_class,
+                get_signature_method,
+                &[JValue::Object(algorithm_jstring.into())],
+                jni::signature::ReturnType::Object,
+            )
+            .map_err(|e| {
+                VendorError::SigningError(format!("Failed to get Signature instance: {}", e))
+            })?;
+
         // Initialize for signing
-        let init_sign_method = env.get_method_id(
-            signature_class,
-            "initSign",
-            "(Ljava/security/PrivateKey;)V"
-        ).map_err(|e| VendorError::SigningError(format!("Failed to find initSign: {}", e)))?;
-        
+        let init_sign_method = env
+            .get_method_id(signature_class, "initSign", "(Ljava/security/PrivateKey;)V")
+            .map_err(|e| VendorError::SigningError(format!("Failed to find initSign: {}", e)))?;
+
         if let JValue::Object(key_obj) = key {
             env.call_method_unchecked(
                 signature.l().unwrap(),
                 init_sign_method,
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                &[JValue::Object(key_obj)]
-            ).map_err(|e| VendorError::SigningError(format!("Failed to init signing: {}", e)))?;
+                &[JValue::Object(key_obj)],
+            )
+            .map_err(|e| VendorError::SigningError(format!("Failed to init signing: {}", e)))?;
         }
-        
+
         // Update with data
-        let update_method = env.get_method_id(
-            signature_class,
-            "update",
-            "([B)V"
-        ).map_err(|e| VendorError::SigningError(format!("Failed to find update: {}", e)))?;
-        
-        let data_array = env.byte_array_from_slice(data)
-            .map_err(|e| VendorError::SigningError(format!("Failed to create byte array: {}", e)))?;
-        
+        let update_method = env
+            .get_method_id(signature_class, "update", "([B)V")
+            .map_err(|e| VendorError::SigningError(format!("Failed to find update: {}", e)))?;
+
+        let data_array = env.byte_array_from_slice(data).map_err(|e| {
+            VendorError::SigningError(format!("Failed to create byte array: {}", e))
+        })?;
+
         env.call_method_unchecked(
             signature.l().unwrap(),
             update_method,
             jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-            &[JValue::Object(data_array.into())]
-        ).map_err(|e| VendorError::SigningError(format!("Failed to update signature: {}", e)))?;
-        
+            &[JValue::Object(data_array.into())],
+        )
+        .map_err(|e| VendorError::SigningError(format!("Failed to update signature: {}", e)))?;
+
         // Sign
-        let sign_method = env.get_method_id(
-            signature_class,
-            "sign",
-            "()[B"
-        ).map_err(|e| VendorError::SigningError(format!("Failed to find sign method: {}", e)))?;
-        
-        let signature_result = env.call_method_unchecked(
-            signature.l().unwrap(),
-            sign_method,
-            jni::signature::ReturnType::Array,
-            &[]
-        ).map_err(|e| VendorError::SigningError(format!("Failed to sign: {}", e)))?;
-        
+        let sign_method = env
+            .get_method_id(signature_class, "sign", "()[B")
+            .map_err(|e| VendorError::SigningError(format!("Failed to find sign method: {}", e)))?;
+
+        let signature_result = env
+            .call_method_unchecked(
+                signature.l().unwrap(),
+                sign_method,
+                jni::signature::ReturnType::Array,
+                &[],
+            )
+            .map_err(|e| VendorError::SigningError(format!("Failed to sign: {}", e)))?;
+
         // Convert result to Vec<u8>
         if let JValue::Object(sig_array) = signature_result {
             let sig_array = sig_array.into_inner() as jbyteArray;
-            let sig_vec = env.convert_byte_array(sig_array)
-                .map_err(|e| VendorError::SigningError(format!("Failed to convert signature: {}", e)))?;
+            let sig_vec = env.convert_byte_array(sig_array).map_err(|e| {
+                VendorError::SigningError(format!("Failed to convert signature: {}", e))
+            })?;
             Ok(sig_vec)
         } else {
             Err(VendorError::SigningError("Invalid signature result".to_string()))
@@ -367,100 +411,132 @@ impl KnoxJniContext {
     }
 
     /// Get Knox attestation
-    pub fn get_attestation(
-        &self,
-        env: &JNIEnv,
-        alias: &str,
-    ) -> VendorResult<Vec<Vec<u8>>> {
+    pub fn get_attestation(&self, env: &JNIEnv, alias: &str) -> VendorResult<Vec<Vec<u8>>> {
         // Load key certificate chain
-        let keystore_class = env.find_class("java/security/KeyStore")
-            .map_err(|e| VendorError::AttestationFailed(format!("Failed to find KeyStore: {}", e)))?;
-        
-        let get_instance_method = env.get_static_method_id(
-            keystore_class,
-            "getInstance",
-            "(Ljava/lang/String;)Ljava/security/KeyStore;"
-        ).map_err(|e| VendorError::AttestationFailed(format!("Failed to find getInstance: {}", e)))?;
-        
-        let provider_jstring = env.new_string("AndroidKeyStore")
-            .map_err(|e| VendorError::AttestationFailed(format!("Failed to create provider string: {}", e)))?;
-        
-        let keystore = env.call_static_method_unchecked(
-            keystore_class,
-            get_instance_method,
-            &[JValue::Object(provider_jstring.into())],
-            jni::signature::ReturnType::Object
-        ).map_err(|e| VendorError::AttestationFailed(format!("Failed to get KeyStore instance: {}", e)))?;
-        
+        let keystore_class = env.find_class("java/security/KeyStore").map_err(|e| {
+            VendorError::AttestationFailed(format!("Failed to find KeyStore: {}", e))
+        })?;
+
+        let get_instance_method = env
+            .get_static_method_id(
+                keystore_class,
+                "getInstance",
+                "(Ljava/lang/String;)Ljava/security/KeyStore;",
+            )
+            .map_err(|e| {
+                VendorError::AttestationFailed(format!("Failed to find getInstance: {}", e))
+            })?;
+
+        let provider_jstring = env.new_string("AndroidKeyStore").map_err(|e| {
+            VendorError::AttestationFailed(format!("Failed to create provider string: {}", e))
+        })?;
+
+        let keystore = env
+            .call_static_method_unchecked(
+                keystore_class,
+                get_instance_method,
+                &[JValue::Object(provider_jstring.into())],
+                jni::signature::ReturnType::Object,
+            )
+            .map_err(|e| {
+                VendorError::AttestationFailed(format!("Failed to get KeyStore instance: {}", e))
+            })?;
+
         // Load keystore
-        let load_method = env.get_method_id(
-            keystore_class,
-            "load",
-            "(Ljava/security/KeyStore$LoadStoreParameter;)V"
-        ).map_err(|e| VendorError::AttestationFailed(format!("Failed to find load method: {}", e)))?;
-        
+        let load_method = env
+            .get_method_id(keystore_class, "load", "(Ljava/security/KeyStore$LoadStoreParameter;)V")
+            .map_err(|e| {
+                VendorError::AttestationFailed(format!("Failed to find load method: {}", e))
+            })?;
+
         env.call_method_unchecked(
             keystore.l().unwrap(),
             load_method,
             jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-            &[JValue::Object(JObject::null())]
-        ).map_err(|e| VendorError::AttestationFailed(format!("Failed to load keystore: {}", e)))?;
-        
+            &[JValue::Object(JObject::null())],
+        )
+        .map_err(|e| VendorError::AttestationFailed(format!("Failed to load keystore: {}", e)))?;
+
         // Get certificate chain
-        let get_certificate_chain_method = env.get_method_id(
-            keystore_class,
-            "getCertificateChain",
-            "(Ljava/lang/String;)[Ljava/security/cert/Certificate;"
-        ).map_err(|e| VendorError::AttestationFailed(format!("Failed to find getCertificateChain: {}", e)))?;
-        
-        let alias_jstring = env.new_string(alias)
-            .map_err(|e| VendorError::AttestationFailed(format!("Failed to create alias string: {}", e)))?;
-        
-        let cert_chain = env.call_method_unchecked(
-            keystore.l().unwrap(),
-            get_certificate_chain_method,
-            jni::signature::ReturnType::Array,
-            &[JValue::Object(alias_jstring.into())]
-        ).map_err(|e| VendorError::AttestationFailed(format!("Failed to get certificate chain: {}", e)))?;
-        
+        let get_certificate_chain_method = env
+            .get_method_id(
+                keystore_class,
+                "getCertificateChain",
+                "(Ljava/lang/String;)[Ljava/security/cert/Certificate;",
+            )
+            .map_err(|e| {
+                VendorError::AttestationFailed(format!("Failed to find getCertificateChain: {}", e))
+            })?;
+
+        let alias_jstring = env.new_string(alias).map_err(|e| {
+            VendorError::AttestationFailed(format!("Failed to create alias string: {}", e))
+        })?;
+
+        let cert_chain = env
+            .call_method_unchecked(
+                keystore.l().unwrap(),
+                get_certificate_chain_method,
+                jni::signature::ReturnType::Array,
+                &[JValue::Object(alias_jstring.into())],
+            )
+            .map_err(|e| {
+                VendorError::AttestationFailed(format!("Failed to get certificate chain: {}", e))
+            })?;
+
         // Convert certificate chain to bytes
         let mut cert_bytes = Vec::new();
-        
+
         if let JValue::Object(chain_obj) = cert_chain {
             let chain_array = chain_obj.into_inner() as jobject;
-            let chain_len = env.get_array_length(chain_array)
-                .map_err(|e| VendorError::AttestationFailed(format!("Failed to get array length: {}", e)))?;
-            
+            let chain_len = env.get_array_length(chain_array).map_err(|e| {
+                VendorError::AttestationFailed(format!("Failed to get array length: {}", e))
+            })?;
+
             for i in 0..chain_len {
-                let cert = env.get_object_array_element(chain_array, i)
-                    .map_err(|e| VendorError::AttestationFailed(format!("Failed to get certificate: {}", e)))?;
-                
+                let cert = env.get_object_array_element(chain_array, i).map_err(|e| {
+                    VendorError::AttestationFailed(format!("Failed to get certificate: {}", e))
+                })?;
+
                 // Get encoded certificate
-                let cert_class = env.find_class("java/security/cert/Certificate")
-                    .map_err(|e| VendorError::AttestationFailed(format!("Failed to find Certificate class: {}", e)))?;
-                
-                let get_encoded_method = env.get_method_id(
-                    cert_class,
-                    "getEncoded",
-                    "()[B"
-                ).map_err(|e| VendorError::AttestationFailed(format!("Failed to find getEncoded: {}", e)))?;
-                
-                let encoded_cert = env.call_method_unchecked(
-                    cert,
-                    get_encoded_method,
-                    jni::signature::ReturnType::Array,
-                    &[]
-                ).map_err(|e| VendorError::AttestationFailed(format!("Failed to get encoded certificate: {}", e)))?;
-                
+                let cert_class = env.find_class("java/security/cert/Certificate").map_err(|e| {
+                    VendorError::AttestationFailed(format!(
+                        "Failed to find Certificate class: {}",
+                        e
+                    ))
+                })?;
+
+                let get_encoded_method =
+                    env.get_method_id(cert_class, "getEncoded", "()[B").map_err(|e| {
+                        VendorError::AttestationFailed(format!("Failed to find getEncoded: {}", e))
+                    })?;
+
+                let encoded_cert = env
+                    .call_method_unchecked(
+                        cert,
+                        get_encoded_method,
+                        jni::signature::ReturnType::Array,
+                        &[],
+                    )
+                    .map_err(|e| {
+                        VendorError::AttestationFailed(format!(
+                            "Failed to get encoded certificate: {}",
+                            e
+                        ))
+                    })?;
+
                 if let JValue::Object(cert_bytes_obj) = encoded_cert {
                     let cert_byte_array = cert_bytes_obj.into_inner() as jbyteArray;
-                    let cert_vec = env.convert_byte_array(cert_byte_array)
-                        .map_err(|e| VendorError::AttestationFailed(format!("Failed to convert certificate bytes: {}", e)))?;
+                    let cert_vec = env.convert_byte_array(cert_byte_array).map_err(|e| {
+                        VendorError::AttestationFailed(format!(
+                            "Failed to convert certificate bytes: {}",
+                            e
+                        ))
+                    })?;
                     cert_bytes.push(cert_vec);
                 }
             }
         }
-        
+
         Ok(cert_bytes)
     }
 }

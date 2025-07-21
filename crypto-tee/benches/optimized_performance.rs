@@ -1,19 +1,23 @@
 //! Optimized performance benchmarks for CryptoTEE
-//! 
+//!
 //! This benchmark tests the performance improvements from caching and memory pooling.
 
-use criterion::{criterion_group, criterion_main, Criterion, BenchmarkId};
-use crypto_tee::{CryptoTEEBuilder, CryptoTEE, types::*};
-use crypto_tee_vendor::{types::{Algorithm, KeyUsage}, cache::PerformanceConfig, MockVendor};
-use tokio::runtime::Runtime;
+use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
+use crypto_tee::{types::*, CryptoTEE, CryptoTEEBuilder};
+use crypto_tee_vendor::{
+    cache::PerformanceConfig,
+    types::{Algorithm, KeyUsage},
+    MockVendor,
+};
 use std::time::Duration;
+use tokio::runtime::Runtime;
 
 /// Benchmark optimized vs non-optimized verification
 fn bench_optimized_verification(c: &mut Criterion) {
     let rt = Runtime::new().expect("Benchmark operation should succeed");
-    
+
     let mut group = c.benchmark_group("optimized_verification");
-    
+
     // Setup keys for testing
     let setup = rt.block_on(async {
         // Create optimized mock vendor
@@ -26,7 +30,7 @@ fn bench_optimized_verification(c: &mut Criterion) {
             max_cached_handles: 500,
             handle_cache_ttl: Duration::from_secs(600),
         };
-        
+
         // Create non-optimized mock vendor
         let non_optimized_config = PerformanceConfig {
             enable_key_cache: false,
@@ -37,10 +41,10 @@ fn bench_optimized_verification(c: &mut Criterion) {
             max_cached_handles: 0,
             handle_cache_ttl: Duration::from_secs(0),
         };
-        
+
         let optimized_vendor = MockVendor::with_config("optimized", optimized_config);
         let non_optimized_vendor = MockVendor::with_config("non-optimized", non_optimized_config);
-        
+
         // Generate keys and signatures for testing
         let alias = "perf_test_key";
         let algorithm = Algorithm::Ed25519;
@@ -53,49 +57,56 @@ fn bench_optimized_verification(c: &mut Criterion) {
             expires_at: None,
             metadata: None,
         };
-        
-        let key_handle = optimized_vendor.generate_key(&crypto_tee_vendor::types::KeyGenParams {
-            algorithm,
-            hardware_backed: false,
-            exportable: true,
-            usage: KeyUsage::default(),
-            vendor_params: None,
-        }).await.expect("Key generation should succeed");
-        
+
+        let key_handle = optimized_vendor
+            .generate_key(&crypto_tee_vendor::types::KeyGenParams {
+                algorithm,
+                hardware_backed: false,
+                exportable: true,
+                usage: KeyUsage::default(),
+                vendor_params: None,
+            })
+            .await
+            .expect("Key generation should succeed");
+
         let test_data = b"Performance test data for optimized verification benchmark";
-        let signature = optimized_vendor.sign(&key_handle, test_data).await
-            .expect("Signing should succeed");
-        
+        let signature =
+            optimized_vendor.sign(&key_handle, test_data).await.expect("Signing should succeed");
+
         (optimized_vendor, non_optimized_vendor, key_handle, test_data.to_vec(), signature)
     });
-    
+
     let (optimized_vendor, non_optimized_vendor, key_handle, test_data, signature) = setup;
-    
+
     // Benchmark optimized verification
     group.bench_function("optimized", |b| {
         b.to_async(&rt).iter(|| async {
-            optimized_vendor.verify(&key_handle, &test_data, &signature).await
+            optimized_vendor
+                .verify(&key_handle, &test_data, &signature)
+                .await
                 .expect("Verification should succeed")
         });
     });
-    
+
     // Benchmark non-optimized verification
     group.bench_function("non_optimized", |b| {
         b.to_async(&rt).iter(|| async {
-            non_optimized_vendor.verify(&key_handle, &test_data, &signature).await
+            non_optimized_vendor
+                .verify(&key_handle, &test_data, &signature)
+                .await
                 .expect("Verification should succeed")
         });
     });
-    
+
     group.finish();
 }
 
 /// Benchmark memory allocation patterns
 fn bench_memory_patterns(c: &mut Criterion) {
     let rt = Runtime::new().expect("Benchmark operation should succeed");
-    
+
     let mut group = c.benchmark_group("memory_patterns");
-    
+
     // Setup
     let setup = rt.block_on(async {
         let optimized_config = PerformanceConfig {
@@ -103,120 +114,128 @@ fn bench_memory_patterns(c: &mut Criterion) {
             enable_memory_pool: true,
             ..Default::default()
         };
-        
+
         let vendor = MockVendor::with_config("memory-test", optimized_config);
-        
-        let key_handle = vendor.generate_key(&crypto_tee_vendor::types::KeyGenParams {
-            algorithm: Algorithm::Ed25519,
-            hardware_backed: false,
-            exportable: true,
-            usage: KeyUsage::default(),
-            vendor_params: None,
-        }).await.expect("Key generation should succeed");
-        
+
+        let key_handle = vendor
+            .generate_key(&crypto_tee_vendor::types::KeyGenParams {
+                algorithm: Algorithm::Ed25519,
+                hardware_backed: false,
+                exportable: true,
+                usage: KeyUsage::default(),
+                vendor_params: None,
+            })
+            .await
+            .expect("Key generation should succeed");
+
         (vendor, key_handle)
     });
-    
+
     let (vendor, key_handle) = setup;
-    
+
     // Test different data sizes
     let data_sizes = vec![64, 256, 1024, 4096];
-    
+
     for size in data_sizes {
         let test_data = vec![0xAB; size];
-        
+
         group.bench_with_input(
             BenchmarkId::new("sign_with_pooling", size),
             &test_data,
             |b, test_data| {
                 b.to_async(&rt).iter(|| async {
-                    vendor.sign(&key_handle, test_data).await
-                        .expect("Signing should succeed")
+                    vendor.sign(&key_handle, test_data).await.expect("Signing should succeed")
                 });
-            }
+            },
         );
     }
-    
+
     group.finish();
 }
 
 /// Benchmark cache effectiveness
 fn bench_cache_effectiveness(c: &mut Criterion) {
     let rt = Runtime::new().expect("Benchmark operation should succeed");
-    
+
     let mut group = c.benchmark_group("cache_effectiveness");
-    
+
     // Setup
     let setup = rt.block_on(async {
         let vendor = MockVendor::with_config("cache-test", PerformanceConfig::default());
-        
+
         // Generate multiple keys
         let mut keys = Vec::new();
         for i in 0..10 {
-            let key_handle = vendor.generate_key(&crypto_tee_vendor::types::KeyGenParams {
-                algorithm: Algorithm::Ed25519,
-                hardware_backed: false,
-                exportable: true,
-                usage: KeyUsage::default(),
-                vendor_params: None,
-            }).await.expect("Key generation should succeed");
+            let key_handle = vendor
+                .generate_key(&crypto_tee_vendor::types::KeyGenParams {
+                    algorithm: Algorithm::Ed25519,
+                    hardware_backed: false,
+                    exportable: true,
+                    usage: KeyUsage::default(),
+                    vendor_params: None,
+                })
+                .await
+                .expect("Key generation should succeed");
             keys.push(key_handle);
         }
-        
+
         // Pre-populate cache by doing some verifications
         let test_data = b"cache warm-up data";
         for key in &keys {
-            let signature = vendor.sign(key, test_data).await
-                .expect("Signing should succeed");
+            let signature = vendor.sign(key, test_data).await.expect("Signing should succeed");
             let _ = vendor.verify(key, test_data, &signature).await;
         }
-        
+
         (vendor, keys)
     });
-    
+
     let (vendor, keys) = setup;
-    
+
     // Test cache hit performance
     group.bench_function("cache_hits", |b| {
         b.to_async(&rt).iter(|| async {
             let test_data = b"repeated verification test";
-            
+
             for key in &keys {
-                let signature = vendor.sign(key, test_data).await
-                    .expect("Signing should succeed");
-                let _ = vendor.verify(key, test_data, &signature).await
+                let signature = vendor.sign(key, test_data).await.expect("Signing should succeed");
+                let _ = vendor
+                    .verify(key, test_data, &signature)
+                    .await
                     .expect("Verification should succeed");
             }
         });
     });
-    
+
     group.finish();
 }
 
 /// Benchmark concurrent operations with optimizations
 fn bench_optimized_concurrency(c: &mut Criterion) {
     let rt = Runtime::new().expect("Benchmark operation should succeed");
-    
+
     let mut group = c.benchmark_group("optimized_concurrency");
-    
+
     // Setup
     let setup = rt.block_on(async {
         let vendor = MockVendor::with_config("concurrent-test", PerformanceConfig::default());
-        
-        let key_handle = vendor.generate_key(&crypto_tee_vendor::types::KeyGenParams {
-            algorithm: Algorithm::Ed25519,
-            hardware_backed: false,
-            exportable: true,
-            usage: KeyUsage::default(),
-            vendor_params: None,
-        }).await.expect("Key generation should succeed");
-        
+
+        let key_handle = vendor
+            .generate_key(&crypto_tee_vendor::types::KeyGenParams {
+                algorithm: Algorithm::Ed25519,
+                hardware_backed: false,
+                exportable: true,
+                usage: KeyUsage::default(),
+                vendor_params: None,
+            })
+            .await
+            .expect("Key generation should succeed");
+
         (vendor, key_handle)
     });
-    
+
     let (vendor, key_handle) = setup;
     let concurrency_levels = vec![1, 5, 10, 20];
-    
+
     for concurrency in concurrency_levels {
         group.bench_with_input(
             BenchmarkId::new("optimized_concurrent_ops", concurrency),
@@ -225,29 +244,27 @@ fn bench_optimized_concurrency(c: &mut Criterion) {
                 b.to_async(&rt).iter(|| async {
                     let test_data = b"Optimized concurrent operation test";
                     let mut tasks = Vec::new();
-                    
+
                     // Create signing tasks
                     for _ in 0..concurrency {
                         let vendor_ref = &vendor;
                         let key_ref = &key_handle;
-                        let task = async move {
-                            vendor_ref.sign(key_ref, test_data).await
-                        };
+                        let task = async move { vendor_ref.sign(key_ref, test_data).await };
                         tasks.push(task);
                     }
-                    
+
                     // Execute all tasks concurrently
                     let results = futures::future::join_all(tasks).await;
-                    
+
                     // Verify all results are successful
                     for result in results {
                         result.expect("Concurrent signing should succeed");
                     }
                 });
-            }
+            },
         );
     }
-    
+
     group.finish();
 }
 

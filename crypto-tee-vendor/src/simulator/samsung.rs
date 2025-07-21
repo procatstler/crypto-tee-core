@@ -1,21 +1,22 @@
 //! Samsung Knox TEE Simulator
-//! 
+//!
 //! Simulates Samsung Knox Vault and TrustZone functionality
 
-use super::*;
 use super::base::{GenericTEESimulator, OperationType};
-use crate::traits::VendorTEE;
-use crate::error::VendorResult;
-use crate::types::*;
+use super::*;
 use crate::error::VendorError;
-use std::sync::{Arc, Mutex};
+use crate::error::VendorResult;
+use crate::traits::VendorTEE;
+use crate::types::*;
+use std::sync::Arc;
 use std::time::SystemTime;
+use tokio::sync::RwLock;
 
 /// Samsung Knox TEE Simulator
 pub struct SamsungTEESimulator {
     base: GenericTEESimulator,
-    knox_config: Arc<Mutex<KnoxConfiguration>>,
-    vault_state: Arc<Mutex<KnoxVaultState>>,
+    knox_config: Arc<RwLock<KnoxConfiguration>>,
+    vault_state: Arc<RwLock<KnoxVaultState>>,
 }
 
 /// Knox-specific configuration
@@ -23,19 +24,19 @@ pub struct SamsungTEESimulator {
 pub struct KnoxConfiguration {
     /// Knox Vault enabled
     pub knox_vault_enabled: bool,
-    
+
     /// Knox version
     pub knox_version: String,
-    
+
     /// TrustZone security level
     pub trustzone_level: TrustZoneLevel,
-    
+
     /// FIDO support
     pub fido_support: bool,
-    
+
     /// Knox Guard enabled
     pub knox_guard_enabled: bool,
-    
+
     /// Device integrity verification
     pub device_integrity_enabled: bool,
 }
@@ -45,16 +46,16 @@ pub struct KnoxConfiguration {
 pub struct KnoxVaultState {
     /// Vault initialization status
     pub initialized: bool,
-    
+
     /// Active secure sessions
     pub active_sessions: u32,
-    
+
     /// Vault key storage utilization
     pub vault_utilization: f32,
-    
+
     /// Last integrity check
     pub last_integrity_check: Option<SystemTime>,
-    
+
     /// Security violations detected
     pub security_violations: u32,
 }
@@ -64,10 +65,10 @@ pub struct KnoxVaultState {
 pub enum TrustZoneLevel {
     /// Normal world only
     Normal,
-    
+
     /// Secure world available
     Secure,
-    
+
     /// Hardware-backed secure world
     HardwareBacked,
 }
@@ -93,26 +94,28 @@ impl SamsungTEESimulator {
 
         Self {
             base: GenericTEESimulator::new(config),
-            knox_config: Arc::new(Mutex::new(knox_config)),
-            vault_state: Arc::new(Mutex::new(vault_state)),
+            knox_config: Arc::new(RwLock::new(knox_config)),
+            vault_state: Arc::new(RwLock::new(vault_state)),
         }
     }
 
     /// Simulate Knox Vault operations
     async fn knox_vault_operation(&self, operation: &str) -> VendorResult<()> {
-        let config = self.knox_config.lock().unwrap();
+        let config = self.knox_config.read().await;
         if !config.knox_vault_enabled {
             return Err(VendorError::NotSupported("Knox Vault not enabled".to_string()));
         }
 
-        let mut state = self.vault_state.lock().unwrap();
+        let state = self.vault_state.read().await;
         if !state.initialized {
             return Err(VendorError::HardwareError("Knox Vault not initialized".to_string()));
         }
 
         // Simulate security checks
         if config.device_integrity_enabled {
-            self.perform_integrity_check(&mut state).await?;
+            drop(state);
+            let mut state_write = self.vault_state.write().await;
+            self.perform_integrity_check(&mut state_write).await?;
         }
 
         tracing::debug!("Knox Vault operation: {}", operation);
@@ -123,15 +126,16 @@ impl SamsungTEESimulator {
     async fn perform_integrity_check(&self, state: &mut KnoxVaultState) -> VendorResult<()> {
         // Simulate integrity verification delay
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-        
+
         state.last_integrity_check = Some(SystemTime::now());
-        
+
         // Simulate occasional integrity violations
-        if ::rand::random::<f32>() < 0.001 { // 0.1% chance
+        if ::rand::random::<f32>() < 0.001 {
+            // 0.1% chance
             state.security_violations += 1;
             return Err(VendorError::SecurityViolation("Device integrity compromised".to_string()));
         }
-        
+
         Ok(())
     }
 
@@ -181,7 +185,7 @@ impl VendorTEE for SamsungTEESimulator {
 
         // Update vault utilization
         {
-            let mut state = self.vault_state.lock().unwrap();
+            let mut state = self.vault_state.write().await;
             let max_keys = self.get_knox_capabilities().max_keys as f32;
             // This is a simplified calculation - in reality we'd track actual usage
             state.vault_utilization = (state.vault_utilization * max_keys + 1.0) / max_keys;
@@ -190,11 +194,15 @@ impl VendorTEE for SamsungTEESimulator {
         Ok(handle)
     }
 
-    async fn import_key(&self, key_data: &[u8], params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
+    async fn import_key(
+        &self,
+        key_data: &[u8],
+        params: &KeyGenParams,
+    ) -> VendorResult<VendorKeyHandle> {
         self.knox_vault_operation("import_key").await?;
 
         // Knox Vault has strict import policies
-        let config = self.knox_config.lock().unwrap();
+        let config = self.knox_config.read().await;
         if !config.knox_vault_enabled {
             return Err(VendorError::NotSupported("Key import requires Knox Vault".to_string()));
         }
@@ -210,21 +218,26 @@ impl VendorTEE for SamsungTEESimulator {
 
         // Knox adds additional security for signing operations
         {
-            let mut state = self.vault_state.lock().unwrap();
+            let mut state = self.vault_state.write().await;
             state.active_sessions += 1;
         }
 
         let result = self.base.sign(key, data).await;
 
         {
-            let mut state = self.vault_state.lock().unwrap();
+            let mut state = self.vault_state.write().await;
             state.active_sessions = state.active_sessions.saturating_sub(1);
         }
 
         result
     }
 
-    async fn verify(&self, key: &VendorKeyHandle, data: &[u8], signature: &Signature) -> VendorResult<bool> {
+    async fn verify(
+        &self,
+        key: &VendorKeyHandle,
+        data: &[u8],
+        signature: &Signature,
+    ) -> VendorResult<bool> {
         self.knox_vault_operation("verify").await?;
         self.base.verify(key, data, signature).await
     }
@@ -233,7 +246,7 @@ impl VendorTEE for SamsungTEESimulator {
         self.knox_vault_operation("delete_key").await?;
 
         // Knox Vault ensures secure deletion
-        let config = self.knox_config.lock().unwrap();
+        let config = self.knox_config.read().await;
         if config.knox_vault_enabled {
             // Simulate secure deletion process
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
@@ -275,31 +288,31 @@ impl TEESimulator for SamsungTEESimulator {
 
     async fn get_simulation_stats(&self) -> VendorResult<SimulationStats> {
         let mut stats = self.base.get_simulation_stats().await?;
-        
+
         // Add Knox-specific stats
-        let state = self.vault_state.lock().unwrap();
+        let state = self.vault_state.read().await;
         stats.security_violations = state.security_violations as u64;
-        
+
         Ok(stats)
     }
 
     async fn reset_simulator(&mut self) -> VendorResult<()> {
         self.base.reset_simulator().await?;
-        
-        let mut state = self.vault_state.lock().unwrap();
+
+        let mut state = self.vault_state.write().await;
         state.active_sessions = 0;
         state.vault_utilization = 0.0;
         state.security_violations = 0;
         state.last_integrity_check = Some(SystemTime::now());
-        
+
         Ok(())
     }
 
     async fn simulate_attestation(&self) -> VendorResult<SimulatedAttestation> {
         self.knox_vault_operation("attestation").await?;
-        
-        let config = self.knox_config.lock().unwrap();
-        
+
+        let config = self.knox_config.read().await;
+
         let device_identity = DeviceIdentity {
             device_id: "KNOX-DEVICE-001".to_string(),
             hardware_model: "Samsung Galaxy Knox".to_string(),

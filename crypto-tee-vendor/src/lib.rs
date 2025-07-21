@@ -1,14 +1,14 @@
 //! Vendor-specific TEE implementations for CryptoTEE
-//! 
+//!
 //! This crate provides the lowest layer (L1) of the CryptoTEE architecture,
 //! handling vendor-specific TEE implementations such as Samsung Knox,
 //! Apple Secure Enclave, Qualcomm QSEE, and OP-TEE.
 
-pub mod error;
-pub mod types;
-pub mod traits;
-pub mod mock;
 pub mod cache;
+pub mod error;
+pub mod mock;
+pub mod traits;
+pub mod types;
 
 #[cfg(feature = "simulator")]
 pub mod simulator;
@@ -23,8 +23,8 @@ pub mod apple;
 pub mod qualcomm;
 
 pub use error::{VendorError, VendorResult};
-pub use types::*;
 pub use traits::VendorTEE;
+pub use types::*;
 
 // Re-export mock for testing
 #[cfg(any(test, feature = "software-fallback"))]
@@ -32,4 +32,4 @@ pub use mock::MockVendor;
 
 // Re-export simulator components
 #[cfg(feature = "simulator")]
-pub use simulator::{TEESimulator, SimulatorFactory, SimulationConfig, SimulatorType};
+pub use simulator::{SimulationConfig, SimulatorFactory, SimulatorType, TEESimulator};

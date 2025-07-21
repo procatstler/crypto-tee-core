@@ -1,16 +1,16 @@
 //! Secure Storage Simulation
-//! 
+//!
 //! Simulates hardware-backed secure storage systems like Samsung Knox Vault,
 //! Apple Secure Enclave storage, and Qualcomm QSEE secure storage.
 
-use crate::error::{VendorResult, VendorError};
-use crate::types::*;
+use crate::error::{VendorError, VendorResult};
 use crate::simulator::base::KeySecurityProperties;
+use crate::types::*;
 use ring::rand::SecureRandom;
+use ring::{aead, digest, rand};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, SystemTime};
-use ring::{aead, digest, rand};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 /// Secure storage simulator
@@ -18,16 +18,16 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 pub struct SecureStorage {
     /// Storage backend
     backend: Arc<Mutex<StorageBackend>>,
-    
+
     /// Storage configuration
     config: Arc<Mutex<StorageConfig>>,
-    
+
     /// Access control manager
     access_control: Arc<Mutex<AccessControlManager>>,
-    
+
     /// Encryption key for storage
     storage_key: Arc<Mutex<Option<aead::LessSafeKey>>>,
-    
+
     /// Random number generator
     rng: Arc<Mutex<rand::SystemRandom>>,
 }
@@ -37,10 +37,10 @@ pub struct SecureStorage {
 struct StorageBackend {
     /// Encrypted key data
     encrypted_data: HashMap<String, EncryptedKeyData>,
-    
+
     /// Storage metadata
     metadata: HashMap<String, KeyMetadata>,
-    
+
     /// Storage utilization statistics
     stats: StorageStats,
 }
@@ -50,22 +50,22 @@ struct StorageBackend {
 pub struct StorageConfig {
     /// Maximum storage capacity (bytes)
     pub max_capacity_bytes: u64,
-    
+
     /// Maximum number of keys
     pub max_keys: u32,
-    
+
     /// Enable encryption at rest
     pub encryption_enabled: bool,
-    
+
     /// Enable secure deletion
     pub secure_deletion_enabled: bool,
-    
+
     /// Enable access logging
     pub access_logging_enabled: bool,
-    
+
     /// Storage type
     pub storage_type: StorageType,
-    
+
     /// Backup configuration
     pub backup_config: Option<BackupConfig>,
 }
@@ -75,13 +75,13 @@ pub struct StorageConfig {
 pub enum StorageType {
     /// Samsung Knox Vault
     KnoxVault,
-    
+
     /// Apple Secure Enclave
     SecureEnclave,
-    
+
     /// Qualcomm QSEE
     QseeSecureStorage,
-    
+
     /// Generic secure storage
     Generic,
 }
@@ -91,13 +91,13 @@ pub enum StorageType {
 pub struct BackupConfig {
     /// Enable automatic backup
     pub auto_backup: bool,
-    
+
     /// Backup interval
     pub backup_interval: Duration,
-    
+
     /// Maximum backup count
     pub max_backups: u32,
-    
+
     /// Backup encryption
     pub backup_encryption: bool,
 }
@@ -107,13 +107,13 @@ pub struct BackupConfig {
 struct EncryptedKeyData {
     /// Encrypted key material
     encrypted_data: Vec<u8>,
-    
+
     /// Encryption nonce
     nonce: Vec<u8>,
-    
+
     /// Additional authenticated data
     aad: Vec<u8>,
-    
+
     /// Checksum for integrity
     checksum: Vec<u8>,
 }
@@ -123,22 +123,22 @@ struct EncryptedKeyData {
 struct KeyMetadata {
     /// Key identifier
     key_id: String,
-    
+
     /// Algorithm used
     algorithm: Algorithm,
-    
+
     /// Creation timestamp
     created_at: SystemTime,
-    
+
     /// Last accessed
     last_accessed: Option<SystemTime>,
-    
+
     /// Access count
     access_count: u64,
-    
+
     /// Security properties
     security_properties: KeySecurityProperties,
-    
+
     /// Size in bytes
     size_bytes: u64,
 }
@@ -148,25 +148,25 @@ struct KeyMetadata {
 pub struct StorageStats {
     /// Total keys stored
     pub total_keys: u32,
-    
+
     /// Used capacity in bytes
     pub used_capacity_bytes: u64,
-    
+
     /// Available capacity in bytes
     pub available_capacity_bytes: u64,
-    
+
     /// Total read operations
     pub read_operations: u64,
-    
+
     /// Total write operations
     pub write_operations: u64,
-    
+
     /// Total delete operations
     pub delete_operations: u64,
-    
+
     /// Storage fragmentation percentage
     pub fragmentation_percent: f32,
-    
+
     /// Last defragmentation
     pub last_defrag: Option<SystemTime>,
 }
@@ -176,10 +176,10 @@ pub struct StorageStats {
 struct AccessControlManager {
     /// Active sessions
     sessions: HashMap<String, AccessSession>,
-    
+
     /// Access policies
     policies: Vec<AccessPolicy>,
-    
+
     /// Audit log
     audit_log: Vec<AccessEvent>,
 }
@@ -189,16 +189,16 @@ struct AccessControlManager {
 struct AccessSession {
     /// Session ID
     session_id: String,
-    
+
     /// Created at
     created_at: SystemTime,
-    
+
     /// Last activity
     last_activity: SystemTime,
-    
+
     /// Authentication level
     auth_level: AuthenticationLevel,
-    
+
     /// Permissions
     permissions: Vec<Permission>,
 }
@@ -208,13 +208,13 @@ struct AccessSession {
 struct AccessPolicy {
     /// Policy name
     name: String,
-    
+
     /// Required authentication level
     required_auth_level: AuthenticationLevel,
-    
+
     /// Allowed operations
     allowed_operations: Vec<Operation>,
-    
+
     /// Time constraints
     time_constraints: Option<TimeConstraints>,
 }
@@ -224,16 +224,16 @@ struct AccessPolicy {
 pub enum AuthenticationLevel {
     /// No authentication
     None = 0,
-    
+
     /// PIN/Password
     Pin = 1,
-    
+
     /// Biometric
     Biometric = 2,
-    
+
     /// Strong biometric
     StrongBiometric = 3,
-    
+
     /// Hardware token
     HardwareToken = 4,
 }
@@ -263,10 +263,10 @@ pub enum Operation {
 struct TimeConstraints {
     /// Start time
     start_time: Option<SystemTime>,
-    
+
     /// End time
     end_time: Option<SystemTime>,
-    
+
     /// Session timeout
     session_timeout: Duration,
 }
@@ -276,19 +276,19 @@ struct TimeConstraints {
 struct AccessEvent {
     /// Timestamp
     timestamp: SystemTime,
-    
+
     /// Session ID
     session_id: String,
-    
+
     /// Operation performed
     operation: Operation,
-    
+
     /// Key ID (if applicable)
     key_id: Option<String>,
-    
+
     /// Success/failure
     success: bool,
-    
+
     /// Additional details
     details: String,
 }
@@ -304,13 +304,13 @@ impl SecureStorage {
                 ..Default::default()
             },
         };
-        
+
         let access_control = AccessControlManager {
             sessions: HashMap::new(),
             policies: Self::default_policies(),
             audit_log: Vec::new(),
         };
-        
+
         Ok(Self {
             backend: Arc::new(Mutex::new(backend)),
             config: Arc::new(Mutex::new(config)),
@@ -326,56 +326,70 @@ impl SecureStorage {
             let config = self.config.lock().unwrap();
             config.encryption_enabled
         };
-        
+
         if !encryption_enabled {
             return Ok(());
         }
-        
+
         // Generate storage encryption key
         let mut key_bytes = [0u8; 32];
         {
             let rng = self.rng.lock().unwrap();
-            rng.fill(&mut key_bytes)
-                .map_err(|e| VendorError::KeyGeneration(format!("Failed to generate storage key: {}", e)))?;
+            rng.fill(&mut key_bytes).map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to generate storage key: {}", e))
+            })?;
         }
-        
-        let unbound_key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, &key_bytes)
-            .map_err(|e| VendorError::KeyGeneration(format!("Failed to create storage key: {}", e)))?;
-        
+
+        let unbound_key =
+            aead::UnboundKey::new(&aead::CHACHA20_POLY1305, &key_bytes).map_err(|e| {
+                VendorError::KeyGeneration(format!("Failed to create storage key: {}", e))
+            })?;
+
         let key = aead::LessSafeKey::new(unbound_key);
-        
+
         {
             let mut storage_key = self.storage_key.lock().unwrap();
             *storage_key = Some(key);
         }
-        
+
         Ok(())
     }
 
     /// Store key securely
-    pub async fn store_key(&self, key_id: &str, key_data: &[u8], metadata: KeyMetadata) -> VendorResult<()> {
+    pub async fn store_key(
+        &self,
+        key_id: &str,
+        key_data: &[u8],
+        metadata: KeyMetadata,
+    ) -> VendorResult<()> {
         // Check capacity
         self.check_capacity(key_data.len() as u64)?;
-        
+
         // Encrypt key data
         let encrypted_data = self.encrypt_key_data(key_data).await?;
-        
+
         // Store encrypted data and metadata
         {
             let mut backend = self.backend.lock().unwrap();
             backend.encrypted_data.insert(key_id.to_string(), encrypted_data);
             backend.metadata.insert(key_id.to_string(), metadata);
-            
+
             // Update statistics
             backend.stats.total_keys += 1;
             backend.stats.used_capacity_bytes += key_data.len() as u64;
             backend.stats.available_capacity_bytes -= key_data.len() as u64;
             backend.stats.write_operations += 1;
         }
-        
+
         // Log access
-        self.log_access(Operation::KeyGeneration, Some(key_id.to_string()), true, "Key stored successfully").await;
-        
+        self.log_access(
+            Operation::KeyGeneration,
+            Some(key_id.to_string()),
+            true,
+            "Key stored successfully",
+        )
+        .await;
+
         Ok(())
     }
 
@@ -383,26 +397,34 @@ impl SecureStorage {
     pub async fn retrieve_key(&self, key_id: &str) -> VendorResult<Vec<u8>> {
         let encrypted_data = {
             let mut backend = self.backend.lock().unwrap();
-            let data = backend.encrypted_data.get(key_id)
+            let data = backend
+                .encrypted_data
+                .get(key_id)
                 .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key_id)))?
                 .clone();
-            
+
             // Update access metadata
             if let Some(metadata) = backend.metadata.get_mut(key_id) {
                 metadata.last_accessed = Some(SystemTime::now());
                 metadata.access_count += 1;
             }
-            
+
             backend.stats.read_operations += 1;
             data
         };
-        
+
         // Decrypt key data
         let decrypted_data = self.decrypt_key_data(&encrypted_data).await?;
-        
+
         // Log access
-        self.log_access(Operation::Signing, Some(key_id.to_string()), true, "Key retrieved successfully").await;
-        
+        self.log_access(
+            Operation::Signing,
+            Some(key_id.to_string()),
+            true,
+            "Key retrieved successfully",
+        )
+        .await;
+
         Ok(decrypted_data)
     }
 
@@ -411,35 +433,38 @@ impl SecureStorage {
         let (size_bytes, success, secure_deletion_enabled) = {
             let config = self.config.lock().unwrap();
             let secure_deletion_enabled = config.secure_deletion_enabled;
-            
+
             let mut backend = self.backend.lock().unwrap();
-            
-            let metadata = backend.metadata.remove(key_id)
+
+            let metadata = backend
+                .metadata
+                .remove(key_id)
                 .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key_id)))?;
-            
+
             let encrypted_data = backend.encrypted_data.remove(key_id);
-            
+
             if encrypted_data.is_some() {
                 // Update statistics
                 backend.stats.total_keys -= 1;
                 backend.stats.used_capacity_bytes -= metadata.size_bytes;
                 backend.stats.available_capacity_bytes += metadata.size_bytes;
                 backend.stats.delete_operations += 1;
-                
+
                 (metadata.size_bytes, true, secure_deletion_enabled)
             } else {
                 (0, false, secure_deletion_enabled)
             }
         };
-        
+
         // Perform secure deletion if enabled
         if secure_deletion_enabled && success {
             self.secure_delete_operation(size_bytes).await?;
         }
-        
+
         // Log access
-        self.log_access(Operation::KeyDeletion, Some(key_id.to_string()), success, "Key deleted").await;
-        
+        self.log_access(Operation::KeyDeletion, Some(key_id.to_string()), success, "Key deleted")
+            .await;
+
         Ok(())
     }
 
@@ -447,10 +472,11 @@ impl SecureStorage {
     pub async fn list_keys(&self) -> VendorResult<Vec<String>> {
         let backend = self.backend.lock().unwrap();
         let keys: Vec<String> = backend.metadata.keys().cloned().collect();
-        
+
         // Log access
-        self.log_access(Operation::KeyListing, None, true, format!("Listed {} keys", keys.len())).await;
-        
+        self.log_access(Operation::KeyListing, None, true, format!("Listed {} keys", keys.len()))
+            .await;
+
         Ok(keys)
     }
 
@@ -463,14 +489,14 @@ impl SecureStorage {
     /// Perform storage defragmentation
     pub async fn defragment(&self) -> VendorResult<()> {
         let mut backend = self.backend.lock().unwrap();
-        
+
         // Simulate defragmentation delay
         tokio::time::sleep(Duration::from_millis(100)).await;
-        
+
         // Reset fragmentation
         backend.stats.fragmentation_percent = 0.0;
         backend.stats.last_defrag = Some(SystemTime::now());
-        
+
         tracing::info!("Storage defragmentation completed");
         Ok(())
     }
@@ -479,15 +505,15 @@ impl SecureStorage {
     fn check_capacity(&self, required_bytes: u64) -> VendorResult<()> {
         let backend = self.backend.lock().unwrap();
         let config = self.config.lock().unwrap();
-        
+
         if backend.stats.total_keys >= config.max_keys {
             return Err(VendorError::NotSupported("Maximum key count reached".to_string()));
         }
-        
+
         if backend.stats.used_capacity_bytes + required_bytes > config.max_capacity_bytes {
             return Err(VendorError::NotSupported("Storage capacity exceeded".to_string()));
         }
-        
+
         Ok(())
     }
 
@@ -497,7 +523,7 @@ impl SecureStorage {
             let config = self.config.lock().unwrap();
             config.encryption_enabled
         };
-        
+
         if !encryption_enabled {
             return Ok(EncryptedKeyData {
                 encrypted_data: data.to_vec(),
@@ -506,33 +532,35 @@ impl SecureStorage {
                 checksum: Vec::new(),
             });
         }
-        
+
         // Generate nonce
         let mut nonce_bytes = [0u8; 12];
         {
             let rng = self.rng.lock().unwrap();
-            rng.fill(&mut nonce_bytes)
-                .map_err(|e| VendorError::CryptoError(format!("Failed to generate nonce: {}", e)))?;
+            rng.fill(&mut nonce_bytes).map_err(|e| {
+                VendorError::CryptoError(format!("Failed to generate nonce: {}", e))
+            })?;
         }
-        
+
         let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
-        
+
         // Encrypt data
         let mut encrypted_data = data.to_vec();
         let tag = {
             let storage_key = self.storage_key.lock().unwrap();
-            let key = storage_key.as_ref()
-                .ok_or_else(|| VendorError::ConfigurationError("Storage encryption not initialized".to_string()))?;
-            
+            let key = storage_key.as_ref().ok_or_else(|| {
+                VendorError::ConfigurationError("Storage encryption not initialized".to_string())
+            })?;
+
             key.seal_in_place_separate_tag(nonce, aead::Aad::empty(), &mut encrypted_data)
                 .map_err(|e| VendorError::CryptoError(format!("Encryption failed: {}", e)))?
         };
-        
+
         encrypted_data.extend_from_slice(tag.as_ref());
-        
+
         // Calculate checksum
         let checksum = digest::digest(&digest::SHA256, &encrypted_data);
-        
+
         Ok(EncryptedKeyData {
             encrypted_data,
             nonce: nonce_bytes.to_vec(),
@@ -547,17 +575,19 @@ impl SecureStorage {
             let config = self.config.lock().unwrap();
             config.encryption_enabled
         };
-        
+
         if !encryption_enabled {
             return Ok(encrypted_data.encrypted_data.clone());
         }
-        
+
         // Verify checksum
         let calculated_checksum = digest::digest(&digest::SHA256, &encrypted_data.encrypted_data);
         if calculated_checksum.as_ref() != &encrypted_data.checksum {
-            return Err(VendorError::KeyCorrupted("Storage checksum verification failed".to_string()));
+            return Err(VendorError::KeyCorrupted(
+                "Storage checksum verification failed".to_string(),
+            ));
         }
-        
+
         // Prepare nonce
         if encrypted_data.nonce.len() != 12 {
             return Err(VendorError::CryptoError("Invalid nonce length".to_string()));
@@ -565,19 +595,20 @@ impl SecureStorage {
         let mut nonce_bytes = [0u8; 12];
         nonce_bytes.copy_from_slice(&encrypted_data.nonce);
         let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
-        
+
         // Decrypt data
         let mut decrypted_data = encrypted_data.encrypted_data.clone();
         let decrypted_len = {
             let storage_key = self.storage_key.lock().unwrap();
-            let key = storage_key.as_ref()
-                .ok_or_else(|| VendorError::ConfigurationError("Storage encryption not initialized".to_string()))?;
-            
+            let key = storage_key.as_ref().ok_or_else(|| {
+                VendorError::ConfigurationError("Storage encryption not initialized".to_string())
+            })?;
+
             key.open_in_place(nonce, aead::Aad::empty(), &mut decrypted_data)
                 .map_err(|e| VendorError::CryptoError(format!("Decryption failed: {}", e)))?
                 .len()
         };
-        
+
         decrypted_data.truncate(decrypted_len);
         Ok(decrypted_data)
     }
@@ -587,16 +618,22 @@ impl SecureStorage {
         // Simulate secure deletion process
         let deletion_time = (size_bytes / 1024) + 5; // Minimum 5ms
         tokio::time::sleep(Duration::from_millis(deletion_time)).await;
-        
+
         tracing::debug!("Performed secure deletion of {} bytes", size_bytes);
         Ok(())
     }
 
     /// Log access event
-    async fn log_access(&self, operation: Operation, key_id: Option<String>, success: bool, details: impl Into<String>) {
+    async fn log_access(
+        &self,
+        operation: Operation,
+        key_id: Option<String>,
+        success: bool,
+        details: impl Into<String>,
+    ) {
         {
             let mut access_control = self.access_control.lock().unwrap();
-            
+
             let event = AccessEvent {
                 timestamp: SystemTime::now(),
                 session_id: "simulator_session".to_string(), // Simplified for simulation
@@ -605,9 +642,9 @@ impl SecureStorage {
                 success,
                 details: details.into(),
             };
-            
+
             access_control.audit_log.push(event);
-            
+
             // Keep audit log size manageable
             if access_control.audit_log.len() > 1000 {
                 access_control.audit_log.remove(0);
@@ -711,9 +748,9 @@ mod tests {
     async fn test_secure_storage_operations() {
         let config = StorageConfig::generic();
         let storage = SecureStorage::new(config).unwrap();
-        
+
         storage.initialize_encryption().await.unwrap();
-        
+
         let test_data = b"test_key_data";
         let metadata = KeyMetadata {
             key_id: "test_key".to_string(),
@@ -730,22 +767,22 @@ mod tests {
             },
             size_bytes: test_data.len() as u64,
         };
-        
+
         // Store key
         storage.store_key("test_key", test_data, metadata).await.unwrap();
-        
+
         // Retrieve key
         let retrieved_data = storage.retrieve_key("test_key").await.unwrap();
         assert_eq!(retrieved_data, test_data);
-        
+
         // List keys
         let keys = storage.list_keys().await.unwrap();
         assert_eq!(keys.len(), 1);
         assert!(keys.contains(&"test_key".to_string()));
-        
+
         // Delete key
         storage.delete_key("test_key").await.unwrap();
-        
+
         // Verify deletion
         let result = storage.retrieve_key("test_key").await;
         assert!(result.is_err());
@@ -756,10 +793,10 @@ mod tests {
         let mut config = StorageConfig::generic();
         config.max_keys = 1;
         config.max_capacity_bytes = 100;
-        
+
         let storage = SecureStorage::new(config).unwrap();
         storage.initialize_encryption().await.unwrap();
-        
+
         let test_data = vec![0u8; 50];
         let metadata = KeyMetadata {
             key_id: "key1".to_string(),
@@ -776,10 +813,10 @@ mod tests {
             },
             size_bytes: test_data.len() as u64,
         };
-        
+
         // First key should succeed
         storage.store_key("key1", &test_data, metadata.clone()).await.unwrap();
-        
+
         // Second key should fail due to key limit
         let result = storage.store_key("key2", &test_data, metadata).await;
         assert!(result.is_err());

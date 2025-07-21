@@ -46,15 +46,15 @@ impl MockVendor {
     ) -> bool {
         // Perform the actual verification
         let actual_result = public_key.verify(data, signature).is_ok();
-        
+
         // Always perform a dummy verification to ensure constant timing
         let dummy_signature = vec![0u8; signature.len()];
         let _dummy_result = public_key.verify(data, &dummy_signature);
-        
+
         // Use constant-time comparison for the final result
         let success_byte = if actual_result { 1u8 } else { 0u8 };
         let expected_byte = 1u8;
-        
+
         // This ensures constant-time comparison regardless of the result
         success_byte.ct_eq(&expected_byte).into()
     }
@@ -85,11 +85,7 @@ impl MockVendor {
             },
         };
 
-        Self {
-            name: name.to_string(),
-            keys: Arc::new(Mutex::new(HashMap::new())),
-            capabilities,
-        }
+        Self { name: name.to_string(), keys: Arc::new(Mutex::new(HashMap::new())), capabilities }
     }
 }
 
@@ -104,11 +100,12 @@ impl VendorTEE for MockVendor {
         debug!("Generating key with params: {:?}", params);
 
         let key_id = format!("mock-key-{}", uuid::Uuid::new_v4());
-        
+
         let (private_key, public_key) = match params.algorithm {
             Algorithm::Ed25519 => {
-                let doc = signature::Ed25519KeyPair::generate_pkcs8(&ring::rand::SystemRandom::new())
-                    .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+                let doc =
+                    signature::Ed25519KeyPair::generate_pkcs8(&ring::rand::SystemRandom::new())
+                        .map_err(|e| VendorError::CryptoError(e.to_string()))?;
                 let key_pair = signature::Ed25519KeyPair::from_pkcs8(doc.as_ref())
                     .map_err(|e| VendorError::CryptoError(e.to_string()))?;
                 (doc.as_ref().to_vec(), Some(key_pair.public_key().as_ref().to_vec()))
@@ -139,15 +136,12 @@ impl VendorTEE for MockVendor {
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
+            vendor: "mock".to_string(),
             hardware_backed: false,
-            attestation: None,
+            vendor_data: None,
         };
 
-        let mock_key = MockKey {
-            handle: handle.clone(),
-            private_key,
-            public_key,
-        };
+        let mock_key = MockKey { handle: handle.clone(), private_key, public_key };
 
         self.keys.lock().await.insert(key_id, mock_key);
 
@@ -157,7 +151,7 @@ impl VendorTEE for MockVendor {
 
     async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
         debug!("Deleting key: {}", key.id);
-        
+
         match self.keys.lock().await.remove(&key.id) {
             Some(_) => {
                 info!("Deleted mock key: {}", key.id);
@@ -171,9 +165,7 @@ impl VendorTEE for MockVendor {
         debug!("Signing data with key: {}", key.id);
 
         let keys = self.keys.lock().await;
-        let mock_key = keys
-            .get(&key.id)
-            .ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
+        let mock_key = keys.get(&key.id).ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
 
         let signature_data = match key.algorithm {
             Algorithm::Ed25519 => {
@@ -189,7 +181,8 @@ impl VendorTEE for MockVendor {
                     &rng,
                 )
                 .map_err(|e| VendorError::CryptoError(e.to_string()))?;
-                key_pair.sign(&rng, data)
+                key_pair
+                    .sign(&rng, data)
                     .map_err(|e| VendorError::CryptoError(e.to_string()))?
                     .as_ref()
                     .to_vec()
@@ -202,10 +195,7 @@ impl VendorTEE for MockVendor {
             }
         };
 
-        Ok(Signature {
-            algorithm: key.algorithm,
-            data: signature_data,
-        })
+        Ok(Signature { algorithm: key.algorithm, data: signature_data })
     }
 
     async fn verify(
@@ -217,20 +207,18 @@ impl VendorTEE for MockVendor {
         debug!("Verifying signature with key: {}", key.id);
 
         let keys = self.keys.lock().await;
-        let mock_key = keys
-            .get(&key.id)
-            .ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
+        let mock_key = keys.get(&key.id).ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
 
-        let public_key = mock_key.public_key.as_ref()
+        let public_key = mock_key
+            .public_key
+            .as_ref()
             .ok_or_else(|| VendorError::CryptoError("No public key available".to_string()))?;
 
         // Perform verification with timing attack protection
         let result = match key.algorithm {
             Algorithm::Ed25519 => {
-                let peer_public_key = signature::UnparsedPublicKey::new(
-                    &signature::ED25519,
-                    public_key,
-                );
+                let peer_public_key =
+                    signature::UnparsedPublicKey::new(&signature::ED25519, public_key);
                 Self::constant_time_verify(&peer_public_key, data, &signature.data)
             }
             Algorithm::EcdsaP256 => {
@@ -253,7 +241,7 @@ impl VendorTEE for MockVendor {
 
     async fn get_attestation(&self) -> VendorResult<Attestation> {
         info!("Getting mock attestation");
-        
+
         Ok(Attestation {
             format: AttestationFormat::Custom("mock-attestation".to_string()),
             data: b"mock-attestation-data".to_vec(),
@@ -298,8 +286,9 @@ impl VendorTEE for MockVendor {
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
+            vendor: "mock".to_string(),
             hardware_backed: false,
-            attestation: None,
+            vendor_data: None,
         };
 
         let mock_key = MockKey {
@@ -318,9 +307,7 @@ impl VendorTEE for MockVendor {
         debug!("Exporting key: {}", key.id);
 
         let keys = self.keys.lock().await;
-        let mock_key = keys
-            .get(&key.id)
-            .ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
+        let mock_key = keys.get(&key.id).ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
 
         Ok(mock_key.private_key.clone())
     }
@@ -342,7 +329,7 @@ mod tests {
     #[tokio::test]
     async fn test_key_lifecycle() {
         let vendor = MockVendor::default();
-        
+
         // Generate key
         let params = KeyGenParams {
             algorithm: Algorithm::Ed25519,
@@ -351,17 +338,17 @@ mod tests {
             usage: KeyUsage::default(),
             vendor_params: None,
         };
-        
+
         let key = vendor.generate_key(&params).await.unwrap();
         assert_eq!(key.algorithm, Algorithm::Ed25519);
-        
+
         // List keys
         let keys = vendor.list_keys().await.unwrap();
         assert_eq!(keys.len(), 1);
-        
+
         // Delete key
         vendor.delete_key(&key).await.unwrap();
-        
+
         // Verify deleted
         let keys = vendor.list_keys().await.unwrap();
         assert_eq!(keys.len(), 0);
@@ -370,7 +357,7 @@ mod tests {
     #[tokio::test]
     async fn test_sign_verify() {
         let vendor = MockVendor::default();
-        
+
         let params = KeyGenParams {
             algorithm: Algorithm::Ed25519,
             hardware_backed: false,
@@ -378,17 +365,17 @@ mod tests {
             usage: KeyUsage::default(),
             vendor_params: None,
         };
-        
+
         let key = vendor.generate_key(&params).await.unwrap();
         let data = b"test message";
-        
+
         // Sign
         let signature = vendor.sign(&key, data).await.unwrap();
-        
+
         // Verify
         let valid = vendor.verify(&key, data, &signature).await.unwrap();
         assert!(valid);
-        
+
         // Verify with wrong data
         let invalid = vendor.verify(&key, b"wrong message", &signature).await.unwrap();
         assert!(!invalid);

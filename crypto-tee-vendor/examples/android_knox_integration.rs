@@ -1,5 +1,5 @@
 //! Example Android integration for Samsung Knox TEE
-//! 
+//!
 //! This example demonstrates how to integrate the Samsung Knox TEE
 //! implementation in an Android application.
 
@@ -13,10 +13,9 @@ use crypto_tee_vendor::{
 
 #[cfg(target_os = "android")]
 use jni::{
-    JNIEnv,
     objects::{JClass, JObject},
     sys::{jint, JNI_VERSION_1_6},
-    JavaVM,
+    JNIEnv, JavaVM,
 };
 
 /// JNI OnLoad - called when the library is loaded by the JVM
@@ -27,7 +26,7 @@ pub extern "C" fn JNI_OnLoad(vm: *mut JavaVM, _: *mut std::ffi::c_void) -> jint 
     unsafe {
         crypto_tee_vendor::samsung::jni_bridge::init_jni(vm);
     }
-    
+
     JNI_VERSION_1_6
 }
 
@@ -49,15 +48,15 @@ pub extern "C" fn Java_com_example_cryptotee_KnoxTEE_initialize(
 fn initialize_knox_internal(env: &JNIEnv, context: JObject) -> VendorResult<()> {
     // Get Knox TEE instance
     let knox_tee = get_samsung_tee()?;
-    
+
     // Initialize JNI context
     let jni_context = crypto_tee_vendor::samsung::jni_bridge::KnoxJniContext::new(
         crypto_tee_vendor::samsung::jni_bridge::get_jni_context()
-            .ok_or(VendorError::InitializationError("JNI not initialized".to_string()))?
+            .ok_or(VendorError::InitializationError("JNI not initialized".to_string()))?,
     );
-    
+
     jni_context.initialize(env, context)?;
-    
+
     Ok(())
 }
 
@@ -80,7 +79,7 @@ pub extern "C" fn Java_com_example_cryptotee_KnoxTEE_generateKey(
 async fn generate_key_internal(use_knox_vault: bool, require_auth: bool) -> VendorResult<()> {
     // Get Knox TEE instance
     let knox_tee = get_samsung_tee()?;
-    
+
     // Set up key generation parameters
     let knox_params = KnoxParams {
         use_knox_vault,
@@ -90,19 +89,19 @@ async fn generate_key_internal(use_knox_vault: bool, require_auth: bool) -> Vend
         enable_attestation: true,
         container_id: None,
     };
-    
+
     let key_params = KeyGenParams {
         algorithm: Algorithm::EcdsaP256,
         hardware_backed: true,
         exportable: false,
         vendor_params: Some(VendorParams::Samsung(knox_params)),
     };
-    
+
     // Generate key
     let key_handle = knox_tee.generate_key(&key_params).await?;
-    
+
     println!("Generated key with ID: {}", key_handle.id);
-    
+
     Ok(())
 }
 
@@ -118,9 +117,7 @@ pub extern "C" fn Java_com_example_cryptotee_KnoxTEE_signData(
     match sign_data_internal(&env, key_id, data) {
         Ok(signature) => {
             // Convert signature to Java byte array
-            env.byte_array_from_slice(&signature)
-                .unwrap_or(JObject::null())
-                .into()
+            env.byte_array_from_slice(&signature).unwrap_or(JObject::null()).into()
         }
         Err(_) => JObject::null(),
     }
@@ -134,14 +131,14 @@ async fn sign_data_internal(
 ) -> VendorResult<Vec<u8>> {
     // Get Knox TEE instance
     let knox_tee = get_samsung_tee()?;
-    
+
     // Convert Java string to Rust string
     let key_id_jstring = env.get_string(key_id_obj.into())?;
     let key_id = key_id_jstring.to_string_lossy().into_owned();
-    
+
     // Convert Java byte array to Rust Vec<u8>
     let data = env.convert_byte_array(data_obj.into_inner())?;
-    
+
     // Create key handle
     let key_handle = VendorKeyHandle {
         id: key_id,
@@ -150,10 +147,10 @@ async fn sign_data_internal(
         hardware_backed: true,
         vendor_data: None,
     };
-    
+
     // Sign data
     let signature = knox_tee.sign(&key_handle, &data).await?;
-    
+
     Ok(signature.data)
 }
 

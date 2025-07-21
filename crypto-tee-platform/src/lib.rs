@@ -1,12 +1,12 @@
 //! Platform-specific adapters for CryptoTEE
-//! 
+//!
 //! This crate provides the platform layer (L2) that bridges between
 //! the core CryptoTEE API and platform-specific security APIs.
 
 pub mod error;
+pub mod fallback;
 pub mod traits;
 pub mod types;
-pub mod fallback;
 
 #[cfg(test)]
 mod tests;
@@ -33,17 +33,17 @@ pub fn load_platform() -> Box<dyn PlatformTEE> {
     {
         Box::new(android::AndroidPlatform::new())
     }
-    
+
     #[cfg(target_os = "ios")]
     {
         Box::new(ios::IOSPlatform::new())
     }
-    
+
     #[cfg(target_os = "linux")]
     {
         Box::new(linux::LinuxPlatform::new())
     }
-    
+
     #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "linux")))]
     {
         Box::new(fallback::FallbackPlatform::new())

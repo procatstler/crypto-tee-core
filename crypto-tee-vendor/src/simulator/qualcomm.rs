@@ -1,23 +1,24 @@
 //! Qualcomm QSEE TEE Simulator
-//! 
+//!
 //! Simulates Qualcomm Secure Execution Environment (QSEE) functionality
 
-use super::*;
 use super::base::GenericTEESimulator;
-use crate::traits::VendorTEE;
-use crate::error::VendorResult;
-use crate::types::*;
+use super::*;
 use crate::error::VendorError;
+use crate::error::VendorResult;
+use crate::traits::VendorTEE;
+use crate::types::*;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::time::SystemTime;
+use tokio::sync::RwLock;
 
 /// Qualcomm QSEE TEE Simulator
 pub struct QualcommTEESimulator {
     base: GenericTEESimulator,
-    qsee_config: Arc<Mutex<QSEEConfiguration>>,
-    qsee_state: Arc<Mutex<QSEEState>>,
-    trusted_apps: Arc<Mutex<HashMap<String, TrustedApp>>>,
+    qsee_config: Arc<RwLock<QSEEConfiguration>>,
+    qsee_state: Arc<RwLock<QSEEState>>,
+    trusted_apps: Arc<RwLock<HashMap<String, TrustedApp>>>,
 }
 
 /// QSEE configuration
@@ -25,19 +26,19 @@ pub struct QualcommTEESimulator {
 pub struct QSEEConfiguration {
     /// QSEE version
     pub qsee_version: String,
-    
+
     /// Available trusted applications
     pub trusted_apps_enabled: bool,
-    
+
     /// Hardware random number generator
     pub hwrng_available: bool,
-    
+
     /// Secure storage availability
     pub secure_storage_enabled: bool,
-    
+
     /// DRM support
     pub drm_support: bool,
-    
+
     /// Secure boot verification
     pub secure_boot_enabled: bool,
 }
@@ -47,16 +48,16 @@ pub struct QSEEConfiguration {
 pub struct QSEEState {
     /// QSEE initialization status
     pub initialized: bool,
-    
+
     /// Active trusted app sessions
     pub active_ta_sessions: u32,
-    
+
     /// Secure storage utilization
     pub storage_utilization: f32,
-    
+
     /// Last secure boot verification
     pub last_boot_verification: Option<SystemTime>,
-    
+
     /// Hardware RNG entropy level
     pub entropy_level: f32,
 }
@@ -66,16 +67,16 @@ pub struct QSEEState {
 pub struct TrustedApp {
     /// App ID
     pub app_id: String,
-    
+
     /// App name
     pub name: String,
-    
+
     /// Version
     pub version: String,
-    
+
     /// Active sessions
     pub active_sessions: u32,
-    
+
     /// Supported operations
     pub supported_operations: Vec<String>,
 }
@@ -118,25 +119,26 @@ impl QualcommTEESimulator {
 
         Self {
             base: GenericTEESimulator::new(config),
-            qsee_config: Arc::new(Mutex::new(qsee_config)),
-            qsee_state: Arc::new(Mutex::new(qsee_state)),
-            trusted_apps: Arc::new(Mutex::new(trusted_apps)),
+            qsee_config: Arc::new(RwLock::new(qsee_config)),
+            qsee_state: Arc::new(RwLock::new(qsee_state)),
+            trusted_apps: Arc::new(RwLock::new(trusted_apps)),
         }
     }
 
     /// Simulate QSEE operations
     async fn qsee_operation(&self, operation: &str) -> VendorResult<()> {
         let needs_boot_verification = {
-            let state = self.qsee_state.lock().unwrap();
+            let state = self.qsee_state.read().await;
             if !state.initialized {
                 return Err(VendorError::HardwareError("QSEE not initialized".to_string()));
             }
 
             // Check if secure boot verification is needed
             if let Some(last_verification) = state.last_boot_verification {
-                let elapsed = SystemTime::now().duration_since(last_verification)
+                let elapsed = SystemTime::now()
+                    .duration_since(last_verification)
                     .unwrap_or(std::time::Duration::from_secs(0));
-                
+
                 // Re-verify boot integrity every hour (simulated)
                 elapsed > std::time::Duration::from_secs(3600)
             } else {
@@ -156,10 +158,10 @@ impl QualcommTEESimulator {
     /// Simulate secure boot verification
     async fn verify_secure_boot(&self) -> VendorResult<()> {
         let secure_boot_enabled = {
-            let config = self.qsee_config.lock().unwrap();
+            let config = self.qsee_config.read().await;
             config.secure_boot_enabled
         };
-        
+
         if !secure_boot_enabled {
             return Ok(());
         }
@@ -168,12 +170,15 @@ impl QualcommTEESimulator {
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
 
         // Simulate occasional boot integrity failures
-        if ::rand::random::<f32>() < 0.001 { // 0.1% chance
-            return Err(VendorError::SecurityViolation("Secure boot verification failed".to_string()));
+        if ::rand::random::<f32>() < 0.001 {
+            // 0.1% chance
+            return Err(VendorError::SecurityViolation(
+                "Secure boot verification failed".to_string(),
+            ));
         }
 
         {
-            let mut state = self.qsee_state.lock().unwrap();
+            let mut state = self.qsee_state.write().await;
             state.last_boot_verification = Some(SystemTime::now());
         }
 
@@ -183,29 +188,35 @@ impl QualcommTEESimulator {
     /// Interact with trusted application
     async fn trusted_app_operation(&self, app_id: &str, operation: &str) -> VendorResult<()> {
         {
-            let config = self.qsee_config.lock().unwrap();
+            let config = self.qsee_config.read().await;
             if !config.trusted_apps_enabled {
-                return Err(VendorError::NotSupported("Trusted applications not enabled".to_string()));
+                return Err(VendorError::NotSupported(
+                    "Trusted applications not enabled".to_string(),
+                ));
             }
         }
 
         {
-            let mut apps = self.trusted_apps.lock().unwrap();
-            let app = apps.get_mut(app_id)
-                .ok_or_else(|| VendorError::NotSupported(format!("Trusted app {} not found", app_id)))?;
+            let mut apps = self.trusted_apps.write().await;
+            let app = apps.get_mut(app_id).ok_or_else(|| {
+                VendorError::NotSupported(format!("Trusted app {} not found", app_id))
+            })?;
 
             if !app.supported_operations.contains(&operation.to_string()) {
-                return Err(VendorError::NotSupported(format!("Operation {} not supported by app {}", operation, app_id)));
+                return Err(VendorError::NotSupported(format!(
+                    "Operation {} not supported by app {}",
+                    operation, app_id
+                )));
             }
 
             app.active_sessions += 1;
         }
-        
+
         // Simulate operation delay
         tokio::time::sleep(std::time::Duration::from_millis(5)).await;
-        
+
         {
-            let mut apps = self.trusted_apps.lock().unwrap();
+            let mut apps = self.trusted_apps.write().await;
             if let Some(app) = apps.get_mut(app_id) {
                 app.active_sessions = app.active_sessions.saturating_sub(1);
             }
@@ -258,7 +269,7 @@ impl VendorTEE for QualcommTEESimulator {
 
         // Update storage utilization
         {
-            let mut state = self.qsee_state.lock().unwrap();
+            let mut state = self.qsee_state.write().await;
             let max_keys = self.get_qualcomm_capabilities().max_keys as f32;
             state.storage_utilization = (state.storage_utilization * max_keys + 1.0) / max_keys;
         }
@@ -266,7 +277,11 @@ impl VendorTEE for QualcommTEESimulator {
         Ok(handle)
     }
 
-    async fn import_key(&self, key_data: &[u8], params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
+    async fn import_key(
+        &self,
+        key_data: &[u8],
+        params: &KeyGenParams,
+    ) -> VendorResult<VendorKeyHandle> {
         self.qsee_operation("import_key").await?;
         self.trusted_app_operation("crypto_ta", "key_generation").await?;
 
@@ -282,21 +297,26 @@ impl VendorTEE for QualcommTEESimulator {
 
         // Update session count
         {
-            let mut state = self.qsee_state.lock().unwrap();
+            let mut state = self.qsee_state.write().await;
             state.active_ta_sessions += 1;
         }
 
         let result = self.base.sign(key, data).await;
 
         {
-            let mut state = self.qsee_state.lock().unwrap();
+            let mut state = self.qsee_state.write().await;
             state.active_ta_sessions = state.active_ta_sessions.saturating_sub(1);
         }
 
         result
     }
 
-    async fn verify(&self, key: &VendorKeyHandle, data: &[u8], signature: &Signature) -> VendorResult<bool> {
+    async fn verify(
+        &self,
+        key: &VendorKeyHandle,
+        data: &[u8],
+        signature: &Signature,
+    ) -> VendorResult<bool> {
         self.qsee_operation("verify").await?;
         self.trusted_app_operation("crypto_ta", "verification").await?;
         self.base.verify(key, data, signature).await
@@ -307,10 +327,10 @@ impl VendorTEE for QualcommTEESimulator {
 
         // QSEE secure deletion
         let secure_storage_enabled = {
-            let config = self.qsee_config.lock().unwrap();
+            let config = self.qsee_config.read().await;
             config.secure_storage_enabled
         };
-        
+
         if secure_storage_enabled {
             tokio::time::sleep(std::time::Duration::from_millis(8)).await;
             tracing::debug!("Performing QSEE secure deletion for key: {}", key.id);
@@ -351,43 +371,44 @@ impl TEESimulator for QualcommTEESimulator {
 
     async fn get_simulation_stats(&self) -> VendorResult<SimulationStats> {
         let mut stats = self.base.get_simulation_stats().await?;
-        
+
         // Add QSEE-specific stats
         let storage_utilization = {
-            let state = self.qsee_state.lock().unwrap();
+            let state = self.qsee_state.read().await;
             state.storage_utilization
         };
         stats.active_keys = (storage_utilization * 128.0) as u32; // Rough estimate
-        
+
         Ok(stats)
     }
 
     async fn reset_simulator(&mut self) -> VendorResult<()> {
         self.base.reset_simulator().await?;
-        
-        let mut state = self.qsee_state.lock().unwrap();
+
+        let mut state = self.qsee_state.write().await;
         state.active_ta_sessions = 0;
         state.storage_utilization = 0.0;
         state.entropy_level = 1.0;
         state.last_boot_verification = Some(SystemTime::now());
-        
+
         // Reset trusted app sessions
-        let mut apps = self.trusted_apps.lock().unwrap();
+        drop(state); // Release the lock before acquiring another
+        let mut apps = self.trusted_apps.write().await;
         for app in apps.values_mut() {
             app.active_sessions = 0;
         }
-        
+
         Ok(())
     }
 
     async fn simulate_attestation(&self) -> VendorResult<SimulatedAttestation> {
         self.qsee_operation("attestation").await?;
-        
+
         let qsee_version = {
-            let config = self.qsee_config.lock().unwrap();
+            let config = self.qsee_config.read().await;
             config.qsee_version.clone()
         };
-        
+
         let device_identity = DeviceIdentity {
             device_id: "QCOM-DEVICE-001".to_string(),
             hardware_model: "Qualcomm QSEE".to_string(),

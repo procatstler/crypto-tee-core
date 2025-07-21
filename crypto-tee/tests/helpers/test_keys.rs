@@ -22,10 +22,7 @@ impl TestKeyConfigs {
 
     /// Get fast algorithms for quick testing
     pub fn fast_algorithms() -> Vec<Algorithm> {
-        vec![
-            Algorithm::Ed25519,
-            Algorithm::EcdsaP256,
-        ]
+        vec![Algorithm::Ed25519, Algorithm::EcdsaP256]
     }
 
     /// Get test data for each algorithm
@@ -45,14 +42,14 @@ impl TestKeyConfigs {
     /// Get expected signature sizes (approximate ranges)
     pub fn expected_signature_size(algorithm: Algorithm) -> (usize, usize) {
         match algorithm {
-            Algorithm::Ed25519 => (64, 64), // Exactly 64 bytes
-            Algorithm::EcdsaP256 => (64, 72), // DER encoding variation
-            Algorithm::EcdsaP384 => (96, 104), // DER encoding variation
+            Algorithm::Ed25519 => (64, 64),     // Exactly 64 bytes
+            Algorithm::EcdsaP256 => (64, 72),   // DER encoding variation
+            Algorithm::EcdsaP384 => (96, 104),  // DER encoding variation
             Algorithm::EcdsaP521 => (132, 139), // DER encoding variation
-            Algorithm::Rsa2048 => (256, 256), // 2048 bits = 256 bytes
-            Algorithm::Rsa3072 => (384, 384), // 3072 bits = 384 bytes
-            Algorithm::Rsa4096 => (512, 512), // 4096 bits = 512 bytes
-            _ => (32, 1024), // Wide range for unknown algorithms
+            Algorithm::Rsa2048 => (256, 256),   // 2048 bits = 256 bytes
+            Algorithm::Rsa3072 => (384, 384),   // 3072 bits = 384 bytes
+            Algorithm::Rsa4096 => (512, 512),   // 4096 bits = 512 bytes
+            _ => (32, 1024),                    // Wide range for unknown algorithms
         }
     }
 }
@@ -64,9 +61,7 @@ pub struct TestKeyFactory {
 
 impl TestKeyFactory {
     pub fn new() -> Self {
-        Self {
-            counter: std::sync::atomic::AtomicUsize::new(0),
-        }
+        Self { counter: std::sync::atomic::AtomicUsize::new(0) }
     }
 
     /// Generate unique key alias
@@ -103,9 +98,7 @@ pub struct TestKeyLifecycle {
 
 impl TestKeyLifecycle {
     pub fn new() -> Self {
-        Self {
-            active_keys: HashMap::new(),
-        }
+        Self { active_keys: HashMap::new() }
     }
 
     /// Register a key as active
@@ -169,7 +162,7 @@ mod tests {
         let mut lifecycle = TestKeyLifecycle::new();
         lifecycle.register_key("key1".to_string(), Algorithm::Ed25519);
         lifecycle.register_key("key2".to_string(), Algorithm::EcdsaP256);
-        
+
         let aliases = lifecycle.active_aliases();
         assert_eq!(aliases.len(), 2);
         assert!(aliases.contains(&"key1".to_string()));

@@ -1,15 +1,17 @@
 //! Test scenarios for comprehensive testing
 
-use super::{TestHelper, TestAssertions};
-use crypto_tee_vendor::types::{Algorithm, KeyUsage};
+use super::{TestAssertions, TestHelper};
 use crypto_tee::types::*;
+use crypto_tee_vendor::types::{Algorithm, KeyUsage};
 
 /// Comprehensive test scenarios
 pub struct TestScenarios;
 
 impl TestScenarios {
     /// Test basic key lifecycle across all algorithms
-    pub async fn test_all_algorithms_lifecycle(helper: &TestHelper) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn test_all_algorithms_lifecycle(
+        helper: &TestHelper,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let algorithms = vec![
             Algorithm::Ed25519,
             Algorithm::EcdsaP256,
@@ -18,7 +20,7 @@ impl TestScenarios {
 
         for algorithm in algorithms {
             let alias = format!("lifecycle_test_{:?}", algorithm);
-            
+
             // Generate key
             let options = KeyOptions {
                 algorithm,
@@ -29,7 +31,7 @@ impl TestScenarios {
                 require_auth: false,
                 metadata: None,
             };
-            
+
             let key_handle = helper.crypto_tee.generate_key(&alias, options).await?;
             let key_info = KeyInfo {
                 alias: key_handle.alias.clone(),
@@ -56,7 +58,9 @@ impl TestScenarios {
     }
 
     /// Test concurrent operations
-    pub async fn test_concurrent_operations(helper: &TestHelper) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn test_concurrent_operations(
+        helper: &TestHelper,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let alias = "concurrent_test_key";
         helper.generate_test_key(alias).await?;
 
@@ -77,17 +81,17 @@ impl TestScenarios {
                 break;
             }
         }
-        
+
         // For deterministic algorithms (like Ed25519), signatures should be the same
         // For probabilistic algorithms (like ECDSA), they should be different
         match helper.config.algorithm {
             Algorithm::Ed25519 => {
                 assert!(all_same, "Ed25519 signatures should be deterministic");
-            },
+            }
             Algorithm::EcdsaP256 | Algorithm::EcdsaP384 | Algorithm::EcdsaP521 => {
                 // ECDSA signatures should be different due to random k value
                 // But in mock implementation, they might be the same
-            },
+            }
             _ => {
                 // For other algorithms, we don't make assumptions
             }
@@ -98,7 +102,9 @@ impl TestScenarios {
     }
 
     /// Test error handling scenarios
-    pub async fn test_error_scenarios(helper: &TestHelper) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn test_error_scenarios(
+        helper: &TestHelper,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         // Test signing with non-existent key
         let result = helper.crypto_tee.sign("non_existent_key", b"test", None).await;
         assert!(result.is_err(), "Signing with non-existent key should fail");
@@ -107,7 +113,7 @@ impl TestScenarios {
         // Test duplicate key generation
         let alias = "duplicate_test_key";
         helper.generate_test_key(alias).await?;
-        
+
         let options = KeyOptions {
             algorithm: helper.config.algorithm,
             hardware_backed: false,
@@ -117,7 +123,7 @@ impl TestScenarios {
             require_auth: false,
             metadata: None,
         };
-        
+
         let result = helper.crypto_tee.generate_key(alias, options).await;
         assert!(result.is_err(), "Duplicate key generation should fail");
         TestAssertions::assert_error_type(&result.unwrap_err(), "already exists");
@@ -130,8 +136,10 @@ impl TestScenarios {
     pub async fn test_key_metadata(helper: &TestHelper) -> Result<(), Box<dyn std::error::Error>> {
         let alias = "metadata_test_key";
         let mut custom_metadata = serde_json::Map::new();
-        custom_metadata.insert("purpose".to_string(), serde_json::Value::String("testing".to_string()));
-        custom_metadata.insert("owner".to_string(), serde_json::Value::String("test_suite".to_string()));
+        custom_metadata
+            .insert("purpose".to_string(), serde_json::Value::String("testing".to_string()));
+        custom_metadata
+            .insert("owner".to_string(), serde_json::Value::String("test_suite".to_string()));
 
         let options = KeyOptions {
             algorithm: helper.config.algorithm,
@@ -151,15 +159,21 @@ impl TestScenarios {
         };
 
         let key_handle = helper.crypto_tee.generate_key(alias, options).await?;
-        
+
         // Verify metadata
         assert_eq!(key_handle.metadata.algorithm, helper.config.algorithm);
         assert_eq!(key_handle.metadata.usage_count, 0);
         assert!(key_handle.metadata.last_used.is_none());
-        
+
         if let Some(serde_json::Value::Object(metadata)) = &key_handle.metadata.custom {
-            assert_eq!(metadata.get("purpose"), Some(&serde_json::Value::String("testing".to_string())));
-            assert_eq!(metadata.get("owner"), Some(&serde_json::Value::String("test_suite".to_string())));
+            assert_eq!(
+                metadata.get("purpose"),
+                Some(&serde_json::Value::String("testing".to_string()))
+            );
+            assert_eq!(
+                metadata.get("owner"),
+                Some(&serde_json::Value::String("test_suite".to_string()))
+            );
         }
 
         // Test usage count increment
@@ -172,13 +186,15 @@ impl TestScenarios {
     }
 
     /// Test large data signing
-    pub async fn test_large_data_signing(helper: &TestHelper) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn test_large_data_signing(
+        helper: &TestHelper,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let alias = "large_data_test_key";
         helper.generate_test_key(alias).await?;
 
         // Test various data sizes
         let data_sizes = vec![1024, 4096, 16384, 65536]; // 1KB to 64KB
-        
+
         for size in data_sizes {
             let large_data = vec![0xAB; size];
             let signature = helper.crypto_tee.sign(alias, &large_data, None).await?;
@@ -228,9 +244,9 @@ impl TestScenarios {
     pub async fn stress_test(helper: &TestHelper) -> Result<(), Box<dyn std::error::Error>> {
         let stress_key_count = 20;
         let operations_per_key = 5;
-        
+
         let mut test_keys = Vec::new();
-        
+
         // Generate many keys
         for i in 0..stress_key_count {
             let alias = format!("stress_test_key_{}", i);
@@ -243,7 +259,8 @@ impl TestScenarios {
             for j in 0..operations_per_key {
                 let test_data = format!("stress test data {}", j);
                 let signature = helper.crypto_tee.sign(alias, test_data.as_bytes(), None).await?;
-                let valid = helper.crypto_tee.verify(alias, test_data.as_bytes(), &signature, None).await?;
+                let valid =
+                    helper.crypto_tee.verify(alias, test_data.as_bytes(), &signature, None).await?;
                 assert!(valid, "Stress test verification failed for key {} operation {}", alias, j);
             }
         }

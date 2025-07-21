@@ -23,23 +23,28 @@ async fn test_generic_simulator_basic_operations() {
         vendor_params: None,
     };
 
-    let key_handle = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
+    let key_handle =
+        simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     assert!(key_handle.id.contains("sim_key_"));
     assert_eq!(key_handle.algorithm, Algorithm::Ed25519);
 
     // Test signing
     let test_data = b"test message for signing";
-    let signature = simulator.sign(&key_handle, test_data).await.expect("Simulator test should succeed");
+    let signature =
+        simulator.sign(&key_handle, test_data).await.expect("Simulator test should succeed");
     assert!(!signature.data.is_empty());
     assert_eq!(signature.algorithm, Algorithm::Ed25519);
 
     // Test verification
-    let valid = simulator.verify(&key_handle, test_data, &signature).await.expect("Simulator test should succeed");
+    let valid = simulator
+        .verify(&key_handle, test_data, &signature)
+        .await
+        .expect("Simulator test should succeed");
     assert!(valid);
 
     // Test deletion
     simulator.delete_key(&key_handle).await.expect("Simulator test should succeed");
-    
+
     // Verify key is deleted
     let result = simulator.sign(&key_handle, test_data).await;
     assert!(result.is_err());
@@ -62,7 +67,7 @@ async fn test_samsung_simulator() {
         knox_attestation: false,
         knox_container_id: None,
     };
-    
+
     #[cfg(not(feature = "samsung"))]
     let samsung_params = ();
 
@@ -77,7 +82,8 @@ async fn test_samsung_simulator() {
         vendor_params: Some(VendorParams::Generic { hardware_backed: true, require_auth: false }),
     };
 
-    let key_handle = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
+    let key_handle =
+        simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     assert!(key_handle.id.contains("knox_"));
     assert_eq!(key_handle.vendor, "Samsung Knox");
 }
@@ -104,7 +110,8 @@ async fn test_apple_simulator() {
     assert!(result.is_err());
 
     // Test Secure Enclave key generation
-    let key_handle = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
+    let key_handle =
+        simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     assert!(key_handle.id.contains("se_"));
     assert_eq!(key_handle.vendor, "Apple Secure Enclave");
 }
@@ -127,7 +134,8 @@ async fn test_qualcomm_simulator() {
         vendor_params: None,
     };
 
-    let key_handle = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
+    let key_handle =
+        simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     assert!(key_handle.id.contains("qsee_"));
     assert_eq!(key_handle.vendor, "Qualcomm QSEE");
 }
@@ -156,7 +164,7 @@ async fn test_error_injection() {
         error_injection_rate: 0.0, // Start with no errors
         ..Default::default()
     };
-    
+
     let mut simulator = base::GenericTEESimulator::new(config);
 
     // Configure simulator
@@ -165,7 +173,10 @@ async fn test_error_injection() {
     simulator.configure_simulation(error_config).await.expect("Simulator test should succeed");
 
     // Inject a specific error
-    simulator.inject_error(SimulatedErrorType::HardwareFailure).await.expect("Simulator test should succeed");
+    simulator
+        .inject_error(SimulatedErrorType::HardwareFailure)
+        .await
+        .expect("Simulator test should succeed");
 
     // Next operation should fail
     let key_params = KeyGenParams {
@@ -186,7 +197,8 @@ async fn test_simulation_stats() {
     let mut simulator = base::GenericTEESimulator::new(config);
 
     // Get initial stats
-    let initial_stats = simulator.get_simulation_stats().await.expect("Simulator test should succeed");
+    let initial_stats =
+        simulator.get_simulation_stats().await.expect("Simulator test should succeed");
     assert_eq!(initial_stats.total_operations, 0);
 
     // Perform some operations
@@ -198,12 +210,15 @@ async fn test_simulation_stats() {
         vendor_params: None,
     };
 
-    let key_handle = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
+    let key_handle =
+        simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     let test_data = b"test data";
-    let _signature = simulator.sign(&key_handle, test_data).await.expect("Simulator test should succeed");
+    let _signature =
+        simulator.sign(&key_handle, test_data).await.expect("Simulator test should succeed");
 
     // Check stats updated
-    let updated_stats = simulator.get_simulation_stats().await.expect("Simulator test should succeed");
+    let updated_stats =
+        simulator.get_simulation_stats().await.expect("Simulator test should succeed");
     assert!(updated_stats.total_operations > initial_stats.total_operations);
     assert!(updated_stats.successful_operations > 0);
     assert_eq!(updated_stats.active_keys, 1);
@@ -214,8 +229,9 @@ async fn test_attestation_simulation() {
     let config = SimulationConfig::default();
     let simulator = base::GenericTEESimulator::new(config);
 
-    let attestation = simulator.simulate_attestation().await.expect("Simulator test should succeed");
-    
+    let attestation =
+        simulator.simulate_attestation().await.expect("Simulator test should succeed");
+
     assert!(!attestation.certificate_chain.is_empty());
     assert!(attestation.hardware_verified);
     assert!(!attestation.device_identity.device_id.is_empty());
@@ -231,10 +247,7 @@ async fn test_performance_simulation() {
         jitter_factor: 0.0, // No jitter for predictable timing
     };
 
-    let config = SimulationConfig {
-        performance_config,
-        ..Default::default()
-    };
+    let config = SimulationConfig { performance_config, ..Default::default() };
 
     let simulator = base::GenericTEESimulator::new(config);
 
@@ -248,7 +261,8 @@ async fn test_performance_simulation() {
 
     // Measure key generation time
     let start = std::time::Instant::now();
-    let key_handle = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
+    let key_handle =
+        simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     let key_gen_time = start.elapsed();
 
     // Should take at least the configured delay
@@ -257,7 +271,8 @@ async fn test_performance_simulation() {
     // Measure signing time
     let test_data = b"test data";
     let start = std::time::Instant::now();
-    let _signature = simulator.sign(&key_handle, test_data).await.expect("Simulator test should succeed");
+    let _signature =
+        simulator.sign(&key_handle, test_data).await.expect("Simulator test should succeed");
     let sign_time = start.elapsed();
 
     assert!(sign_time >= Duration::from_millis(50));
@@ -280,14 +295,16 @@ async fn test_simulator_reset() {
     let _key1 = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     let _key2 = simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
 
-    let stats_before = simulator.get_simulation_stats().await.expect("Simulator test should succeed");
+    let stats_before =
+        simulator.get_simulation_stats().await.expect("Simulator test should succeed");
     assert!(stats_before.total_operations > 0);
     assert_eq!(stats_before.active_keys, 2);
 
     // Reset simulator
     simulator.reset_simulator().await.expect("Simulator test should succeed");
 
-    let stats_after = simulator.get_simulation_stats().await.expect("Simulator test should succeed");
+    let stats_after =
+        simulator.get_simulation_stats().await.expect("Simulator test should succeed");
     assert_eq!(stats_after.total_operations, 0);
     assert_eq!(stats_after.active_keys, 0);
 }

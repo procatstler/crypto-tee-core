@@ -1,5 +1,5 @@
 //! RFC 9421 HTTP Message Signatures implementation
-//! 
+//!
 //! This crate provides the message signing layer (L4) that implements
 //! RFC 9421 HTTP Message Signatures using keys from CryptoTEE.
 

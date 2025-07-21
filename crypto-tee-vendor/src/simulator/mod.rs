@@ -1,18 +1,18 @@
 //! TEE Hardware Simulators
-//! 
+//!
 //! This module provides realistic simulations of various TEE hardware implementations,
 //! enabling comprehensive testing and development without requiring actual hardware.
 
-pub mod base;
-pub mod samsung;
 pub mod apple;
-pub mod qualcomm;
-pub mod errors;
-pub mod secure_storage;
 pub mod attestation;
+pub mod base;
+pub mod errors;
+pub mod qualcomm;
+pub mod samsung;
+pub mod secure_storage;
 
-use crate::traits::VendorTEE;
 use crate::error::VendorResult;
+use crate::traits::VendorTEE;
 use crate::types::*;
 use std::sync::Arc;
 
@@ -24,19 +24,19 @@ mod tests;
 pub trait TEESimulator: VendorTEE + Send + Sync {
     /// Get simulator type
     fn simulator_type(&self) -> SimulatorType;
-    
+
     /// Configure simulation parameters
     async fn configure_simulation(&mut self, config: SimulationConfig) -> VendorResult<()>;
-    
+
     /// Inject simulated hardware errors
     async fn inject_error(&mut self, error_type: SimulatedErrorType) -> VendorResult<()>;
-    
+
     /// Get simulation statistics
     async fn get_simulation_stats(&self) -> VendorResult<SimulationStats>;
-    
+
     /// Reset simulator state
     async fn reset_simulator(&mut self) -> VendorResult<()>;
-    
+
     /// Simulate hardware attestation
     async fn simulate_attestation(&self) -> VendorResult<SimulatedAttestation>;
 }
@@ -55,22 +55,22 @@ pub enum SimulatorType {
 pub struct SimulationConfig {
     /// Enable hardware security features
     pub hardware_security_enabled: bool,
-    
+
     /// Maximum number of keys to store
     pub max_key_slots: u32,
-    
+
     /// Simulate biometric authentication
     pub biometric_auth_enabled: bool,
-    
+
     /// Enable secure deletion simulation
     pub secure_deletion_enabled: bool,
-    
+
     /// Attestation key configuration
     pub attestation_config: Option<AttestationConfig>,
-    
+
     /// Error injection probability (0.0 - 1.0)
     pub error_injection_rate: f32,
-    
+
     /// Performance simulation parameters
     pub performance_config: PerformanceConfig,
 }
@@ -80,10 +80,10 @@ pub struct SimulationConfig {
 pub struct AttestationConfig {
     /// Root certificate chain
     pub root_ca_enabled: bool,
-    
+
     /// Device-specific certificate
     pub device_cert_enabled: bool,
-    
+
     /// Include hardware verification
     pub hardware_verification: bool,
 }
@@ -93,13 +93,13 @@ pub struct AttestationConfig {
 pub struct PerformanceConfig {
     /// Key generation delay (milliseconds)
     pub key_gen_delay_ms: u64,
-    
+
     /// Signing operation delay (milliseconds)
     pub sign_delay_ms: u64,
-    
+
     /// Verification delay (milliseconds)
     pub verify_delay_ms: u64,
-    
+
     /// Random jitter factor (0.0 - 1.0)
     pub jitter_factor: f32,
 }
@@ -109,22 +109,22 @@ pub struct PerformanceConfig {
 pub enum SimulatedErrorType {
     /// Hardware communication failure
     HardwareFailure,
-    
+
     /// Insufficient permissions
     PermissionDenied,
-    
+
     /// Resource exhaustion
     ResourceExhausted,
-    
+
     /// Authentication failure
     AuthenticationFailed,
-    
+
     /// Key storage corruption
     StorageCorruption,
-    
+
     /// Secure element malfunction
     SecureElementError,
-    
+
     /// Network connectivity issues (for remote attestation)
     NetworkError,
 }
@@ -134,25 +134,25 @@ pub enum SimulatedErrorType {
 pub struct SimulationStats {
     /// Total operations performed
     pub total_operations: u64,
-    
+
     /// Successful operations
     pub successful_operations: u64,
-    
+
     /// Failed operations
     pub failed_operations: u64,
-    
+
     /// Keys currently stored
     pub active_keys: u32,
-    
+
     /// Maximum keys reached
     pub peak_key_count: u32,
-    
+
     /// Errors injected
     pub injected_errors: u64,
-    
+
     /// Average operation time (milliseconds)
     pub avg_operation_time_ms: f64,
-    
+
     /// Security violations detected
     pub security_violations: u64,
 }
@@ -162,16 +162,16 @@ pub struct SimulationStats {
 pub struct SimulatedAttestation {
     /// Attestation certificate chain
     pub certificate_chain: Vec<Vec<u8>>,
-    
+
     /// Hardware verification result
     pub hardware_verified: bool,
-    
+
     /// Device identity
     pub device_identity: DeviceIdentity,
-    
+
     /// Security level achieved
     pub security_level: SecurityLevel,
-    
+
     /// Timestamp of attestation
     pub timestamp: std::time::SystemTime,
 }
@@ -181,13 +181,13 @@ pub struct SimulatedAttestation {
 pub struct DeviceIdentity {
     /// Unique device identifier
     pub device_id: String,
-    
+
     /// Hardware model
     pub hardware_model: String,
-    
+
     /// Firmware version
     pub firmware_version: String,
-    
+
     /// Security patch level
     pub security_patch_level: String,
 }
@@ -197,13 +197,13 @@ pub struct DeviceIdentity {
 pub enum SecurityLevel {
     /// Software implementation only
     Software = 0,
-    
+
     /// Trusted execution environment
     TrustedExecutionEnvironment = 100,
-    
+
     /// Hardware security module
     HardwareSecurityModule = 200,
-    
+
     /// Secure element with certification
     CertifiedSecureElement = 300,
 }
@@ -224,22 +224,13 @@ impl Default for SimulationConfig {
 
 impl Default for AttestationConfig {
     fn default() -> Self {
-        Self {
-            root_ca_enabled: true,
-            device_cert_enabled: true,
-            hardware_verification: true,
-        }
+        Self { root_ca_enabled: true, device_cert_enabled: true, hardware_verification: true }
     }
 }
 
 impl Default for PerformanceConfig {
     fn default() -> Self {
-        Self {
-            key_gen_delay_ms: 50,
-            sign_delay_ms: 10,
-            verify_delay_ms: 5,
-            jitter_factor: 0.1,
-        }
+        Self { key_gen_delay_ms: 50, sign_delay_ms: 10, verify_delay_ms: 5, jitter_factor: 0.1 }
     }
 }
 
@@ -266,32 +257,32 @@ impl SimulatorFactory {
     pub fn create_samsung_simulator(config: SimulationConfig) -> Box<dyn TEESimulator> {
         Box::new(samsung::SamsungTEESimulator::new(config))
     }
-    
+
     /// Create an Apple TEE simulator
     pub fn create_apple_simulator(config: SimulationConfig) -> Box<dyn TEESimulator> {
         Box::new(apple::AppleTEESimulator::new(config))
     }
-    
+
     /// Create a Qualcomm TEE simulator
     pub fn create_qualcomm_simulator(config: SimulationConfig) -> Box<dyn TEESimulator> {
         Box::new(qualcomm::QualcommTEESimulator::new(config))
     }
-    
+
     /// Create a generic TEE simulator
     pub fn create_generic_simulator(config: SimulationConfig) -> Box<dyn TEESimulator> {
         Box::new(base::GenericTEESimulator::new(config))
     }
-    
+
     /// Auto-detect and create appropriate simulator for current platform
     pub fn create_platform_simulator() -> Box<dyn TEESimulator> {
         let config = SimulationConfig::default();
-        
+
         #[cfg(target_os = "android")]
         return Self::create_samsung_simulator(config);
-        
+
         #[cfg(target_os = "ios")]
         return Self::create_apple_simulator(config);
-        
+
         // Default to generic for other platforms
         Self::create_generic_simulator(config)
     }

@@ -1,11 +1,11 @@
 //! Basic RFC 9421 HTTP message signing example
 
-use std::collections::HashMap;
-use crypto_tee_rfc9421::{
-    Rfc9421Adapter,
-    types::{HttpMessage, SignatureComponent, SignatureInputBuilder, SignatureAlgorithm},
-};
 use chrono::Utc;
+use crypto_tee_rfc9421::{
+    types::{HttpMessage, SignatureAlgorithm, SignatureComponent, SignatureInputBuilder},
+    Rfc9421Adapter,
+};
+use std::collections::HashMap;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,17 +29,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
 
     // Build signature parameters
-    let params = SignatureInputBuilder::new(
-        "test-key".to_string(),
-        SignatureAlgorithm::Ed25519,
-    )
-    .add_component(SignatureComponent::Method)
-    .add_component(SignatureComponent::Path)
-    .add_component(SignatureComponent::Authority)
-    .add_component(SignatureComponent::Header("content-type".to_string()))
-    .add_component(SignatureComponent::Header("date".to_string()))
-    .created(Utc::now())
-    .build();
+    let params = SignatureInputBuilder::new("test-key".to_string(), SignatureAlgorithm::Ed25519)
+        .add_component(SignatureComponent::Method)
+        .add_component(SignatureComponent::Path)
+        .add_component(SignatureComponent::Authority)
+        .add_component(SignatureComponent::Header("content-type".to_string()))
+        .add_component(SignatureComponent::Header("date".to_string()))
+        .created(Utc::now())
+        .build();
 
     println!("Signature parameters:");
     println!("  Key ID: {}", params.key_id);
@@ -50,6 +47,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // a key to be available in the CryptoTEE instance
     println!("\nRFC 9421 HTTP Message Signing example completed!");
     println!("To run actual signing, first generate a key using CryptoTEE API.");
-    
+
     Ok(())
 }

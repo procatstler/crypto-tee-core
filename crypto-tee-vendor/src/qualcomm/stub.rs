@@ -19,9 +19,7 @@ struct StubKeyData {
 
 impl QualcommStubTEE {
     pub fn new() -> VendorResult<Self> {
-        Ok(Self {
-            keys: Mutex::new(HashMap::new()),
-        })
+        Ok(Self { keys: Mutex::new(HashMap::new()) })
     }
 }
 
@@ -34,19 +32,19 @@ impl VendorTEE for QualcommStubTEE {
     async fn generate_key(&self, params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
         // Always fail on non-Android platforms
         Err(VendorError::NotSupported(
-            "Qualcomm QSEE is only available on Android devices with Qualcomm chipsets".to_string()
+            "Qualcomm QSEE is only available on Android devices with Qualcomm chipsets".to_string(),
         ))
     }
 
     async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
         Err(VendorError::NotSupported(
-            "Qualcomm QSEE is only available on Android devices".to_string()
+            "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
     }
 
     async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
         Err(VendorError::NotSupported(
-            "Qualcomm QSEE is only available on Android devices".to_string()
+            "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
     }
 
@@ -57,25 +55,25 @@ impl VendorTEE for QualcommStubTEE {
         signature: &Signature,
     ) -> VendorResult<bool> {
         Err(VendorError::NotSupported(
-            "Qualcomm QSEE is only available on Android devices".to_string()
+            "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
     }
 
     async fn get_attestation(&self) -> VendorResult<Attestation> {
         Err(VendorError::NotSupported(
-            "Qualcomm QSEE is only available on Android devices".to_string()
+            "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
     }
 
     async fn get_key_attestation(&self, key: &VendorKeyHandle) -> VendorResult<Attestation> {
         Err(VendorError::NotSupported(
-            "Qualcomm QSEE is only available on Android devices".to_string()
+            "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
     }
 
     async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
         Err(VendorError::NotSupported(
-            "Qualcomm QSEE is only available on Android devices".to_string()
+            "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
     }
 }

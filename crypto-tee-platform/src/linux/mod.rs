@@ -1,15 +1,15 @@
 //! Linux platform implementation
-//! 
+//!
 //! This module provides integration with Linux keyring and
 //! OP-TEE where available.
 
 use async_trait::async_trait;
-use crypto_tee_vendor::{VendorTEE, VendorKeyHandle};
+use crypto_tee_vendor::{VendorKeyHandle, VendorTEE};
 
 use crate::{
     error::{PlatformError, PlatformResult},
     traits::{PlatformKeyHandle, PlatformTEE},
-    types::{AuthResult, AuthMethod, PlatformConfig},
+    types::{AuthMethod, AuthResult, PlatformConfig},
 };
 
 pub struct LinuxPlatform {
@@ -18,9 +18,7 @@ pub struct LinuxPlatform {
 
 impl LinuxPlatform {
     pub fn new() -> Self {
-        Self {
-            config: PlatformConfig::default(),
-        }
+        Self { config: PlatformConfig::default() }
     }
 }
 
@@ -29,31 +27,29 @@ impl PlatformTEE for LinuxPlatform {
     fn name(&self) -> &str {
         "linux"
     }
-    
+
     fn version(&self) -> &str {
         // Get kernel version
         std::env::consts::OS
     }
-    
+
     async fn detect_vendors(&self) -> Vec<Box<dyn VendorTEE>> {
         // TODO: Detect OP-TEE availability via /dev/tee*
         vec![]
     }
-    
+
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
         // TODO: Select OP-TEE if available, otherwise software fallback
         Err(PlatformError::NotSupported(
-            "Linux platform implementation not yet available".to_string()
+            "Linux platform implementation not yet available".to_string(),
         ))
     }
-    
+
     async fn get_vendor(&self, _name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
         // TODO: Get OP-TEE or software vendor
-        Err(PlatformError::NotSupported(
-            "Linux vendor access not yet implemented".to_string()
-        ))
+        Err(PlatformError::NotSupported("Linux vendor access not yet implemented".to_string()))
     }
-    
+
     async fn authenticate(&self, _challenge: &[u8]) -> PlatformResult<AuthResult> {
         // Linux typically doesn't have built-in biometric auth
         // Could integrate with PAM or PolicyKit
@@ -64,20 +60,20 @@ impl PlatformTEE for LinuxPlatform {
             valid_until: None,
         })
     }
-    
+
     async fn requires_authentication(&self) -> bool {
         self.config.require_auth
     }
-    
+
     async fn configure(&mut self, config: PlatformConfig) -> PlatformResult<()> {
         self.config = config;
         Ok(())
     }
-    
+
     fn get_config(&self) -> &PlatformConfig {
         &self.config
     }
-    
+
     async fn wrap_key_handle(
         &self,
         vendor_handle: VendorKeyHandle,
@@ -91,7 +87,7 @@ impl PlatformTEE for LinuxPlatform {
             metadata: None,
         })
     }
-    
+
     async fn unwrap_key_handle(
         &self,
         platform_handle: &PlatformKeyHandle,

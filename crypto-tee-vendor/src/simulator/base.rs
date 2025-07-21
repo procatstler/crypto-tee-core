@@ -1,15 +1,15 @@
 //! Generic TEE Simulator Base Implementation
 
 use super::*;
-use crate::traits::VendorTEE;
-use crate::error::VendorResult;
-use crate::types::*;
 use crate::error::VendorError;
+use crate::error::VendorResult;
+use crate::traits::VendorTEE;
+use crate::types::*;
+use ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair};
+use ring::{digest, rand, signature};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant, SystemTime};
-use ring::signature::{EcdsaKeyPair, Ed25519KeyPair, KeyPair};
-use ring::{digest, rand, signature};
 use tokio::time::sleep;
 
 /// Generic TEE simulator providing base functionality for all vendor simulators
@@ -26,19 +26,19 @@ pub struct GenericTEESimulator {
 pub struct SimulatedKey {
     /// Key handle for external reference
     pub handle: VendorKeyHandle,
-    
+
     /// Actual key material (encrypted in real hardware)
     pub key_material: KeyMaterial,
-    
+
     /// Security properties
     pub security_properties: KeySecurityProperties,
-    
+
     /// Usage statistics
     pub usage_stats: KeyUsageStats,
-    
+
     /// Creation timestamp
     pub created_at: SystemTime,
-    
+
     /// Last accessed timestamp
     pub last_accessed: Option<SystemTime>,
 }
@@ -59,16 +59,16 @@ pub enum KeyMaterial {
 pub struct KeySecurityProperties {
     /// Whether key is hardware-backed
     pub hardware_backed: bool,
-    
+
     /// Whether key can be exported
     pub exportable: bool,
-    
+
     /// Requires biometric authentication
     pub requires_biometric: bool,
-    
+
     /// Secure deletion guaranteed
     pub secure_deletion: bool,
-    
+
     /// Attestation binding
     pub attestation_bound: bool,
 }
@@ -78,10 +78,10 @@ pub struct KeySecurityProperties {
 pub struct KeyUsageStats {
     /// Total sign operations
     pub sign_count: u64,
-    
+
     /// Total verify operations
     pub verify_count: u64,
-    
+
     /// Last operation timestamp
     pub last_operation: Option<SystemTime>,
 }
@@ -129,7 +129,7 @@ impl GenericTEESimulator {
     /// Check if error should be injected
     async fn check_error_injection(&self) -> VendorResult<()> {
         let mut injector = self.error_injector.lock().unwrap();
-        
+
         // Check for forced errors first
         if let Some(error_type) = injector.forced_errors.pop() {
             injector.error_count += 1;
@@ -156,25 +156,25 @@ impl GenericTEESimulator {
         match error_type {
             SimulatedErrorType::HardwareFailure => {
                 VendorError::HardwareError("Simulated hardware communication failure".to_string())
-            },
+            }
             SimulatedErrorType::PermissionDenied => {
                 VendorError::PermissionDenied("Simulated insufficient permissions".to_string())
-            },
+            }
             SimulatedErrorType::ResourceExhausted => {
                 VendorError::NotSupported("Simulated resource exhaustion".to_string())
-            },
+            }
             SimulatedErrorType::AuthenticationFailed => {
                 VendorError::AuthenticationFailed("Simulated authentication failure".to_string())
-            },
+            }
             SimulatedErrorType::StorageCorruption => {
                 VendorError::KeyCorrupted("Simulated storage corruption".to_string())
-            },
+            }
             SimulatedErrorType::SecureElementError => {
                 VendorError::HardwareError("Simulated secure element malfunction".to_string())
-            },
+            }
             SimulatedErrorType::NetworkError => {
                 VendorError::HardwareError("Simulated network connectivity issue".to_string())
-            },
+            }
         }
     }
 
@@ -182,7 +182,7 @@ impl GenericTEESimulator {
     fn update_stats(&self, success: bool, operation_time: Duration) {
         let mut stats = self.stats.lock().unwrap();
         stats.total_operations += 1;
-        
+
         if success {
             stats.successful_operations += 1;
         } else {
@@ -191,54 +191,78 @@ impl GenericTEESimulator {
 
         // Update average operation time
         let total_time = stats.avg_operation_time_ms * (stats.total_operations - 1) as f64;
-        stats.avg_operation_time_ms = (total_time + operation_time.as_millis() as f64) / stats.total_operations as f64;
+        stats.avg_operation_time_ms =
+            (total_time + operation_time.as_millis() as f64) / stats.total_operations as f64;
     }
 
     /// Generate key material based on algorithm
     fn generate_key_material(&self, algorithm: Algorithm) -> VendorResult<KeyMaterial> {
         let rng = self.rng.lock().unwrap();
-        
+
         match algorithm {
             Algorithm::Ed25519 => {
-                let pkcs8 = Ed25519KeyPair::generate_pkcs8(&*rng)
-                    .map_err(|e| VendorError::KeyGeneration(format!("Ed25519 generation failed: {}", e)))?;
+                let pkcs8 = Ed25519KeyPair::generate_pkcs8(&*rng).map_err(|e| {
+                    VendorError::KeyGeneration(format!("Ed25519 generation failed: {}", e))
+                })?;
                 Ok(KeyMaterial::Ed25519(pkcs8.as_ref().to_vec()))
-            },
+            }
             Algorithm::EcdsaP256 => {
-                let pkcs8 = EcdsaKeyPair::generate_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, &*rng)
-                    .map_err(|e| VendorError::KeyGeneration(format!("ECDSA P-256 generation failed: {}", e)))?;
+                let pkcs8 = EcdsaKeyPair::generate_pkcs8(
+                    &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+                    &*rng,
+                )
+                .map_err(|e| {
+                    VendorError::KeyGeneration(format!("ECDSA P-256 generation failed: {}", e))
+                })?;
                 Ok(KeyMaterial::EcdsaP256(pkcs8.as_ref().to_vec()))
-            },
-            _ => Err(VendorError::NotSupported(format!("Algorithm {:?} not yet implemented in simulator", algorithm))),
+            }
+            _ => Err(VendorError::NotSupported(format!(
+                "Algorithm {:?} not yet implemented in simulator",
+                algorithm
+            ))),
         }
     }
 
     /// Sign data with key material
-    fn sign_with_key_material(&self, key_material: &KeyMaterial, data: &[u8]) -> VendorResult<Signature> {
+    fn sign_with_key_material(
+        &self,
+        key_material: &KeyMaterial,
+        data: &[u8],
+    ) -> VendorResult<Signature> {
         let rng = self.rng.lock().unwrap();
-        
+
         match key_material {
             KeyMaterial::Ed25519(pkcs8) => {
-                let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8)
-                    .map_err(|e| VendorError::SigningError(format!("Ed25519 key parsing failed: {}", e)))?;
+                let key_pair = Ed25519KeyPair::from_pkcs8(pkcs8).map_err(|e| {
+                    VendorError::SigningError(format!("Ed25519 key parsing failed: {}", e))
+                })?;
                 let signature_bytes = key_pair.sign(data);
                 Ok(Signature {
                     algorithm: Algorithm::Ed25519,
                     data: signature_bytes.as_ref().to_vec(),
                 })
-            },
+            }
             KeyMaterial::EcdsaP256(pkcs8) => {
                 let rng = self.rng.lock().unwrap();
-                let key_pair = EcdsaKeyPair::from_pkcs8(&signature::ECDSA_P256_SHA256_FIXED_SIGNING, pkcs8, &*rng)
-                    .map_err(|e| VendorError::SigningError(format!("ECDSA P-256 key parsing failed: {}", e)))?;
-                let signature_bytes = key_pair.sign(&*rng, data)
-                    .map_err(|e| VendorError::SigningError(format!("ECDSA signing failed: {}", e)))?;
+                let key_pair = EcdsaKeyPair::from_pkcs8(
+                    &signature::ECDSA_P256_SHA256_FIXED_SIGNING,
+                    pkcs8,
+                    &*rng,
+                )
+                .map_err(|e| {
+                    VendorError::SigningError(format!("ECDSA P-256 key parsing failed: {}", e))
+                })?;
+                let signature_bytes = key_pair.sign(&*rng, data).map_err(|e| {
+                    VendorError::SigningError(format!("ECDSA signing failed: {}", e))
+                })?;
                 Ok(Signature {
                     algorithm: Algorithm::EcdsaP256,
                     data: signature_bytes.as_ref().to_vec(),
                 })
-            },
-            _ => Err(VendorError::NotSupported("Signing with this algorithm not implemented".to_string())),
+            }
+            _ => Err(VendorError::NotSupported(
+                "Signing with this algorithm not implemented".to_string(),
+            )),
         }
     }
 }
@@ -252,11 +276,7 @@ pub(super) enum OperationType {
 
 impl ErrorInjector {
     fn new(injection_rate: f32) -> Self {
-        Self {
-            injection_rate,
-            forced_errors: Vec::new(),
-            error_count: 0,
-        }
+        Self { injection_rate, forced_errors: Vec::new(), error_count: 0 }
     }
 }
 
@@ -264,10 +284,10 @@ impl ErrorInjector {
 impl VendorTEE for GenericTEESimulator {
     async fn probe(&self) -> VendorResult<VendorCapabilities> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
         self.simulate_delay(OperationType::Verification).await;
-        
+
         let capabilities = VendorCapabilities {
             algorithms: vec![Algorithm::Ed25519, Algorithm::EcdsaP256],
             hardware_backed: true,
@@ -281,7 +301,7 @@ impl VendorTEE for GenericTEESimulator {
 
     async fn generate_key(&self, params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
         self.simulate_delay(OperationType::KeyGeneration).await;
 
@@ -297,14 +317,15 @@ impl VendorTEE for GenericTEESimulator {
 
         // Generate key material
         let key_material = self.generate_key_material(params.algorithm)?;
-        
+
         // Create key handle
         let key_id = format!("sim_key_{}", uuid::Uuid::new_v4());
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
+            vendor: "TEE Simulator".to_string(),
             hardware_backed: params.hardware_backed,
-            attestation: None,
+            vendor_data: None,
         };
 
         // Create simulated key
@@ -327,7 +348,7 @@ impl VendorTEE for GenericTEESimulator {
         {
             let mut keys = self.keys.lock().unwrap();
             keys.insert(key_id, simulated_key);
-            
+
             // Update stats
             let mut stats = self.stats.lock().unwrap();
             stats.active_keys = keys.len() as u32;
@@ -338,9 +359,13 @@ impl VendorTEE for GenericTEESimulator {
         Ok(handle)
     }
 
-    async fn import_key(&self, key_data: &[u8], params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
+    async fn import_key(
+        &self,
+        key_data: &[u8],
+        params: &KeyGenParams,
+    ) -> VendorResult<VendorKeyHandle> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
         self.simulate_delay(OperationType::KeyGeneration).await;
 
@@ -351,7 +376,10 @@ impl VendorTEE for GenericTEESimulator {
             Algorithm::EcdsaP256 => KeyMaterial::EcdsaP256(key_data.to_vec()),
             _ => {
                 self.update_stats(false, start.elapsed());
-                return Err(VendorError::NotSupported(format!("Key import for {:?} not supported", params.algorithm)));
+                return Err(VendorError::NotSupported(format!(
+                    "Key import for {:?} not supported",
+                    params.algorithm
+                )));
             }
         };
 
@@ -359,8 +387,9 @@ impl VendorTEE for GenericTEESimulator {
         let handle = VendorKeyHandle {
             id: key_id.clone(),
             algorithm: params.algorithm,
+            vendor: "TEE Simulator".to_string(),
             hardware_backed: params.hardware_backed,
-            attestation: None,
+            vendor_data: None,
         };
 
         let simulated_key = SimulatedKey {
@@ -381,7 +410,7 @@ impl VendorTEE for GenericTEESimulator {
         {
             let mut keys = self.keys.lock().unwrap();
             keys.insert(key_id, simulated_key);
-            
+
             let mut stats = self.stats.lock().unwrap();
             stats.active_keys = keys.len() as u32;
             stats.peak_key_count = stats.peak_key_count.max(stats.active_keys);
@@ -393,13 +422,14 @@ impl VendorTEE for GenericTEESimulator {
 
     async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
         self.simulate_delay(OperationType::Signing).await;
 
         let signature = {
             let mut keys = self.keys.lock().unwrap();
-            let simulated_key = keys.get_mut(&key.id)
+            let simulated_key = keys
+                .get_mut(&key.id)
                 .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key.id)))?;
 
             // Update usage stats
@@ -414,9 +444,14 @@ impl VendorTEE for GenericTEESimulator {
         Ok(signature)
     }
 
-    async fn verify(&self, key: &VendorKeyHandle, data: &[u8], signature: &Signature) -> VendorResult<bool> {
+    async fn verify(
+        &self,
+        key: &VendorKeyHandle,
+        data: &[u8],
+        signature: &Signature,
+    ) -> VendorResult<bool> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
         self.simulate_delay(OperationType::Verification).await;
 
@@ -424,7 +459,8 @@ impl VendorTEE for GenericTEESimulator {
         // Real implementation would use public key verification
         let valid = {
             let mut keys = self.keys.lock().unwrap();
-            let simulated_key = keys.get_mut(&key.id)
+            let simulated_key = keys
+                .get_mut(&key.id)
                 .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key.id)))?;
 
             // Update usage stats
@@ -442,14 +478,14 @@ impl VendorTEE for GenericTEESimulator {
 
     async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
 
         {
             let mut keys = self.keys.lock().unwrap();
             keys.remove(&key.id)
                 .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key.id)))?;
-            
+
             let mut stats = self.stats.lock().unwrap();
             stats.active_keys = keys.len() as u32;
         }
@@ -460,17 +496,14 @@ impl VendorTEE for GenericTEESimulator {
 
     async fn get_attestation(&self) -> VendorResult<Attestation> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
         self.simulate_delay(OperationType::Verification).await;
 
         let attestation = Attestation {
             format: AttestationFormat::Custom("generic_simulation".to_string()),
             data: b"SIMULATED_ATTESTATION_DATA".to_vec(),
-            certificates: vec![
-                b"SIMULATED_ROOT_CERT".to_vec(),
-                b"SIMULATED_DEVICE_CERT".to_vec(),
-            ],
+            certificates: vec![b"SIMULATED_ROOT_CERT".to_vec(), b"SIMULATED_DEVICE_CERT".to_vec()],
         };
 
         self.update_stats(true, start.elapsed());
@@ -479,7 +512,7 @@ impl VendorTEE for GenericTEESimulator {
 
     async fn get_key_attestation(&self, key: &VendorKeyHandle) -> VendorResult<Attestation> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
         self.simulate_delay(OperationType::Verification).await;
 
@@ -493,10 +526,7 @@ impl VendorTEE for GenericTEESimulator {
         let attestation = Attestation {
             format: AttestationFormat::Custom("key_attestation_simulation".to_string()),
             data: format!("SIMULATED_KEY_ATTESTATION_{}", key.id).into_bytes(),
-            certificates: vec![
-                b"SIMULATED_ROOT_CERT".to_vec(),
-                b"SIMULATED_KEY_CERT".to_vec(),
-            ],
+            certificates: vec![b"SIMULATED_ROOT_CERT".to_vec(), b"SIMULATED_KEY_CERT".to_vec()],
         };
 
         self.update_stats(true, start.elapsed());
@@ -505,7 +535,7 @@ impl VendorTEE for GenericTEESimulator {
 
     async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
         self.check_error_injection().await?;
-        
+
         let start = Instant::now();
 
         let handles = {
@@ -527,10 +557,10 @@ impl TEESimulator for GenericTEESimulator {
     async fn configure_simulation(&mut self, config: SimulationConfig) -> VendorResult<()> {
         let mut current_config = self.config.lock().unwrap();
         *current_config = config.clone();
-        
+
         let mut injector = self.error_injector.lock().unwrap();
         injector.injection_rate = config.error_injection_rate;
-        
+
         Ok(())
     }
 
@@ -543,10 +573,10 @@ impl TEESimulator for GenericTEESimulator {
     async fn get_simulation_stats(&self) -> VendorResult<SimulationStats> {
         let stats = self.stats.lock().unwrap();
         let injector = self.error_injector.lock().unwrap();
-        
+
         let mut result = stats.clone();
         result.injected_errors = injector.error_count;
-        
+
         Ok(result)
     }
 
@@ -555,24 +585,24 @@ impl TEESimulator for GenericTEESimulator {
             let mut keys = self.keys.lock().unwrap();
             keys.clear();
         }
-        
+
         {
             let mut stats = self.stats.lock().unwrap();
             *stats = SimulationStats::default();
         }
-        
+
         {
             let mut injector = self.error_injector.lock().unwrap();
             injector.forced_errors.clear();
             injector.error_count = 0;
         }
-        
+
         Ok(())
     }
 
     async fn simulate_attestation(&self) -> VendorResult<SimulatedAttestation> {
         self.check_error_injection().await?;
-        
+
         let device_identity = DeviceIdentity {
             device_id: "SIM-DEVICE-001".to_string(),
             hardware_model: "Generic TEE Simulator".to_string(),
