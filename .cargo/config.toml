@@ -1,0 +1,12 @@
+[build]
+rustdocflags = [
+    "--html-in-header", "docs/header.html",
+    "--extend-css", "docs/custom.css",
+    "--default-theme", "ayu"
+]
+
+[doc]
+rustdocflags = [
+    "-D", "warnings",
+    "--cfg", "docsrs"
+]

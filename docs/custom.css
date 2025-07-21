@@ -1,0 +1,70 @@
+/* CryptoTEE Documentation Custom Styles */
+
+/* Platform badges */
+.platform-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    margin: 2px;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-weight: bold;
+}
+
+.platform-badge.macos { background-color: #007AFF; color: white; }
+.platform-badge.ios { background-color: #FF3B30; color: white; }
+.platform-badge.android { background-color: #3DDC84; color: white; }
+.platform-badge.linux { background-color: #FCC624; color: black; }
+.platform-badge.windows { background-color: #0078D4; color: white; }
+
+/* Security level indicators */
+.security-level {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.security-level.hardware { background-color: #27ae60; color: white; }
+.security-level.software { background-color: #95a5a6; color: white; }
+
+/* API stability markers */
+.stability {
+    float: right;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-size: 0.8em;
+}
+
+.stability.stable { background-color: #27ae60; color: white; }
+.stability.unstable { background-color: #e74c3c; color: white; }
+.stability.deprecated { background-color: #7f8c8d; color: white; }
+
+/* Example categories */
+.example-category {
+    margin-top: 20px;
+    padding: 10px;
+    border-left: 4px solid #3498db;
+    background-color: rgba(52, 152, 219, 0.05);
+}
+
+/* Performance metrics */
+.perf-metric {
+    display: inline-block;
+    margin: 5px;
+    padding: 5px 10px;
+    background-color: #ecf0f1;
+    border-radius: 3px;
+    font-family: monospace;
+}
+
+/* Feature flags */
+.feature-flag {
+    display: inline-block;
+    padding: 2px 6px;
+    margin: 2px;
+    background-color: #9b59b6;
+    color: white;
+    border-radius: 3px;
+    font-size: 0.85em;
+    font-family: monospace;
+}

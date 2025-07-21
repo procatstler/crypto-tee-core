@@ -8,6 +8,7 @@ pub mod error;
 pub mod types;
 pub mod traits;
 pub mod mock;
+pub mod cache;
 
 #[cfg(feature = "simulator")]
 pub mod simulator;
