@@ -63,6 +63,18 @@ pub enum VendorError {
     #[error("Attestation failed: {0}")]
     AttestationFailed(String),
 
+    #[error("Verification error: {0}")]
+    VerificationError(String),
+
+    #[error("Initialization error: {0}")]
+    InitializationError(String),
+
+    #[error("Key deletion failed: {0}")]
+    KeyDeletion(String),
+
+    #[error("Key listing failed: {0}")]
+    KeyListing(String),
+
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

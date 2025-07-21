@@ -2,7 +2,7 @@
 //!
 //! Simulates Samsung Knox Vault and TrustZone functionality
 
-use super::base::{GenericTEESimulator, OperationType};
+use super::base::GenericTEESimulator;
 use super::*;
 use crate::error::VendorError;
 use crate::error::VendorResult;

@@ -5,7 +5,7 @@
 //! - Public key operations  
 //! - Verification results (for repeated verification of same data)
 
-use crate::error::VendorResult;
+// use crate::error::VendorResult; // Currently unused
 use crate::types::*;
 use ring::signature;
 use std::collections::HashMap;

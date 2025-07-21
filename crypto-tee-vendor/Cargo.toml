@@ -12,11 +12,12 @@ thiserror = { workspace = true }
 anyhow = { workspace = true }
 tracing = { workspace = true }
 serde = { workspace = true }
+serde_json = { workspace = true }
 zeroize = { workspace = true }
 subtle = { workspace = true }
 async-trait = { workspace = true }
 ring = { workspace = true }
-uuid = { version = "1.6", features = ["v4"] }
+uuid = { version = "1.6", features = ["v4", "serde"] }
 tokio = { workspace = true, features = ["sync", "time"] }
 rand = "0.8"
 

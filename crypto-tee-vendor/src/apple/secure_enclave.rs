@@ -3,7 +3,8 @@
 //! This module provides the actual implementation of Apple Secure Enclave
 //! for iOS and macOS devices.
 
-use super::{keychain::KeychainOperations, SecureEnclaveParams};
+use super::SecureEnclaveParams;
+use crate::apple::keychain::KeychainOperations;
 use crate::{
     error::{VendorError, VendorResult},
     traits::VendorTEE,
@@ -39,7 +40,7 @@ impl AppleSecureEnclave {
     /// Create new Apple Secure Enclave instance
     pub fn new() -> VendorResult<Self> {
         // Verify Secure Enclave is available
-        if !is_secure_enclave_available()? {
+        if !Self::is_secure_enclave_available()? {
             return Err(VendorError::NotSupported(
                 "Secure Enclave is not available on this device".to_string(),
             ));
@@ -51,8 +52,8 @@ impl AppleSecureEnclave {
     /// Convert algorithm to SecKey algorithm
     fn algorithm_to_sec_algorithm(algorithm: Algorithm) -> VendorResult<SecAlgorithm> {
         match algorithm {
-            Algorithm::EcdsaP256 => Ok(SecAlgorithm::EcdsaSignatureMessageX962SHA256),
-            Algorithm::EcdsaP384 => Ok(SecAlgorithm::EcdsaSignatureMessageX962SHA384),
+            Algorithm::EcdsaP256 => Ok(SecAlgorithm::ECDSASignatureDigestX962SHA256),
+            Algorithm::EcdsaP384 => Ok(SecAlgorithm::ECDSASignatureDigestX962SHA384),
             _ => Err(VendorError::NotSupported(format!(
                 "Algorithm {:?} not supported by Secure Enclave",
                 algorithm
@@ -107,8 +108,9 @@ impl AppleSecureEnclave {
     }
 }
 
-/// Check if Secure Enclave is available on this device
-pub fn is_secure_enclave_available() -> VendorResult<bool> {
+impl AppleSecureEnclave {
+    /// Check if Secure Enclave is available on this device
+    pub fn is_secure_enclave_available() -> VendorResult<bool> {
     #[cfg(target_os = "ios")]
     {
         // On iOS, check if we're on a device with Secure Enclave
@@ -173,6 +175,7 @@ pub fn is_secure_enclave_available() -> VendorResult<bool> {
     {
         Ok(false)
     }
+    }
 }
 
 #[async_trait]
@@ -182,6 +185,8 @@ impl VendorTEE for AppleSecureEnclave {
             name: "Apple Secure Enclave".to_string(),
             version: "2.0".to_string(), // SEP version
             algorithms: vec![Algorithm::EcdsaP256, Algorithm::EcdsaP384],
+            hardware_backed: true,
+            attestation: true,
             features: VendorFeatures {
                 hardware_backed: true,
                 secure_key_import: false, // Secure Enclave doesn't allow key import
@@ -212,7 +217,7 @@ impl VendorTEE for AppleSecureEnclave {
         }
 
         // Generate key in Secure Enclave
-        let (key, key_id) =
+        let (_key, key_id) =
             KeychainOperations::generate_secure_enclave_key(params.algorithm, &se_params)?;
 
         // Store key info
@@ -290,7 +295,7 @@ impl VendorTEE for AppleSecureEnclave {
     async fn get_attestation(&self) -> VendorResult<Attestation> {
         // Device attestation through DeviceCheck or App Attest
         Ok(Attestation {
-            format: "apple_device_attestation".to_string(),
+            format: AttestationFormat::AppleDeviceCheck,
             data: vec![],         // Would contain actual attestation data
             certificates: vec![], // Would contain certificate chain
         })
@@ -306,7 +311,7 @@ impl VendorTEE for AppleSecureEnclave {
         // In a real implementation, this would use App Attest or similar
         // to generate hardware-backed attestation
         Ok(Attestation {
-            format: "apple_key_attestation".to_string(),
+            format: AttestationFormat::Custom("apple_key_attestation".to_string()),
             data: serde_json::to_vec(&attributes).map_err(|e| {
                 VendorError::AttestationFailed(format!("Failed to serialize attributes: {}", e))
             })?,

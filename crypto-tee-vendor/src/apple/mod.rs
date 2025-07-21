@@ -27,7 +27,7 @@ pub fn get_apple_tee() -> VendorResult<Box<dyn VendorTEE>> {
     #[cfg(any(target_os = "ios", target_os = "macos"))]
     {
         // Check if Secure Enclave is available
-        if secure_enclave::is_secure_enclave_available()? {
+        if secure_enclave::AppleSecureEnclave::is_secure_enclave_available()? {
             Ok(Box::new(secure_enclave::AppleSecureEnclave::new()?))
         } else {
             Err(crate::error::VendorError::NotSupported(
