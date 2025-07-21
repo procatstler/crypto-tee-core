@@ -6,6 +6,7 @@ use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
 use crypto_tee::{types::*, CryptoTEE, CryptoTEEBuilder};
 use crypto_tee_vendor::{
     cache::PerformanceConfig,
+    traits::VendorTEE,
     types::{Algorithm, KeyUsage},
     MockVendor,
 };
@@ -42,8 +43,9 @@ fn bench_optimized_verification(c: &mut Criterion) {
             handle_cache_ttl: Duration::from_secs(0),
         };
 
-        let optimized_vendor = MockVendor::with_config("optimized", optimized_config);
-        let non_optimized_vendor = MockVendor::with_config("non-optimized", non_optimized_config);
+        // For now, use standard mock vendors since with_config is not implemented
+        let optimized_vendor = MockVendor::new("optimized");
+        let non_optimized_vendor = MockVendor::new("non-optimized");
 
         // Generate keys and signatures for testing
         let alias = "perf_test_key";
@@ -115,7 +117,8 @@ fn bench_memory_patterns(c: &mut Criterion) {
             ..Default::default()
         };
 
-        let vendor = MockVendor::with_config("memory-test", optimized_config);
+        // For now, use standard mock vendor since with_config is not implemented
+        let vendor = MockVendor::new("memory-test");
 
         let key_handle = vendor
             .generate_key(&crypto_tee_vendor::types::KeyGenParams {
@@ -161,7 +164,8 @@ fn bench_cache_effectiveness(c: &mut Criterion) {
 
     // Setup
     let setup = rt.block_on(async {
-        let vendor = MockVendor::with_config("cache-test", PerformanceConfig::default());
+        // For now, use standard mock vendor since with_config is not implemented
+        let vendor = MockVendor::new("cache-test");
 
         // Generate multiple keys
         let mut keys = Vec::new();
@@ -217,7 +221,8 @@ fn bench_optimized_concurrency(c: &mut Criterion) {
 
     // Setup
     let setup = rt.block_on(async {
-        let vendor = MockVendor::with_config("concurrent-test", PerformanceConfig::default());
+        // For now, use standard mock vendor since with_config is not implemented
+        let vendor = MockVendor::new("concurrent-test");
 
         let key_handle = vendor
             .generate_key(&crypto_tee_vendor::types::KeyGenParams {
@@ -234,6 +239,8 @@ fn bench_optimized_concurrency(c: &mut Criterion) {
     });
 
     let (vendor, key_handle) = setup;
+    let vendor = std::sync::Arc::new(vendor);
+    let key_handle = std::sync::Arc::new(key_handle);
     let concurrency_levels = vec![1, 5, 10, 20];
 
     for concurrency in concurrency_levels {
@@ -241,15 +248,17 @@ fn bench_optimized_concurrency(c: &mut Criterion) {
             BenchmarkId::new("optimized_concurrent_ops", concurrency),
             &concurrency,
             |b, &concurrency| {
+                let vendor = vendor.clone();
+                let key_handle = key_handle.clone();
                 b.to_async(&rt).iter(|| async {
                     let test_data = b"Optimized concurrent operation test";
                     let mut tasks = Vec::new();
 
                     // Create signing tasks
                     for _ in 0..concurrency {
-                        let vendor_ref = &vendor;
-                        let key_ref = &key_handle;
-                        let task = async move { vendor_ref.sign(key_ref, test_data).await };
+                        let vendor_clone = vendor.clone();
+                        let key_handle_clone = key_handle.clone();
+                        let task = async move { vendor_clone.sign(&key_handle_clone, test_data).await };
                         tasks.push(task);
                     }
 

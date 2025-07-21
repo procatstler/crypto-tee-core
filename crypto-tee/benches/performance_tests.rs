@@ -32,6 +32,7 @@ fn bench_key_generation(c: &mut Criterion) {
                         usage: KeyUsage::default(),
                         require_auth: false,
                         expires_at: None,
+                        metadata: None,
                     };
 
                     let result = crypto_tee.generate_key(&alias, options).await;
@@ -73,6 +74,7 @@ fn bench_signing(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 require_auth: false,
                 expires_at: None,
+                metadata: None,
             };
 
             crypto_tee
@@ -136,6 +138,7 @@ fn bench_verification(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 require_auth: false,
                 expires_at: None,
+                metadata: None,
             };
 
             crypto_tee
@@ -199,6 +202,7 @@ fn bench_concurrent_signing(c: &mut Criterion) {
             usage: KeyUsage::default(),
             require_auth: false,
             expires_at: None,
+            metadata: None,
         };
 
         crypto_tee.generate_key(alias, options).await.expect("Benchmark operation should succeed");
@@ -254,6 +258,7 @@ fn bench_data_sizes(c: &mut Criterion) {
             usage: KeyUsage::default(),
             require_auth: false,
             expires_at: None,
+            metadata: None,
         };
 
         crypto_tee.generate_key(alias, options).await.expect("Benchmark operation should succeed");
