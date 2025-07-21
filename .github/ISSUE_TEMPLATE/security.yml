@@ -1,0 +1,94 @@
+name: Security Issue
+description: Report a security vulnerability (use privately)
+title: "[SECURITY] "
+labels: ["security", "triage"]
+assignees:
+  - procatstler
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ **IMPORTANT**: If this is a security vulnerability, please do NOT create a public issue.
+        
+        Instead, please email security@example.com or use GitHub's private vulnerability reporting.
+        
+        This template is for security-related issues that are NOT vulnerabilities (e.g., security hardening suggestions).
+
+  - type: dropdown
+    id: type
+    attributes:
+      label: Security Issue Type
+      description: What type of security issue is this?
+      options:
+        - Security hardening suggestion
+        - Security documentation improvement
+        - Security audit request
+        - Security testing enhancement
+        - Compliance requirement
+        - Other non-vulnerability security concern
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component does this affect?
+      options:
+        - crypto-tee (Core)
+        - crypto-tee-vendor (Vendor Layer)
+        - crypto-tee-platform (Platform Layer)
+        - crypto-tee-rfc9421 (RFC 9421 Adapter)
+        - Build/CI pipeline
+        - Documentation
+        - Dependencies
+        - All components
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Describe the security concern or suggestion
+      placeholder: "Describe the security-related issue or improvement..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Security Impact
+      description: What is the potential security impact?
+      placeholder: "Describe the potential security implications..."
+
+  - type: textarea
+    id: recommendation
+    attributes:
+      label: Recommendation
+      description: What do you recommend to address this?
+      placeholder: "Describe your recommended solution..."
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Any relevant security standards, guidelines, or documentation
+      placeholder: |
+        - NIST guidelines: 
+        - OWASP recommendations:
+        - Industry standards:
+
+  - type: checkboxes
+    id: confirmation
+    attributes:
+      label: Confirmation
+      description: Please confirm the following
+      options:
+        - label: This is NOT a security vulnerability (I understand those should be reported privately)
+          required: true
+        - label: I have reviewed existing security documentation
+          required: true
+        - label: I understand this will be publicly visible
+          required: true

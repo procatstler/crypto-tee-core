@@ -1,0 +1,287 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, dev ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  formatting:
+    name: Code Formatting
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: rustfmt
+
+    - name: Check formatting
+      run: cargo fmt --all -- --check
+
+    - name: Generate formatting report
+      if: failure()
+      run: |
+        echo "## Formatting Issues" >> $GITHUB_STEP_SUMMARY
+        echo "The following files need formatting:" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cargo fmt --all -- --check 2>&1 || true >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "Run \`cargo fmt\` to fix these issues." >> $GITHUB_STEP_SUMMARY
+
+  clippy:
+    name: Clippy Lints
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run Clippy
+      run: |
+        cargo clippy --all-targets --all-features -- \
+          -D warnings \
+          -D clippy::all \
+          -D clippy::pedantic \
+          -D clippy::nursery \
+          -D clippy::cargo \
+          -A clippy::multiple_crate_versions \
+          -A clippy::module_name_repetitions \
+          -A clippy::too_many_lines
+
+    - name: Generate Clippy report
+      if: failure()
+      run: |
+        echo "## Clippy Issues" >> $GITHUB_STEP_SUMMARY
+        echo "The following issues were found:" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        cargo clippy --all-targets --all-features -- -D warnings 2>&1 || true >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  documentation:
+    name: Documentation Quality
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Check documentation
+      run: |
+        RUSTDOCFLAGS="-D warnings -D rustdoc::broken_intra_doc_links" \
+        cargo doc --all-features --no-deps --document-private-items
+
+    - name: Check for missing documentation
+      run: |
+        RUSTDOCFLAGS="-D missing_docs" \
+        cargo doc --all-features --no-deps 2>&1 | tee doc-check.log
+        
+        if grep -q "warning: missing documentation" doc-check.log; then
+          echo "## Missing Documentation" >> $GITHUB_STEP_SUMMARY
+          echo "The following items are missing documentation:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          grep "warning: missing documentation" doc-check.log >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+
+  complexity:
+    name: Code Complexity Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install cargo-complexity
+      run: cargo install cargo-complexity
+
+    - name: Run complexity analysis
+      run: |
+        cargo complexity --all --threshold 10 > complexity-report.txt || true
+        echo "## Code Complexity Report" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        head -n 20 complexity-report.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload complexity report
+      uses: actions/upload-artifact@v3
+      with:
+        name: complexity-report
+        path: complexity-report.txt
+
+  dead-code:
+    name: Dead Code Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@nightly
+      with:
+        components: rust-src
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install cargo-udeps
+      run: cargo install cargo-udeps
+
+    - name: Check for unused dependencies
+      run: |
+        cargo +nightly udeps --all-targets --all-features > udeps-report.txt || true
+        if [ -s udeps-report.txt ]; then
+          echo "## Unused Dependencies" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat udeps-report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        fi
+
+  test-coverage:
+    name: Test Coverage Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        components: llvm-tools-preview
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install grcov
+      run: cargo install grcov
+
+    - name: Run tests with coverage
+      env:
+        CARGO_INCREMENTAL: 0
+        RUSTFLAGS: '-Cinstrument-coverage'
+        LLVM_PROFILE_FILE: 'cargo-test-%p-%m.profraw'
+      run: |
+        cargo test --all-features
+        cargo test --doc --all-features
+
+    - name: Generate coverage report
+      run: |
+        grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o coverage.lcov
+        grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o coverage/
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: coverage.lcov
+        fail_ci_if_error: false
+
+    - name: Generate coverage summary
+      run: |
+        COVERAGE=$(grcov . --binary-path ./target/debug/deps/ -s . -t text --branch --ignore-not-existing --ignore '../*' --ignore "/*" | grep "Total:" | awk '{print $2}')
+        echo "## Test Coverage: $COVERAGE" >> $GITHUB_STEP_SUMMARY
+        echo "Detailed coverage report available in artifacts." >> $GITHUB_STEP_SUMMARY
+
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-report
+        path: coverage/
+
+  api-breaking-changes:
+    name: API Breaking Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Install cargo-semver-checks
+      run: cargo install cargo-semver-checks
+
+    - name: Check for breaking changes
+      run: |
+        # Check each package for breaking changes
+        cargo semver-checks check-release --package crypto-tee-vendor || echo "Breaking changes in crypto-tee-vendor"
+        cargo semver-checks check-release --package crypto-tee-platform || echo "Breaking changes in crypto-tee-platform"
+        cargo semver-checks check-release --package crypto-tee || echo "Breaking changes in crypto-tee"
+        cargo semver-checks check-release --package crypto-tee-rfc9421 || echo "Breaking changes in crypto-tee-rfc9421"
+
+  dependency-analysis:
+    name: Dependency Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Generate dependency tree
+      run: |
+        cargo tree --all-features > dependency-tree.txt
+        echo "## Dependency Tree" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        head -n 30 dependency-tree.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+    - name: Check for duplicate dependencies
+      run: |
+        cargo tree --duplicates --all-features > duplicates.txt
+        if [ -s duplicates.txt ]; then
+          echo "## Duplicate Dependencies Found" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat duplicates.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        else
+          echo "## No Duplicate Dependencies Found ✅" >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Upload dependency analysis
+      uses: actions/upload-artifact@v3
+      with:
+        name: dependency-analysis
+        path: |
+          dependency-tree.txt
+          duplicates.txt
