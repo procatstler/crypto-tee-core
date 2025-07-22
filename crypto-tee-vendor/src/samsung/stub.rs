@@ -13,6 +13,12 @@ use async_trait::async_trait;
 /// Stub implementation for Samsung Knox TEE
 pub struct SamsungKnoxStub;
 
+impl Default for SamsungKnoxStub {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SamsungKnoxStub {
     pub fn new() -> Self {
         Self

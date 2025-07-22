@@ -1,5 +1,7 @@
 //! Performance demonstration comparing standard and optimized mock vendors
 
+#![allow(clippy::uninlined_format_args)]
+
 use crypto_tee_vendor::{
     mock::{optimized::OptimizedMockVendor, MockVendor},
     traits::VendorTEE,

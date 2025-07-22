@@ -98,7 +98,7 @@ impl BiometricContext {
                     .arg("SPiBridgeDataType")
                     .output()
                     .map_err(|e| {
-                        VendorError::InitializationError(format!("Failed to check Touch ID: {}", e))
+                        VendorError::InitializationError(format!("Failed to check Touch ID: {e}"))
                     })?;
 
                 let has_touch_id = String::from_utf8_lossy(&output.stdout).contains("Touch ID");

@@ -1,7 +1,7 @@
 //! Example demonstrating audit logging in CryptoTEE
 
-use crypto_tee::{Algorithm, CryptoTEE, CryptoTEEBuilder, KeyUsage};
 use crypto_tee::types::KeyOptions;
+use crypto_tee::{Algorithm, CryptoTEE, CryptoTEEBuilder, KeyUsage};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -12,9 +12,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("============================\n");
 
     // Create CryptoTEE instance with audit logging enabled
-    let crypto_tee = CryptoTEEBuilder::new()
-        .build()
-        .await?;
+    let crypto_tee = CryptoTEEBuilder::new().build().await?;
 
     println!("✓ CryptoTEE initialized with audit logging\n");
 
@@ -37,35 +35,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         require_auth: false,
     };
 
-    let key_handle = crypto_tee
-        .generate_key("demo_key", key_options)
-        .await?;
-    
+    let key_handle = crypto_tee.generate_key("demo_key", key_options).await?;
+
     println!("✓ Key generated: {}\n", key_handle.alias);
 
     // Sign some data (this will be audited)
     println!("Signing data...");
     let data = b"Hello, CryptoTEE with Audit Logging!";
-    let signature = crypto_tee
-        .sign("demo_key", data, None)
-        .await?;
-    
+    let signature = crypto_tee.sign("demo_key", data, None).await?;
+
     println!("✓ Data signed, signature length: {} bytes\n", signature.len());
 
     // Verify the signature (this will be audited)
     println!("Verifying signature...");
-    let valid = crypto_tee
-        .verify("demo_key", data, &signature, None)
-        .await?;
-    
+    let valid = crypto_tee.verify("demo_key", data, &signature, None).await?;
+
     println!("✓ Signature verification result: {}\n", valid);
 
     // Get key info (this will be audited)
     println!("Getting key information...");
-    let key_info = crypto_tee
-        .get_key_info("demo_key")
-        .await?;
-    
+    let key_info = crypto_tee.get_key_info("demo_key").await?;
+
     println!("✓ Key info retrieved:");
     println!("  - Algorithm: {:?}", key_info.algorithm);
     println!("  - Hardware backed: {}", key_info.hardware_backed);
@@ -73,10 +63,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Delete the key (this will be audited)
     println!("Deleting key...");
-    crypto_tee
-        .delete_key("demo_key")
-        .await?;
-    
+    crypto_tee.delete_key("demo_key").await?;
+
     println!("✓ Key deleted\n");
 
     println!("Audit logs have been written to:");

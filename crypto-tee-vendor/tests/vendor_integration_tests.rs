@@ -3,6 +3,9 @@
 //! These tests focus on testing vendor-specific functionality through the mock vendor
 //! since hardware vendors require specific platform features.
 
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::expect_fun_call)]
+
 use crypto_tee_vendor::{mock::MockVendor, traits::VendorTEE, types::*};
 
 /// Test mock vendor basic operations

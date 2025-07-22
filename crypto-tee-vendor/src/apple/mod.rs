@@ -20,7 +20,7 @@ pub mod stub;
 
 use crate::error::VendorResult;
 use crate::traits::VendorTEE;
-use crate::types::*;
+// use crate::types::*; // Unused import
 
 /// Get Apple Secure Enclave implementation
 pub fn get_apple_tee() -> VendorResult<Box<dyn VendorTEE>> {

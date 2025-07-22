@@ -3,6 +3,8 @@
 //! This module provides integration with Apple's CryptoKit framework
 //! for modern cryptographic operations on iOS 13+ and macOS 10.15+.
 
+#![allow(unexpected_cfgs)] // Allow cfg warnings from objc crate
+
 use crate::error::{VendorError, VendorResult};
 use crate::types::*;
 
@@ -86,8 +88,7 @@ impl CryptoKitOperations {
             Algorithm::EcdsaP384 => Self::generate_p384_key(),
             Algorithm::Ed25519 => Self::generate_ed25519_key(),
             _ => Err(VendorError::NotSupported(format!(
-                "Algorithm {:?} not supported by CryptoKit",
-                algorithm
+                "Algorithm {algorithm:?} not supported by CryptoKit"
             ))),
         }
     }
@@ -221,7 +222,9 @@ impl CryptoKitOperations {
             let raw_representation: *mut Object = msg_send![public_key, rawRepresentation];
 
             if raw_representation.is_null() {
-                return Err(VendorError::CryptoError("Failed to get raw representation".to_string()));
+                return Err(VendorError::CryptoError(
+                    "Failed to get raw representation".to_string(),
+                ));
             }
 
             // Get bytes
@@ -311,6 +314,7 @@ impl CryptoKitOperations {
 #[cfg(any(target_os = "ios", target_os = "macos"))]
 pub struct CryptoKitKey {
     key_object: StrongPtr,
+    #[allow(dead_code)]
     algorithm: Algorithm,
 }
 

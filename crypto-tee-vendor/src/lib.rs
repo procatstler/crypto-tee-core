@@ -4,6 +4,9 @@
 //! handling vendor-specific TEE implementations such as Samsung Knox,
 //! Apple Secure Enclave, Qualcomm QSEE, and OP-TEE.
 
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::await_holding_lock)]
+
 pub mod cache;
 pub mod error;
 pub mod mock;

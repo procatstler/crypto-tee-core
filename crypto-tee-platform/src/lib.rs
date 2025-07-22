@@ -3,6 +3,10 @@
 //! This crate provides the platform layer (L2) that bridges between
 //! the core CryptoTEE API and platform-specific security APIs.
 
+#![allow(clippy::uninlined_format_args)]
+#![allow(clippy::new_without_default)]
+#![allow(unused_imports)]
+
 pub mod error;
 pub mod fallback;
 pub mod traits;

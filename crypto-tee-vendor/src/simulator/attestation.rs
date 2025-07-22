@@ -343,7 +343,7 @@ impl AttestationService {
         &self,
         challenge_id: &str,
     ) -> VendorResult<AttestationResponse> {
-        let config = self.config.lock().unwrap();
+        let _config = self.config.lock().unwrap();
         let mut challenge_state = self.challenge_state.lock().unwrap();
 
         // Get challenge

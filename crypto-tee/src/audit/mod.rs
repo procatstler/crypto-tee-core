@@ -16,7 +16,10 @@ use tracing::{error, warn};
 pub mod logger;
 pub mod storage;
 
-pub use logger::{AuditLogger, AuditLoggerConfig, ConsoleAuditLogger, FileAuditLogger, LogFormat, MultiAuditLogger};
+pub use logger::{
+    AuditLogger, AuditLoggerConfig, ConsoleAuditLogger, FileAuditLogger, LogFormat,
+    MultiAuditLogger,
+};
 pub use storage::{AuditStorage, FileAuditStorage, MemoryAuditStorage};
 
 /// Audit event types
@@ -112,7 +115,7 @@ impl AuditEvent {
         let id = uuid::Uuid::new_v4().to_string();
         let timestamp = Utc::now();
         let metadata = HashMap::new();
-        
+
         let event = Self {
             id,
             timestamp,
@@ -126,30 +129,30 @@ impl AuditEvent {
             previous_hash: None,
             hash: String::new(),
         };
-        
+
         // Calculate hash will be called after setting previous_hash
         event
     }
-    
+
     /// Add metadata to the event
     pub fn with_metadata(mut self, key: String, value: serde_json::Value) -> Self {
         self.metadata.insert(key, value);
         self
     }
-    
+
     /// Set error message
     pub fn with_error(mut self, error: String) -> Self {
         self.error_message = Some(error);
         self.success = false;
         self
     }
-    
+
     /// Set previous event hash for chain integrity
     pub fn with_previous_hash(mut self, hash: String) -> Self {
         self.previous_hash = Some(hash);
         self
     }
-    
+
     /// Calculate hash of the event
     pub fn calculate_hash(&mut self) {
         let data = format!(
@@ -165,11 +168,11 @@ impl AuditEvent {
             self.metadata,
             self.previous_hash
         );
-        
+
         let hash = digest(&SHA256, data.as_bytes());
         self.hash = hex::encode(hash.as_ref());
     }
-    
+
     /// Verify the event hash
     pub fn verify_hash(&self) -> bool {
         let data = format!(
@@ -185,10 +188,10 @@ impl AuditEvent {
             self.metadata,
             self.previous_hash
         );
-        
+
         let calculated_hash = digest(&SHA256, data.as_bytes());
         let calculated_hash_hex = hex::encode(calculated_hash.as_ref());
-        
+
         calculated_hash_hex == self.hash
     }
 }
@@ -236,30 +239,30 @@ impl AuditContext {
             attributes: HashMap::new(),
         }
     }
-    
+
     /// Create a system audit context
     pub fn system() -> Self {
         Self::new("system".to_string())
     }
-    
+
     /// Add session ID
     pub fn with_session_id(mut self, session_id: String) -> Self {
         self.session_id = Some(session_id);
         self
     }
-    
+
     /// Add request ID
     pub fn with_request_id(mut self, request_id: String) -> Self {
         self.request_id = Some(request_id);
         self
     }
-    
+
     /// Add client IP
     pub fn with_client_ip(mut self, client_ip: String) -> Self {
         self.client_ip = Some(client_ip);
         self
     }
-    
+
     /// Add custom attribute
     pub fn with_attribute(mut self, key: String, value: String) -> Self {
         self.attributes.insert(key, value);
@@ -322,18 +325,18 @@ impl AuditManager {
             last_event_hash: Arc::new(RwLock::new(None)),
         }
     }
-    
+
     /// Log an audit event
     pub async fn log_event(&self, mut event: AuditEvent) -> CryptoTEEResult<()> {
         if !self.config.enabled {
             return Ok(());
         }
-        
+
         // Check severity threshold
         if event.severity < self.config.min_severity {
             return Ok(());
         }
-        
+
         // Add chain integrity if enabled
         if self.config.enable_chain_integrity {
             let last_hash = self.last_event_hash.read().await.clone();
@@ -341,29 +344,29 @@ impl AuditManager {
                 event = event.with_previous_hash(hash);
             }
         }
-        
+
         // Calculate event hash
         event.calculate_hash();
-        
+
         // Log the event
         self.logger.write().await.log(&event).await?;
-        
+
         // Store the event
         self.storage.write().await.store(&event).await?;
-        
+
         // Update last event hash
         if self.config.enable_chain_integrity {
             *self.last_event_hash.write().await = Some(event.hash.clone());
         }
-        
+
         // Send alerts for critical events
         if self.config.enable_alerts && event.severity >= AuditSeverity::Critical {
             self.send_alert(&event).await;
         }
-        
+
         Ok(())
     }
-    
+
     /// Log a key generation event
     pub async fn log_key_generated(
         &self,
@@ -380,20 +383,20 @@ impl AuditManager {
             Some(key_alias.to_string()),
             success,
         );
-        
+
         event = event.with_metadata("algorithm".to_string(), serde_json::json!(algorithm));
-        
+
         if let Some(session_id) = &context.session_id {
             event = event.with_metadata("session_id".to_string(), serde_json::json!(session_id));
         }
-        
+
         if let Some(err) = error {
             event = event.with_error(err);
         }
-        
+
         self.log_event(event).await
     }
-    
+
     /// Log a signing operation
     pub async fn log_sign_operation(
         &self,
@@ -410,66 +413,59 @@ impl AuditManager {
             Some(key_alias.to_string()),
             success,
         );
-        
+
         event = event.with_metadata("data_size".to_string(), serde_json::json!(data_size));
-        
+
         if let Some(err) = error {
             event = event.with_error(err);
         }
-        
+
         self.log_event(event).await
     }
-    
+
     /// Query audit events
-    pub async fn query_events(
-        &self,
-        filter: AuditFilter,
-    ) -> CryptoTEEResult<Vec<AuditEvent>> {
+    pub async fn query_events(&self, filter: AuditFilter) -> CryptoTEEResult<Vec<AuditEvent>> {
         self.storage.read().await.query(filter).await
     }
-    
+
     /// Verify audit chain integrity
     pub async fn verify_chain_integrity(
         &self,
         start_time: Option<DateTime<Utc>>,
         end_time: Option<DateTime<Utc>>,
     ) -> CryptoTEEResult<bool> {
-        let filter = AuditFilter {
-            start_time,
-            end_time,
-            ..Default::default()
-        };
-        
+        let filter = AuditFilter { start_time, end_time, ..Default::default() };
+
         let events = self.storage.read().await.query(filter).await?;
-        
+
         if events.is_empty() {
             return Ok(true);
         }
-        
+
         // Verify first event has no previous hash
         if events[0].previous_hash.is_some() {
             warn!("First event in chain has previous hash");
             return Ok(false);
         }
-        
+
         // Verify each event's hash and chain
         for i in 0..events.len() {
             if !events[i].verify_hash() {
                 error!("Event {} has invalid hash", events[i].id);
                 return Ok(false);
             }
-            
+
             if i > 0 {
-                if events[i].previous_hash.as_ref() != Some(&events[i-1].hash) {
-                    error!("Chain broken between events {} and {}", events[i-1].id, events[i].id);
+                if events[i].previous_hash.as_ref() != Some(&events[i - 1].hash) {
+                    error!("Chain broken between events {} and {}", events[i - 1].id, events[i].id);
                     return Ok(false);
                 }
             }
         }
-        
+
         Ok(true)
     }
-    
+
     /// Send alert for critical events
     async fn send_alert(&self, event: &AuditEvent) {
         if let Some(_webhook_url) = &self.config.alert_webhook {
@@ -506,7 +502,7 @@ pub struct AuditFilter {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_audit_event_hash() {
         let mut event = AuditEvent::new(
@@ -516,16 +512,16 @@ mod tests {
             Some("test_key".to_string()),
             true,
         );
-        
+
         event.calculate_hash();
         assert!(!event.hash.is_empty());
         assert!(event.verify_hash());
-        
+
         // Modify event and verify hash fails
         event.actor = "modified_user".to_string();
         assert!(!event.verify_hash());
     }
-    
+
     #[test]
     fn test_audit_context() {
         let context = AuditContext::new("user123".to_string())
@@ -533,7 +529,7 @@ mod tests {
             .with_request_id("req789".to_string())
             .with_client_ip("192.168.1.1".to_string())
             .with_attribute("department".to_string(), "security".to_string());
-        
+
         assert_eq!(context.actor, "user123");
         assert_eq!(context.session_id.unwrap(), "session456");
         assert_eq!(context.request_id.unwrap(), "req789");

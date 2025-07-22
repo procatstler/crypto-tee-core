@@ -50,30 +50,32 @@ impl AppleSecureEnclave {
     }
 
     /// Convert algorithm to SecKey algorithm
+    #[allow(dead_code)]
     fn algorithm_to_sec_algorithm(algorithm: Algorithm) -> VendorResult<SecAlgorithm> {
         match algorithm {
             Algorithm::EcdsaP256 => Ok(SecAlgorithm::ECDSASignatureDigestX962SHA256),
             Algorithm::EcdsaP384 => Ok(SecAlgorithm::ECDSASignatureDigestX962SHA384),
             _ => Err(VendorError::NotSupported(format!(
-                "Algorithm {:?} not supported by Secure Enclave",
-                algorithm
+                "Algorithm {algorithm:?} not supported by Secure Enclave"
             ))),
         }
     }
 
     /// Sign data using SecKey
+    #[allow(dead_code)]
     fn sign_with_sec_key(key: &SecKey, data: &[u8], algorithm: Algorithm) -> VendorResult<Vec<u8>> {
         let sec_algorithm = Self::algorithm_to_sec_algorithm(algorithm)?;
         let data_to_sign = CFData::from_buffer(data);
 
         let signature = key.create_signature(sec_algorithm, &data_to_sign).map_err(|e| {
-            VendorError::SigningError(format!("Failed to create signature: {:?}", e))
+            VendorError::SigningError(format!("Failed to create signature: {e:?}"))
         })?;
 
         Ok(signature.to_vec())
     }
 
     /// Verify signature using SecKey with constant-time result handling
+    #[allow(dead_code)]
     fn verify_with_sec_key(
         key: &SecKey,
         data: &[u8],
@@ -102,7 +104,7 @@ impl AppleSecureEnclave {
                 Ok(success_byte.ct_eq(&expected_byte).into())
             }
             Err(e) => {
-                Err(VendorError::VerificationError(format!("Failed to verify signature: {:?}", e)))
+                Err(VendorError::VerificationError(format!("Failed to verify signature: {e:?}")))
             }
         }
     }
@@ -155,7 +157,7 @@ impl AppleSecureEnclave {
             let output =
                 Command::new("sysctl").arg("-n").arg("hw.optional.arm64").output().map_err(
                     |e| {
-                        VendorError::InitializationError(format!("Failed to check hardware: {}", e))
+                        VendorError::InitializationError(format!("Failed to check hardware: {e}"))
                     },
                 )?;
 
@@ -164,10 +166,7 @@ impl AppleSecureEnclave {
             // Also check for Secure Enclave specifically
             let sep_output =
                 Command::new("system_profiler").arg("SPiBridgeDataType").output().map_err(|e| {
-                    VendorError::InitializationError(format!(
-                        "Failed to check Secure Enclave: {}",
-                        e
-                    ))
+                    VendorError::InitializationError(format!("Failed to check Secure Enclave: {e}"))
                 })?;
 
             let has_secure_enclave = String::from_utf8_lossy(&sep_output.stdout)
@@ -208,7 +207,7 @@ impl VendorTEE for AppleSecureEnclave {
 
     async fn generate_key(&self, params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
         // Extract Secure Enclave parameters
-        let se_params = if let Some(VendorParams::Apple(se_params)) = &params.vendor_params {
+        let _se_params = if let Some(VendorParams::Apple(se_params)) = &params.vendor_params {
             se_params.clone()
         } else {
             SecureEnclaveParams::default()
@@ -242,9 +241,7 @@ impl VendorTEE for AppleSecureEnclave {
     async fn sign(&self, _key: &VendorKeyHandle, _data: &[u8]) -> VendorResult<Signature> {
         // Get key from keychain
         // TODO: Implement keychain operations
-        Err(VendorError::NotSupported(
-            "Keychain operations not yet implemented".to_string(),
-        ))
+        Err(VendorError::NotSupported("Keychain operations not yet implemented".to_string()))
     }
 
     async fn verify(
@@ -255,9 +252,7 @@ impl VendorTEE for AppleSecureEnclave {
     ) -> VendorResult<bool> {
         // Get key from keychain
         // TODO: Implement keychain operations
-        Err(VendorError::NotSupported(
-            "Keychain operations not yet implemented".to_string(),
-        ))
+        Err(VendorError::NotSupported("Keychain operations not yet implemented".to_string()))
     }
 
     async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
@@ -270,7 +265,7 @@ impl VendorTEE for AppleSecureEnclave {
         self.key_handles
             .lock()
             .map_err(|e| {
-                VendorError::InternalError(format!("Failed to acquire key handles lock: {}", e))
+                VendorError::InternalError(format!("Failed to acquire key handles lock: {e}"))
             })?
             .remove(&key.id);
 
@@ -289,14 +284,12 @@ impl VendorTEE for AppleSecureEnclave {
     async fn get_key_attestation(&self, _key: &VendorKeyHandle) -> VendorResult<Attestation> {
         // Get key from keychain
         // TODO: Implement keychain operations
-        Err(VendorError::NotSupported(
-            "Keychain operations not yet implemented".to_string(),
-        ))
+        Err(VendorError::NotSupported("Keychain operations not yet implemented".to_string()))
     }
 
     async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
         let key_handles = self.key_handles.lock().map_err(|e| {
-            VendorError::InternalError(format!("Failed to acquire key handles lock: {}", e))
+            VendorError::InternalError(format!("Failed to acquire key handles lock: {e}"))
         })?;
 
         let handles: Vec<VendorKeyHandle> = key_handles

@@ -120,7 +120,8 @@ struct EncryptedKeyData {
 
 /// Key metadata
 #[derive(Debug, Clone)]
-struct KeyMetadata {
+#[allow(dead_code)]
+pub struct KeyMetadata {
     /// Key identifier
     key_id: String,
 
@@ -173,6 +174,7 @@ pub struct StorageStats {
 
 /// Access control manager
 #[derive(Debug)]
+#[allow(dead_code)]
 struct AccessControlManager {
     /// Active sessions
     sessions: HashMap<String, AccessSession>,
@@ -186,6 +188,7 @@ struct AccessControlManager {
 
 /// Access session
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct AccessSession {
     /// Session ID
     session_id: String,
@@ -205,6 +208,7 @@ struct AccessSession {
 
 /// Access policy
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct AccessPolicy {
     /// Policy name
     name: String,
@@ -260,6 +264,7 @@ pub enum Operation {
 
 /// Time constraints
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct TimeConstraints {
     /// Start time
     start_time: Option<SystemTime>,
@@ -273,6 +278,7 @@ struct TimeConstraints {
 
 /// Access event for auditing
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct AccessEvent {
     /// Timestamp
     timestamp: SystemTime,
@@ -336,13 +342,13 @@ impl SecureStorage {
         {
             let rng = self.rng.lock().unwrap();
             rng.fill(&mut key_bytes).map_err(|e| {
-                VendorError::KeyGeneration(format!("Failed to generate storage key: {}", e))
+                VendorError::KeyGeneration(format!("Failed to generate storage key: {e}"))
             })?;
         }
 
         let unbound_key =
             aead::UnboundKey::new(&aead::CHACHA20_POLY1305, &key_bytes).map_err(|e| {
-                VendorError::KeyGeneration(format!("Failed to create storage key: {}", e))
+                VendorError::KeyGeneration(format!("Failed to create storage key: {e}"))
             })?;
 
         let key = aead::LessSafeKey::new(unbound_key);
@@ -400,7 +406,7 @@ impl SecureStorage {
             let data = backend
                 .encrypted_data
                 .get(key_id)
-                .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key_id)))?
+                .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {key_id}")))?
                 .clone();
 
             // Update access metadata
@@ -439,7 +445,7 @@ impl SecureStorage {
             let metadata = backend
                 .metadata
                 .remove(key_id)
-                .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key_id)))?;
+                .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {key_id}")))?;
 
             let encrypted_data = backend.encrypted_data.remove(key_id);
 
@@ -538,7 +544,7 @@ impl SecureStorage {
         {
             let rng = self.rng.lock().unwrap();
             rng.fill(&mut nonce_bytes).map_err(|e| {
-                VendorError::CryptoError(format!("Failed to generate nonce: {}", e))
+                VendorError::CryptoError(format!("Failed to generate nonce: {e}"))
             })?;
         }
 
@@ -553,7 +559,7 @@ impl SecureStorage {
             })?;
 
             key.seal_in_place_separate_tag(nonce, aead::Aad::empty(), &mut encrypted_data)
-                .map_err(|e| VendorError::CryptoError(format!("Encryption failed: {}", e)))?
+                .map_err(|e| VendorError::CryptoError(format!("Encryption failed: {e}")))?
         };
 
         encrypted_data.extend_from_slice(tag.as_ref());
@@ -582,7 +588,7 @@ impl SecureStorage {
 
         // Verify checksum
         let calculated_checksum = digest::digest(&digest::SHA256, &encrypted_data.encrypted_data);
-        if calculated_checksum.as_ref() != &encrypted_data.checksum {
+        if calculated_checksum.as_ref() != encrypted_data.checksum {
             return Err(VendorError::KeyCorrupted(
                 "Storage checksum verification failed".to_string(),
             ));
@@ -605,7 +611,7 @@ impl SecureStorage {
             })?;
 
             key.open_in_place(nonce, aead::Aad::empty(), &mut decrypted_data)
-                .map_err(|e| VendorError::CryptoError(format!("Decryption failed: {}", e)))?
+                .map_err(|e| VendorError::CryptoError(format!("Decryption failed: {e}")))?
                 .len()
         };
 

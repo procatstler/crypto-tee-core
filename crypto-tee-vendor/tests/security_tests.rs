@@ -1,5 +1,7 @@
 //! Security-focused tests for CryptoTEE vendor implementations
 
+#![allow(clippy::uninlined_format_args)]
+
 use crypto_tee_vendor::{mock::MockVendor, traits::VendorTEE, types::*};
 use std::time::Instant;
 

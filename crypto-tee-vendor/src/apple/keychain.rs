@@ -5,9 +5,7 @@
 
 use crate::error::{VendorError, VendorResult};
 use crate::types::*;
-use core_foundation::{
-    dictionary::{CFDictionary, CFMutableDictionary},
-};
+use core_foundation::dictionary::{CFDictionary, CFMutableDictionary};
 use security_framework::{access_control::SecAccessControl, key::SecKey};
 use std::collections::HashMap;
 
@@ -15,15 +13,20 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct KeychainStorage {
     /// Cached key references
+    #[allow(dead_code)]
     cache: HashMap<String, SecKey>,
+}
+
+impl Default for KeychainStorage {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl KeychainStorage {
     /// Create a new keychain storage instance
     pub fn new() -> Self {
-        Self {
-            cache: HashMap::new(),
-        }
+        Self { cache: HashMap::new() }
     }
 
     /// Create access control for key
@@ -32,9 +35,7 @@ impl KeychainStorage {
     ) -> VendorResult<SecAccessControl> {
         // TODO: Fix SecAccessControl creation once security-framework is updated
         // For now, return a placeholder error
-        Err(VendorError::NotSupported(
-            "SecAccessControl creation not yet implemented".to_string(),
-        ))
+        Err(VendorError::NotSupported("SecAccessControl creation not yet implemented".to_string()))
     }
 
     /// Create key generation parameters
@@ -50,15 +51,14 @@ impl KeychainStorage {
             Algorithm::Ed25519 => "Ed25519",
             _ => {
                 return Err(VendorError::NotSupported(format!(
-                    "Algorithm {:?} not supported by Secure Enclave",
-                    algorithm
+                    "Algorithm {algorithm:?} not supported by Secure Enclave"
                 )))
             }
         };
 
         // TODO: Add proper key parameters once security-framework types are fixed
         // For now, return basic dictionary
-        
+
         Ok(dict)
     }
 
@@ -90,9 +90,7 @@ impl KeychainStorage {
     pub fn extract_key_reference(_result: &CFDictionary) -> VendorResult<SecKey> {
         // TODO: Implement proper key extraction from CFDictionary
         // This requires proper type casting and security-framework integration
-        Err(VendorError::NotSupported(
-            "Key extraction not yet implemented".to_string(),
-        ))
+        Err(VendorError::NotSupported("Key extraction not yet implemented".to_string()))
     }
 }
 
@@ -114,16 +112,14 @@ pub mod query {
 
     /// Build a query for finding keys
     pub fn find_key_query(_key_id: &str) -> CFMutableDictionary {
-        let query = CFMutableDictionary::new();
         // TODO: Add proper query parameters
-        query
+        CFMutableDictionary::new()
     }
 
     /// Build a query for deleting keys
     pub fn delete_key_query(_key_id: &str) -> CFMutableDictionary {
-        let query = CFMutableDictionary::new();
         // TODO: Add proper query parameters
-        query
+        CFMutableDictionary::new()
     }
 }
 

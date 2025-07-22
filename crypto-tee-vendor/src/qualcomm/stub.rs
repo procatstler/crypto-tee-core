@@ -9,9 +9,11 @@ use std::sync::Mutex;
 
 /// Stub implementation of Qualcomm QSEE for non-Android platforms
 pub struct QualcommStubTEE {
+    #[allow(dead_code)]
     keys: Mutex<HashMap<String, StubKeyData>>,
 }
 
+#[allow(dead_code)]
 struct StubKeyData {
     algorithm: Algorithm,
     created_at: std::time::SystemTime,

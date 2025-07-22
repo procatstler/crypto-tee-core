@@ -7,7 +7,7 @@ use tokio::time::Duration;
 #[tokio::test]
 async fn test_generic_simulator_basic_operations() {
     let config = SimulationConfig::default();
-    let mut simulator = base::GenericTEESimulator::new(config);
+    let simulator = base::GenericTEESimulator::new(config);
 
     // Test probe
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
@@ -53,7 +53,7 @@ async fn test_generic_simulator_basic_operations() {
 #[tokio::test]
 async fn test_samsung_simulator() {
     let config = SimulationConfig::default();
-    let mut simulator = samsung::SamsungTEESimulator::new(config);
+    let simulator = samsung::SamsungTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
     assert!(capabilities.hardware_backed);
@@ -93,7 +93,7 @@ async fn test_samsung_simulator() {
 #[tokio::test]
 async fn test_apple_simulator() {
     let config = SimulationConfig::default();
-    let mut simulator = apple::AppleTEESimulator::new(config);
+    let simulator = apple::AppleTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
     assert_eq!(capabilities.name, "Apple Secure Enclave");
@@ -121,7 +121,7 @@ async fn test_apple_simulator() {
 #[tokio::test]
 async fn test_qualcomm_simulator() {
     let config = SimulationConfig::default();
-    let mut simulator = qualcomm::QualcommTEESimulator::new(config);
+    let simulator = qualcomm::QualcommTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
     assert_eq!(capabilities.name, "Qualcomm QSEE");
@@ -170,8 +170,7 @@ async fn test_error_injection() {
     let mut simulator = base::GenericTEESimulator::new(config);
 
     // Configure simulator
-    let mut error_config = SimulationConfig::default();
-    error_config.error_injection_rate = 0.0;
+    let error_config = SimulationConfig { error_injection_rate: 0.0, ..Default::default() };
     simulator.configure_simulation(error_config).await.expect("Simulator test should succeed");
 
     // Inject a specific error
@@ -196,7 +195,7 @@ async fn test_error_injection() {
 #[tokio::test]
 async fn test_simulation_stats() {
     let config = SimulationConfig::default();
-    let mut simulator = base::GenericTEESimulator::new(config);
+    let simulator = base::GenericTEESimulator::new(config);
 
     // Get initial stats
     let initial_stats =

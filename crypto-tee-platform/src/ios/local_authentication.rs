@@ -4,7 +4,7 @@
 //! for biometric and passcode authentication.
 
 use crate::error::{PlatformError, PlatformResult};
-use crate::types::{AuthResult, AuthMethod};
+use crate::types::{AuthMethod, AuthResult};
 
 /// Local authentication configuration
 #[derive(Debug, Clone)]

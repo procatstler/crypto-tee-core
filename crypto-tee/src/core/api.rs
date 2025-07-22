@@ -10,9 +10,11 @@ use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 use crate::{
-    audit::{AuditConfig, AuditContext, AuditEvent, AuditEventType, AuditManager, AuditSeverity, 
-            ConsoleAuditLogger, FileAuditLogger, AuditLoggerConfig, LogFormat,
-            MemoryAuditStorage, MultiAuditLogger},
+    audit::{
+        AuditConfig, AuditContext, AuditEvent, AuditEventType, AuditLoggerConfig, AuditManager,
+        AuditSeverity, ConsoleAuditLogger, FileAuditLogger, LogFormat, MemoryAuditStorage,
+        MultiAuditLogger,
+    },
     core::manager::KeyManager,
     error::{CryptoTEEError, CryptoTEEResult},
     plugins::PluginManager,
@@ -93,15 +95,18 @@ impl CryptoTEEImpl {
         };
 
         // Log system initialization
-        instance.audit_manager.read().await.log_event(
-            crate::audit::AuditEvent::new(
+        instance
+            .audit_manager
+            .read()
+            .await
+            .log_event(crate::audit::AuditEvent::new(
                 AuditEventType::SystemInitialized,
                 AuditSeverity::Info,
                 AuditContext::system().actor,
                 None,
                 true,
-            )
-        ).await?;
+            ))
+            .await?;
 
         Ok(instance)
     }
@@ -130,11 +135,7 @@ impl CryptoTEEImpl {
         let storage = Box::new(MemoryAuditStorage::new(10000));
 
         // Create audit manager
-        let audit_manager = AuditManager::new(
-            multi_logger,
-            storage,
-            AuditConfig::default(),
-        );
+        let audit_manager = AuditManager::new(multi_logger, storage, AuditConfig::default());
 
         Ok(audit_manager)
     }
@@ -178,13 +179,11 @@ impl CryptoTEE for CryptoTEEImpl {
         // Check if alias already exists
         if self.key_manager.read().await.exists(alias) {
             let error = format!("Key with alias '{}' already exists", alias);
-            self.audit_manager.read().await.log_key_generated(
-                &context,
-                alias,
-                options.algorithm,
-                false,
-                Some(error.clone()),
-            ).await?;
+            self.audit_manager
+                .read()
+                .await
+                .log_key_generated(&context, alias, options.algorithm, false, Some(error.clone()))
+                .await?;
             return Err(CryptoTEEError::InvalidKeyAlias(error));
         }
 
@@ -201,13 +200,17 @@ impl CryptoTEE for CryptoTEEImpl {
         let vendor_handle = match vendor.generate_key(&key_params).await {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_key_generated(
-                    &context,
-                    alias,
-                    options.algorithm,
-                    false,
-                    Some(e.to_string()),
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_key_generated(
+                        &context,
+                        alias,
+                        options.algorithm,
+                        false,
+                        Some(e.to_string()),
+                    )
+                    .await?;
                 return Err(e.into());
             }
         };
@@ -217,13 +220,17 @@ impl CryptoTEE for CryptoTEEImpl {
         let platform_handle = match platform.wrap_key_handle(vendor_handle).await {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_key_generated(
-                    &context,
-                    alias,
-                    options.algorithm,
-                    false,
-                    Some(e.to_string()),
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_key_generated(
+                        &context,
+                        alias,
+                        options.algorithm,
+                        false,
+                        Some(e.to_string()),
+                    )
+                    .await?;
                 return Err(e.into());
             }
         };
@@ -244,24 +251,20 @@ impl CryptoTEE for CryptoTEEImpl {
 
         // Store in key manager
         if let Err(e) = self.key_manager.write().await.add_key(alias, key_handle.clone()) {
-            self.audit_manager.read().await.log_key_generated(
-                &context,
-                alias,
-                options.algorithm,
-                false,
-                Some(e.to_string()),
-            ).await?;
+            self.audit_manager
+                .read()
+                .await
+                .log_key_generated(&context, alias, options.algorithm, false, Some(e.to_string()))
+                .await?;
             return Err(e);
         }
 
         // Log successful key generation
-        self.audit_manager.read().await.log_key_generated(
-            &context,
-            alias,
-            options.algorithm,
-            true,
-            None,
-        ).await?;
+        self.audit_manager
+            .read()
+            .await
+            .log_key_generated(&context, alias, options.algorithm, true, None)
+            .await?;
 
         Ok(key_handle)
     }
@@ -277,16 +280,21 @@ impl CryptoTEE for CryptoTEEImpl {
 
         if self.key_manager.read().await.exists(alias) {
             let error = format!("Key with alias '{}' already exists", alias);
-            self.audit_manager.read().await.log_event(
-                AuditEvent::new(
-                    AuditEventType::KeyImported,
-                    AuditSeverity::Error,
-                    context.actor,
-                    Some(alias.to_string()),
-                    false,
-                ).with_error(error.clone())
-                .with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm))
-            ).await?;
+            self.audit_manager
+                .read()
+                .await
+                .log_event(
+                    AuditEvent::new(
+                        AuditEventType::KeyImported,
+                        AuditSeverity::Error,
+                        context.actor,
+                        Some(alias.to_string()),
+                        false,
+                    )
+                    .with_error(error.clone())
+                    .with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm)),
+                )
+                .await?;
             return Err(CryptoTEEError::InvalidKeyAlias(error));
         }
 
@@ -302,16 +310,24 @@ impl CryptoTEE for CryptoTEEImpl {
         let vendor_handle = match vendor.import_key(key_data, &key_params).await {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_event(
-                    AuditEvent::new(
-                        AuditEventType::KeyImported,
-                        AuditSeverity::Error,
-                        context.actor,
-                        Some(alias.to_string()),
-                        false,
-                    ).with_error(e.to_string())
-                    .with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm))
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_event(
+                        AuditEvent::new(
+                            AuditEventType::KeyImported,
+                            AuditSeverity::Error,
+                            context.actor,
+                            Some(alias.to_string()),
+                            false,
+                        )
+                        .with_error(e.to_string())
+                        .with_metadata(
+                            "algorithm".to_string(),
+                            serde_json::json!(options.algorithm),
+                        ),
+                    )
+                    .await?;
                 return Err(e.into());
             }
         };
@@ -320,16 +336,24 @@ impl CryptoTEE for CryptoTEEImpl {
         let platform_handle = match platform.wrap_key_handle(vendor_handle).await {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_event(
-                    AuditEvent::new(
-                        AuditEventType::KeyImported,
-                        AuditSeverity::Error,
-                        context.actor,
-                        Some(alias.to_string()),
-                        false,
-                    ).with_error(e.to_string())
-                    .with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm))
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_event(
+                        AuditEvent::new(
+                            AuditEventType::KeyImported,
+                            AuditSeverity::Error,
+                            context.actor,
+                            Some(alias.to_string()),
+                            false,
+                        )
+                        .with_error(e.to_string())
+                        .with_metadata(
+                            "algorithm".to_string(),
+                            serde_json::json!(options.algorithm),
+                        ),
+                    )
+                    .await?;
                 return Err(e.into());
             }
         };
@@ -348,30 +372,43 @@ impl CryptoTEE for CryptoTEEImpl {
         };
 
         if let Err(e) = self.key_manager.write().await.add_key(alias, key_handle.clone()) {
-            self.audit_manager.read().await.log_event(
-                AuditEvent::new(
-                    AuditEventType::KeyImported,
-                    AuditSeverity::Error,
-                    context.actor,
-                    Some(alias.to_string()),
-                    false,
-                ).with_error(e.to_string())
-                .with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm))
-            ).await?;
+            self.audit_manager
+                .read()
+                .await
+                .log_event(
+                    AuditEvent::new(
+                        AuditEventType::KeyImported,
+                        AuditSeverity::Error,
+                        context.actor,
+                        Some(alias.to_string()),
+                        false,
+                    )
+                    .with_error(e.to_string())
+                    .with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm)),
+                )
+                .await?;
             return Err(e);
         }
 
         // Log successful import
-        self.audit_manager.read().await.log_event(
-            AuditEvent::new(
-                AuditEventType::KeyImported,
-                AuditSeverity::Info,
-                context.actor,
-                Some(alias.to_string()),
-                true,
-            ).with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm))
-            .with_metadata("hardware_backed".to_string(), serde_json::json!(key_handle.metadata.hardware_backed))
-        ).await?;
+        self.audit_manager
+            .read()
+            .await
+            .log_event(
+                AuditEvent::new(
+                    AuditEventType::KeyImported,
+                    AuditSeverity::Info,
+                    context.actor,
+                    Some(alias.to_string()),
+                    true,
+                )
+                .with_metadata("algorithm".to_string(), serde_json::json!(options.algorithm))
+                .with_metadata(
+                    "hardware_backed".to_string(),
+                    serde_json::json!(key_handle.metadata.hardware_backed),
+                ),
+            )
+            .await?;
 
         Ok(key_handle)
     }
@@ -384,15 +421,20 @@ impl CryptoTEE for CryptoTEEImpl {
         let key_handle = match key_manager.get_key(alias) {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_event(
-                    AuditEvent::new(
-                        AuditEventType::KeyDeleted,
-                        AuditSeverity::Error,
-                        context.actor,
-                        Some(alias.to_string()),
-                        false,
-                    ).with_error(e.to_string())
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_event(
+                        AuditEvent::new(
+                            AuditEventType::KeyDeleted,
+                            AuditSeverity::Error,
+                            context.actor,
+                            Some(alias.to_string()),
+                            false,
+                        )
+                        .with_error(e.to_string()),
+                    )
+                    .await?;
                 return Err(e);
             }
         };
@@ -400,42 +442,54 @@ impl CryptoTEE for CryptoTEEImpl {
         // Delete from vendor
         let vendor = self.vendor.read().await;
         if let Err(e) = vendor.delete_key(&key_handle.platform_handle.vendor_handle).await {
-            self.audit_manager.read().await.log_event(
-                AuditEvent::new(
-                    AuditEventType::KeyDeleted,
-                    AuditSeverity::Error,
-                    context.actor,
-                    Some(alias.to_string()),
-                    false,
-                ).with_error(e.to_string())
-            ).await?;
+            self.audit_manager
+                .read()
+                .await
+                .log_event(
+                    AuditEvent::new(
+                        AuditEventType::KeyDeleted,
+                        AuditSeverity::Error,
+                        context.actor,
+                        Some(alias.to_string()),
+                        false,
+                    )
+                    .with_error(e.to_string()),
+                )
+                .await?;
             return Err(e.into());
         }
 
         // Remove from key manager
         if let Err(e) = key_manager.remove_key(alias) {
-            self.audit_manager.read().await.log_event(
-                AuditEvent::new(
-                    AuditEventType::KeyDeleted,
-                    AuditSeverity::Error,
-                    context.actor,
-                    Some(alias.to_string()),
-                    false,
-                ).with_error(e.to_string())
-            ).await?;
+            self.audit_manager
+                .read()
+                .await
+                .log_event(
+                    AuditEvent::new(
+                        AuditEventType::KeyDeleted,
+                        AuditSeverity::Error,
+                        context.actor,
+                        Some(alias.to_string()),
+                        false,
+                    )
+                    .with_error(e.to_string()),
+                )
+                .await?;
             return Err(e);
         }
 
         // Log successful deletion
-        self.audit_manager.read().await.log_event(
-            AuditEvent::new(
+        self.audit_manager
+            .read()
+            .await
+            .log_event(AuditEvent::new(
                 AuditEventType::KeyDeleted,
                 AuditSeverity::Info,
                 context.actor,
                 Some(alias.to_string()),
                 true,
-            )
-        ).await?;
+            ))
+            .await?;
 
         Ok(())
     }
@@ -453,13 +507,11 @@ impl CryptoTEE for CryptoTEEImpl {
         let key_handle = match key_manager.get_key_mut(alias) {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_sign_operation(
-                    &context,
-                    alias,
-                    data.len(),
-                    false,
-                    Some(e.to_string()),
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_sign_operation(&context, alias, data.len(), false, Some(e.to_string()))
+                    .await?;
                 return Err(e);
             }
         };
@@ -473,25 +525,21 @@ impl CryptoTEE for CryptoTEEImpl {
         let signature = match vendor.sign(&key_handle.platform_handle.vendor_handle, data).await {
             Ok(sig) => sig,
             Err(e) => {
-                self.audit_manager.read().await.log_sign_operation(
-                    &context,
-                    alias,
-                    data.len(),
-                    false,
-                    Some(e.to_string()),
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_sign_operation(&context, alias, data.len(), false, Some(e.to_string()))
+                    .await?;
                 return Err(e.into());
             }
         };
 
         // Log successful signing
-        self.audit_manager.read().await.log_sign_operation(
-            &context,
-            alias,
-            data.len(),
-            true,
-            None,
-        ).await?;
+        self.audit_manager
+            .read()
+            .await
+            .log_sign_operation(&context, alias, data.len(), true, None)
+            .await?;
 
         Ok(signature.into_bytes())
     }
@@ -510,16 +558,21 @@ impl CryptoTEE for CryptoTEEImpl {
         let key_handle = match key_manager.get_key(alias) {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_event(
-                    AuditEvent::new(
-                        AuditEventType::VerifyOperation,
-                        AuditSeverity::Error,
-                        context.actor,
-                        Some(alias.to_string()),
-                        false,
-                    ).with_error(e.to_string())
-                    .with_metadata("data_size".to_string(), serde_json::json!(data.len()))
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_event(
+                        AuditEvent::new(
+                            AuditEventType::VerifyOperation,
+                            AuditSeverity::Error,
+                            context.actor,
+                            Some(alias.to_string()),
+                            false,
+                        )
+                        .with_error(e.to_string())
+                        .with_metadata("data_size".to_string(), serde_json::json!(data.len())),
+                    )
+                    .await?;
                 return Err(e);
             }
         };
@@ -527,34 +580,45 @@ impl CryptoTEE for CryptoTEEImpl {
         let vendor = self.vendor.read().await;
         let sig = Signature { algorithm: key_handle.metadata.algorithm, data: signature.to_vec() };
 
-        let result = match vendor.verify(&key_handle.platform_handle.vendor_handle, data, &sig).await {
-            Ok(res) => res,
-            Err(e) => {
-                self.audit_manager.read().await.log_event(
-                    AuditEvent::new(
-                        AuditEventType::VerifyOperation,
-                        AuditSeverity::Warning,
-                        context.actor,
-                        Some(alias.to_string()),
-                        false,
-                    ).with_error(e.to_string())
-                    .with_metadata("data_size".to_string(), serde_json::json!(data.len()))
-                ).await?;
-                return Err(e.into());
-            }
-        };
+        let result =
+            match vendor.verify(&key_handle.platform_handle.vendor_handle, data, &sig).await {
+                Ok(res) => res,
+                Err(e) => {
+                    self.audit_manager
+                        .read()
+                        .await
+                        .log_event(
+                            AuditEvent::new(
+                                AuditEventType::VerifyOperation,
+                                AuditSeverity::Warning,
+                                context.actor,
+                                Some(alias.to_string()),
+                                false,
+                            )
+                            .with_error(e.to_string())
+                            .with_metadata("data_size".to_string(), serde_json::json!(data.len())),
+                        )
+                        .await?;
+                    return Err(e.into());
+                }
+            };
 
         // Log verification operation
-        self.audit_manager.read().await.log_event(
-            AuditEvent::new(
-                AuditEventType::VerifyOperation,
-                AuditSeverity::Info,
-                context.actor,
-                Some(alias.to_string()),
-                true,
-            ).with_metadata("data_size".to_string(), serde_json::json!(data.len()))
-            .with_metadata("verification_result".to_string(), serde_json::json!(result))
-        ).await?;
+        self.audit_manager
+            .read()
+            .await
+            .log_event(
+                AuditEvent::new(
+                    AuditEventType::VerifyOperation,
+                    AuditSeverity::Info,
+                    context.actor,
+                    Some(alias.to_string()),
+                    true,
+                )
+                .with_metadata("data_size".to_string(), serde_json::json!(data.len()))
+                .with_metadata("verification_result".to_string(), serde_json::json!(result)),
+            )
+            .await?;
 
         Ok(result)
     }
@@ -566,34 +630,44 @@ impl CryptoTEE for CryptoTEEImpl {
 
     async fn get_key_info(&self, alias: &str) -> CryptoTEEResult<KeyInfo> {
         let context = AuditContext::system(); // TODO: Get from request context
-        
+
         let key_manager = self.key_manager.read().await;
         let key_handle = match key_manager.get_key(alias) {
             Ok(handle) => handle,
             Err(e) => {
-                self.audit_manager.read().await.log_event(
-                    AuditEvent::new(
-                        AuditEventType::KeyAccessed,
-                        AuditSeverity::Warning,
-                        context.actor,
-                        Some(alias.to_string()),
-                        false,
-                    ).with_error(e.to_string())
-                ).await?;
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_event(
+                        AuditEvent::new(
+                            AuditEventType::KeyAccessed,
+                            AuditSeverity::Warning,
+                            context.actor,
+                            Some(alias.to_string()),
+                            false,
+                        )
+                        .with_error(e.to_string()),
+                    )
+                    .await?;
                 return Err(e);
             }
         };
 
         // Log successful key access
-        self.audit_manager.read().await.log_event(
-            AuditEvent::new(
-                AuditEventType::KeyAccessed,
-                AuditSeverity::Info,
-                context.actor,
-                Some(alias.to_string()),
-                true,
-            ).with_metadata("operation".to_string(), serde_json::json!("get_info"))
-        ).await?;
+        self.audit_manager
+            .read()
+            .await
+            .log_event(
+                AuditEvent::new(
+                    AuditEventType::KeyAccessed,
+                    AuditSeverity::Info,
+                    context.actor,
+                    Some(alias.to_string()),
+                    true,
+                )
+                .with_metadata("operation".to_string(), serde_json::json!("get_info")),
+            )
+            .await?;
 
         Ok(KeyInfo {
             alias: key_handle.alias.clone(),
@@ -651,15 +725,18 @@ impl CryptoTEEBuilder {
         };
 
         // Log system initialization
-        instance.audit_manager.read().await.log_event(
-            AuditEvent::new(
+        instance
+            .audit_manager
+            .read()
+            .await
+            .log_event(AuditEvent::new(
                 AuditEventType::SystemInitialized,
                 AuditSeverity::Info,
                 AuditContext::system().actor,
                 None,
                 true,
-            )
-        ).await?;
+            ))
+            .await?;
 
         Ok(instance)
     }

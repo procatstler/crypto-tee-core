@@ -11,7 +11,7 @@ use crypto_tee_vendor::{VendorKeyHandle, VendorTEE};
 use crate::{
     error::{PlatformError, PlatformResult},
     traits::{PlatformKeyHandle, PlatformTEE},
-    types::{AuthResult, AuthMethod, PlatformConfig},
+    types::{AuthMethod, AuthResult, PlatformConfig},
 };
 
 use self::system_info::{detect_tee_implementations, get_linux_distro, get_security_level};
@@ -104,7 +104,10 @@ impl PlatformTEE for LinuxPlatform {
         for priority_name in &priority_order {
             for i in (0..vendors.len()).rev() {
                 match vendors[i].probe().await {
-                    Ok(caps) if caps.name.to_lowercase().contains(priority_name) && caps.hardware_backed => {
+                    Ok(caps)
+                        if caps.name.to_lowercase().contains(priority_name)
+                            && caps.hardware_backed =>
+                    {
                         return Ok(vendors.swap_remove(i));
                     }
                     _ => continue,

@@ -6,9 +6,10 @@
 use crate::error::{VendorError, VendorResult};
 use crate::traits::VendorTEE;
 use crate::types::*;
-use async_trait::async_trait;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+// use async_trait::async_trait;
+// use std::collections::HashMap;
+use std::sync::Arc;
+// use std::sync::Mutex;
 
 #[cfg(not(target_os = "android"))]
 mod stub;
