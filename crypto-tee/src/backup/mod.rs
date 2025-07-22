@@ -557,8 +557,11 @@ impl BackupManager {
                 .seal_in_place_separate_tag(nonce, aead::Aad::empty(), &mut encrypted_data)
                 .map_err(|e| CryptoTEEError::CryptoError(format!("Encryption failed: {e}")))?;
 
-            encrypted_data.extend_from_slice(tag.as_ref());
-            Ok(encrypted_data)
+            // Prepend nonce to the result
+            let mut result = nonce_bytes.to_vec();
+            result.extend_from_slice(&encrypted_data);
+            result.extend_from_slice(tag.as_ref());
+            Ok(result)
         } else {
             Err(CryptoTEEError::ConfigurationError("Backup encryption not initialized".to_string()))
         }
@@ -572,11 +575,17 @@ impl BackupManager {
     /// Decrypt backup data
     async fn decrypt_backup_data(&self, encrypted_data: &[u8]) -> CryptoTEEResult<Vec<u8>> {
         if let Some(key) = &self.encryption_key {
-            let nonce_bytes = [0u8; 12];
-            // TODO: Extract nonce from encrypted data
-            let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
+            // Extract nonce from the beginning of encrypted data
+            if encrypted_data.len() < 12 {
+                return Err(CryptoTEEError::CryptoError("Encrypted data too short".to_string()));
+            }
+            
+            let (nonce_bytes, ciphertext_with_tag) = encrypted_data.split_at(12);
+            let mut nonce_array = [0u8; 12];
+            nonce_array.copy_from_slice(nonce_bytes);
+            let nonce = aead::Nonce::assume_unique_for_key(nonce_array);
 
-            let mut data = encrypted_data.to_vec();
+            let mut data = ciphertext_with_tag.to_vec();
             let decrypted_len = key
                 .open_in_place(nonce, aead::Aad::empty(), &mut data)
                 .map_err(|e| CryptoTEEError::CryptoError(format!("Decryption failed: {e}")))?
@@ -688,6 +697,7 @@ impl Default for RecoveryOptions {
 mod tests {
     use super::*;
     use crate::keys::KeyUsage;
+    use crypto_tee_vendor::Algorithm;
     use std::sync::Arc;
     use tokio::sync::Mutex;
 

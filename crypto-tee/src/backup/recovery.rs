@@ -909,8 +909,7 @@ impl Default for RecoveryValidation {
 mod tests {
     use super::*;
     use crate::{
-        backup::{storage::MockStorage, BackupManager, BackupStorage},
-        keys::KeyUsage,
+        backup::{BackupStorage, BackupType},
     };
     use std::sync::Arc;
     use tokio::sync::Mutex;
@@ -968,9 +967,8 @@ mod tests {
 
     #[tokio::test]
     async fn test_recovery_plan_creation() {
-        let storage = Box::new(MockRecoveryStorage::new());
+        let mut storage = Box::new(MockRecoveryStorage::new());
         let config = RecoveryConfig::default();
-        let mut recovery_manager = RecoveryManager::new(storage, None, config);
 
         let metadata = BackupMetadata {
             backup_id: "test_backup".to_string(),
@@ -984,6 +982,35 @@ mod tests {
             signature: None,
             encryption_info: None,
         };
+
+        // Create test backup entries
+        let entries = vec![BackupEntry {
+            key_handle: crate::keys::KeyHandle {
+                id: "test_key".to_string(),
+                algorithm: crypto_tee_vendor::Algorithm::Ed25519,
+                vendor: "test".to_string(),
+                hardware_backed: false,
+                vendor_data: None,
+            },
+            metadata: crate::keys::KeyMetadata {
+                id: "test_key".to_string(),
+                algorithm: crypto_tee_vendor::Algorithm::Ed25519,
+                created_at: SystemTime::now(),
+                usage: crate::keys::KeyUsage::default(),
+                hardware_backed: false,
+                exportable: true,
+            },
+            encrypted_key_data: vec![1, 2, 3, 4],
+            checksum: vec![5, 6, 7, 8],
+            created_at: SystemTime::now(),
+        }];
+        
+        let backup_data = serde_json::to_vec(&entries).unwrap();
+        
+        // Store the backup in mock storage first
+        storage.store_backup(&metadata, &backup_data).await.unwrap();
+        
+        let mut recovery_manager = RecoveryManager::new(storage, None, config);
 
         let backup_source = BackupSource {
             source_type: BackupSourceType::LocalFile,

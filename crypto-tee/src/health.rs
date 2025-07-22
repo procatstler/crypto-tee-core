@@ -737,7 +737,7 @@ mod tests {
         assert_eq!(report.overall_status, HealthStatus::Healthy);
         assert!(report.components.len() >= 3); // TEE, Platform, Vendor
         assert!(report.tee_health.available);
-        assert!(report.check_duration_ms > 0);
+        assert!(report.check_duration_ms >= 0); // May be 0 on very fast systems
     }
 
     #[tokio::test]

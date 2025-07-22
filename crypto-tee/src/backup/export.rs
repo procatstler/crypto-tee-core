@@ -552,10 +552,10 @@ impl Default for ExportOptions {
 mod tests {
     use super::*;
     use crate::{
-        backup::{BackupEntry, EncryptionInfo},
+        backup::{BackupEntry, BackupType},
         keys::{KeyHandle, KeyMetadata, KeyUsage},
-        types::Algorithm,
     };
+    use crypto_tee_vendor::Algorithm;
     use ring::digest;
     use std::time::SystemTime;
     use tempfile::TempDir;

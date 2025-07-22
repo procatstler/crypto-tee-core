@@ -753,8 +753,6 @@ impl Default for RotationConfig {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::sync::Arc;
-    use tokio::sync::RwLock;
 
     // Mock implementations would go here
     // Similar to health.rs tests but for rotation functionality
