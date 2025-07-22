@@ -4,7 +4,7 @@
 //! for iOS and macOS devices.
 
 use super::SecureEnclaveParams;
-use crate::apple::keychain::KeychainStorage;
+// use crate::apple::keychain::KeychainStorage;
 use crate::{
     error::{VendorError, VendorResult},
     traits::VendorTEE,
@@ -223,36 +223,11 @@ impl VendorTEE for AppleSecureEnclave {
         }
 
         // Generate key in Secure Enclave
-        let (_key, key_id) =
-            // TODO: Implement secure enclave key generation
-            // For now, use stub implementation
-            return Err(VendorError::NotSupported(
-                "Secure Enclave key generation not yet implemented".to_string(),
-            ));
-
-        // Store key info
-        let key_info = SecureEnclaveKeyInfo {
-            key_id: key_id.clone(),
-            algorithm: params.algorithm,
-            created_at: std::time::SystemTime::now(),
-            requires_biometric: se_params.require_biometric,
-            access_group: se_params.access_group.clone(),
-        };
-
-        self.key_handles
-            .lock()
-            .map_err(|e| {
-                VendorError::InternalError(format!("Failed to acquire key handles lock: {}", e))
-            })?
-            .insert(key_id.clone(), key_info);
-
-        Ok(VendorKeyHandle {
-            id: key_id,
-            algorithm: params.algorithm,
-            vendor: "Apple Secure Enclave".to_string(),
-            hardware_backed: true,
-            vendor_data: None,
-        })
+        // TODO: Implement secure enclave key generation
+        // For now, use stub implementation
+        Err(VendorError::NotSupported(
+            "Secure Enclave key generation not yet implemented".to_string(),
+        ))
     }
 
     async fn import_key(
@@ -264,33 +239,25 @@ impl VendorTEE for AppleSecureEnclave {
         Err(VendorError::NotSupported("Secure Enclave does not support key import".to_string()))
     }
 
-    async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
+    async fn sign(&self, _key: &VendorKeyHandle, _data: &[u8]) -> VendorResult<Signature> {
         // Get key from keychain
         // TODO: Implement keychain operations
-        return Err(VendorError::NotSupported(
+        Err(VendorError::NotSupported(
             "Keychain operations not yet implemented".to_string(),
-        ));
-
-        // Sign data
-        let signature_data = Self::sign_with_sec_key(&sec_key, data, key.algorithm)?;
-
-        Ok(Signature { algorithm: key.algorithm, data: signature_data })
+        ))
     }
 
     async fn verify(
         &self,
-        key: &VendorKeyHandle,
-        data: &[u8],
-        signature: &Signature,
+        _key: &VendorKeyHandle,
+        _data: &[u8],
+        _signature: &Signature,
     ) -> VendorResult<bool> {
         // Get key from keychain
         // TODO: Implement keychain operations
-        return Err(VendorError::NotSupported(
+        Err(VendorError::NotSupported(
             "Keychain operations not yet implemented".to_string(),
-        ));
-
-        // Verify signature
-        Self::verify_with_sec_key(&sec_key, data, &signature.data, key.algorithm)
+        ))
     }
 
     async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
@@ -319,26 +286,12 @@ impl VendorTEE for AppleSecureEnclave {
         })
     }
 
-    async fn get_key_attestation(&self, key: &VendorKeyHandle) -> VendorResult<Attestation> {
+    async fn get_key_attestation(&self, _key: &VendorKeyHandle) -> VendorResult<Attestation> {
         // Get key from keychain
         // TODO: Implement keychain operations
-        return Err(VendorError::NotSupported(
+        Err(VendorError::NotSupported(
             "Keychain operations not yet implemented".to_string(),
-        ));
-
-        // Get key attributes
-        // TODO: Get key attributes from keychain
-        // let attributes = KeychainOperations::get_key_attributes(&sec_key)?;
-
-        // In a real implementation, this would use App Attest or similar
-        // to generate hardware-backed attestation
-        Ok(Attestation {
-            format: AttestationFormat::Custom("apple_key_attestation".to_string()),
-            data: serde_json::to_vec(&attributes).map_err(|e| {
-                VendorError::AttestationFailed(format!("Failed to serialize attributes: {}", e))
-            })?,
-            certificates: vec![], // Would contain attestation certificates
-        })
+        ))
     }
 
     async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {

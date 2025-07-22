@@ -232,7 +232,7 @@ impl BiometricContext {
     }
 
     #[cfg(target_os = "macos")]
-    pub fn evaluate_policy(&self, reason: &str) -> VendorResult<bool> {
+    pub fn evaluate_policy(&self, _reason: &str) -> VendorResult<bool> {
         // On macOS, biometric authentication is handled through
         // the keychain access control when the key is used
         Ok(true)

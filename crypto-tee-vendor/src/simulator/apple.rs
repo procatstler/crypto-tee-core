@@ -207,7 +207,7 @@ impl VendorTEE for AppleTEESimulator {
 
         // Check if biometric authentication is required
         {
-            let mut state = self.enclave_state.write().await;
+            let state = self.enclave_state.write().await;
             if let Some(last_auth) = state.last_bio_auth {
                 let elapsed = SystemTime::now()
                     .duration_since(last_auth)

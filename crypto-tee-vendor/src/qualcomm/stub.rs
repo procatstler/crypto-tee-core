@@ -29,20 +29,20 @@ impl VendorTEE for QualcommStubTEE {
         Err(VendorError::NotAvailable)
     }
 
-    async fn generate_key(&self, params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
+    async fn generate_key(&self, _params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
         // Always fail on non-Android platforms
         Err(VendorError::NotSupported(
             "Qualcomm QSEE is only available on Android devices with Qualcomm chipsets".to_string(),
         ))
     }
 
-    async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
+    async fn delete_key(&self, _key: &VendorKeyHandle) -> VendorResult<()> {
         Err(VendorError::NotSupported(
             "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
     }
 
-    async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
+    async fn sign(&self, _key: &VendorKeyHandle, _data: &[u8]) -> VendorResult<Signature> {
         Err(VendorError::NotSupported(
             "Qualcomm QSEE is only available on Android devices".to_string(),
         ))
@@ -50,9 +50,9 @@ impl VendorTEE for QualcommStubTEE {
 
     async fn verify(
         &self,
-        key: &VendorKeyHandle,
-        data: &[u8],
-        signature: &Signature,
+        _key: &VendorKeyHandle,
+        _data: &[u8],
+        _signature: &Signature,
     ) -> VendorResult<bool> {
         Err(VendorError::NotSupported(
             "Qualcomm QSEE is only available on Android devices".to_string(),
@@ -65,7 +65,7 @@ impl VendorTEE for QualcommStubTEE {
         ))
     }
 
-    async fn get_key_attestation(&self, key: &VendorKeyHandle) -> VendorResult<Attestation> {
+    async fn get_key_attestation(&self, _key: &VendorKeyHandle) -> VendorResult<Attestation> {
         Err(VendorError::NotSupported(
             "Qualcomm QSEE is only available on Android devices".to_string(),
         ))

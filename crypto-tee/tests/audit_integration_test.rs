@@ -23,6 +23,8 @@ async fn test_audit_logging_generates_logs() {
             verify: true,
             encrypt: false,
             decrypt: false,
+            wrap: false,
+            unwrap: false,
         },
         metadata: Default::default(),
         expires_at: None,

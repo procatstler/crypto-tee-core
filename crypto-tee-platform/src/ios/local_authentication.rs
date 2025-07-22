@@ -4,7 +4,7 @@
 //! for biometric and passcode authentication.
 
 use crate::error::{PlatformError, PlatformResult};
-use crate::types::AuthResult;
+use crate::types::{AuthResult, AuthMethod};
 
 /// Local authentication configuration
 #[derive(Debug, Clone)]
@@ -90,15 +90,9 @@ impl LAContext {
 
         Ok(AuthResult {
             success: true,
-            method: method.to_string(),
-            timestamp: std::time::SystemTime::now(),
-            validity_duration: Some(std::time::Duration::from_secs(300)),
-            metadata: challenge.map(|c| {
-                serde_json::json!({
-                    "challenge_response": base64_encode(c),
-                    "policy": format!("{:?}", policy),
-                })
-            }),
+            method: AuthMethod::Biometric,
+            session_token: challenge.map(|c| c.to_vec()),
+            valid_until: Some(std::time::SystemTime::now() + std::time::Duration::from_secs(300)),
         })
     }
 
@@ -221,7 +215,7 @@ mod tests {
             .unwrap();
 
         assert!(result.success);
-        assert!(!result.method.is_empty());
+        assert!(result.method == AuthMethod::Biometric);
     }
 
     #[test]

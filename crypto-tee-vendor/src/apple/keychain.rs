@@ -42,7 +42,7 @@ impl KeychainStorage {
         algorithm: Algorithm,
         _params: &super::SecureEnclaveParams,
     ) -> VendorResult<CFMutableDictionary> {
-        let mut dict = CFMutableDictionary::new();
+        let dict = CFMutableDictionary::new();
 
         // Key type
         let _key_type = match algorithm {

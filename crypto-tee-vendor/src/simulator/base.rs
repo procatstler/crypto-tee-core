@@ -229,7 +229,7 @@ impl GenericTEESimulator {
         key_material: &KeyMaterial,
         data: &[u8],
     ) -> VendorResult<Signature> {
-        let rng = self.rng.lock().unwrap();
+        let _rng = self.rng.lock().unwrap();
 
         match key_material {
             KeyMaterial::Ed25519(pkcs8) => {
@@ -458,7 +458,7 @@ impl VendorTEE for GenericTEESimulator {
     async fn verify(
         &self,
         key: &VendorKeyHandle,
-        data: &[u8],
+        _data: &[u8],
         signature: &Signature,
     ) -> VendorResult<bool> {
         self.check_error_injection().await?;

@@ -133,19 +133,14 @@ impl From<BiometricResult> for AuthResult {
         AuthResult {
             success: bio_result.success,
             method: match bio_result.method {
-                AuthMethod::Fingerprint => "fingerprint".to_string(),
-                AuthMethod::Face => "face".to_string(),
-                AuthMethod::Iris => "iris".to_string(),
-                AuthMethod::DeviceCredential => "device_credential".to_string(),
-                AuthMethod::UnknownBiometric => "biometric".to_string(),
+                AuthMethod::Fingerprint => crate::types::AuthMethod::Biometric,
+                AuthMethod::Face => crate::types::AuthMethod::Biometric,
+                AuthMethod::Iris => crate::types::AuthMethod::Biometric,
+                AuthMethod::DeviceCredential => crate::types::AuthMethod::DeviceCredential,
+                AuthMethod::UnknownBiometric => crate::types::AuthMethod::Biometric,
             },
-            timestamp: std::time::SystemTime::now(),
-            validity_duration: Some(std::time::Duration::from_secs(300)), // 5 minutes
-            metadata: bio_result.crypto_object.map(|co| {
-                serde_json::json!({
-                    "crypto_object": base64::encode(co)
-                })
-            }),
+            session_token: bio_result.crypto_object,
+            valid_until: Some(std::time::SystemTime::now() + std::time::Duration::from_secs(300)),
         }
     }
 }
@@ -192,16 +187,8 @@ impl BiometricPromptBuilder {
 
 // Helper function to encode base64
 fn base64_encode(data: &[u8]) -> String {
-    use base64::Engine;
+    use base64::Engine as _;
     base64::engine::general_purpose::STANDARD.encode(data)
-}
-
-// Re-export base64 encode function with correct import
-mod base64 {
-    pub fn encode(data: Vec<u8>) -> String {
-        use base64::Engine;
-        base64::engine::general_purpose::STANDARD.encode(data)
-    }
 }
 
 #[cfg(test)]

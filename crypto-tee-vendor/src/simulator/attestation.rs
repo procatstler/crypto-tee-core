@@ -454,7 +454,7 @@ impl AttestationService {
     /// Generate attestation data
     fn generate_attestation_data(&self) -> VendorResult<AttestationData> {
         let device_identity = self.device_identity.lock().unwrap();
-        let config = self.config.lock().unwrap();
+        let _config = self.config.lock().unwrap();
 
         let boot_state = BootState {
             verified_boot: true,

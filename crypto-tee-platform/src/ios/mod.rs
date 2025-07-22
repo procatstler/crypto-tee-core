@@ -60,17 +60,19 @@ impl PlatformTEE for IOSPlatform {
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
         // Select Secure Enclave if available
-        let vendors = self.detect_vendors().await;
+        let mut vendors = self.detect_vendors().await;
 
         if vendors.is_empty() {
             return Err(PlatformError::NotSupported("No vendors available on iOS".to_string()));
         }
 
         // Prefer Secure Enclave over Keychain
-        for vendor in vendors {
-            let caps = vendor.probe().await?;
-            if caps.name.contains("secure_enclave") {
-                return Ok(vendor);
+        for i in (0..vendors.len()).rev() {
+            match vendors[i].probe().await {
+                Ok(caps) if caps.name.contains("secure_enclave") => {
+                    return Ok(vendors.swap_remove(i));
+                }
+                _ => continue,
             }
         }
 
@@ -95,19 +97,19 @@ impl PlatformTEE for IOSPlatform {
     async fn authenticate(&self, challenge: &[u8]) -> PlatformResult<AuthResult> {
         // Implement LAContext biometric authentication
         if !is_biometric_available()? {
-            return Err(PlatformError::AuthFailed(
+            return Err(PlatformError::AuthenticationRequired(
                 "Biometric authentication not available".to_string(),
             ));
         }
 
-        let policy = if self.config.require_biometric_only {
+        let policy = if self.config.require_strong_biometric {
             LAPolicy::BiometryOnly
         } else {
             LAPolicy::BiometryOrPasscode
         };
 
         let result = LAContextBuilder::new("Authenticate to access secure key")
-            .fallback_to_passcode(!self.config.require_biometric_only)
+            .fallback_to_passcode(!self.config.require_strong_biometric)
             .authenticate(Some(challenge))
             .await?;
 

@@ -64,8 +64,10 @@ async fn test_samsung_simulator() {
     let samsung_params = crate::samsung::KnoxParams {
         use_knox_vault: true,
         require_user_auth: false,
-        knox_attestation: false,
-        knox_container_id: None,
+        auth_validity_seconds: None,
+        use_trustzone: true,
+        enable_attestation: false,
+        container_id: None,
     };
 
     #[cfg(not(feature = "samsung"))]

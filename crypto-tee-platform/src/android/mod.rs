@@ -90,7 +90,7 @@ impl PlatformTEE for AndroidPlatform {
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
         // Select best available vendor based on device capabilities
-        let vendors = self.detect_vendors().await;
+        let mut vendors = self.detect_vendors().await;
 
         if vendors.is_empty() {
             return Err(PlatformError::NotSupported(
@@ -105,19 +105,23 @@ impl PlatformTEE for AndroidPlatform {
         match security_level {
             system_properties::SecurityLevel::StrongBox => {
                 // Prefer StrongBox if available
-                for vendor in vendors {
-                    let caps = vendor.probe().await?;
-                    if caps.name.contains("strongbox") {
-                        return Ok(vendor);
+                for i in (0..vendors.len()).rev() {
+                    match vendors[i].probe().await {
+                        Ok(caps) if caps.name.contains("strongbox") => {
+                            return Ok(vendors.swap_remove(i));
+                        }
+                        _ => continue,
                     }
                 }
             }
             system_properties::SecurityLevel::Knox => {
                 // Prefer Knox on Samsung devices
-                for vendor in vendors {
-                    let caps = vendor.probe().await?;
-                    if caps.name.contains("knox") {
-                        return Ok(vendor);
+                for i in (0..vendors.len()).rev() {
+                    match vendors[i].probe().await {
+                        Ok(caps) if caps.name.contains("knox") => {
+                            return Ok(vendors.swap_remove(i));
+                        }
+                        _ => continue,
                     }
                 }
             }
@@ -125,10 +129,12 @@ impl PlatformTEE for AndroidPlatform {
         }
 
         // Default to first hardware-backed vendor
-        for vendor in vendors {
-            let caps = vendor.probe().await?;
-            if caps.hardware_backed {
-                return Ok(vendor);
+        for i in (0..vendors.len()).rev() {
+            match vendors[i].probe().await {
+                Ok(caps) if caps.hardware_backed => {
+                    return Ok(vendors.swap_remove(i));
+                }
+                _ => continue,
             }
         }
 
@@ -153,14 +159,14 @@ impl PlatformTEE for AndroidPlatform {
     async fn authenticate(&self, challenge: &[u8]) -> PlatformResult<AuthResult> {
         // Implement BiometricPrompt integration
         if !is_biometric_available()? {
-            return Err(PlatformError::AuthFailed(
+            return Err(PlatformError::AuthenticationRequired(
                 "Biometric authentication not available".to_string(),
             ));
         }
 
         let result = BiometricPromptBuilder::new("Authenticate to access secure key")
             .subtitle("Your biometric is required to use this key")
-            .allow_device_credential(self.config.allow_device_credential)
+            .allow_device_credential(!self.config.require_strong_biometric)
             .authenticate(Some(challenge))
             .await?;
 

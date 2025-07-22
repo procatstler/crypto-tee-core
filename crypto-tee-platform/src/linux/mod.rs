@@ -11,7 +11,7 @@ use crypto_tee_vendor::{VendorKeyHandle, VendorTEE};
 use crate::{
     error::{PlatformError, PlatformResult},
     traits::{PlatformKeyHandle, PlatformTEE},
-    types::{AuthResult, PlatformConfig},
+    types::{AuthResult, AuthMethod, PlatformConfig},
 };
 
 use self::system_info::{detect_tee_implementations, get_linux_distro, get_security_level};
@@ -90,7 +90,7 @@ impl PlatformTEE for LinuxPlatform {
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
         // Select best available vendor based on security level
-        let vendors = self.detect_vendors().await;
+        let mut vendors = self.detect_vendors().await;
 
         if vendors.is_empty() {
             return Err(PlatformError::NotSupported(
@@ -102,10 +102,12 @@ impl PlatformTEE for LinuxPlatform {
         let priority_order = ["op_tee", "intel_sgx", "amd_sev", "tpm", "software"];
 
         for priority_name in &priority_order {
-            for vendor in &vendors {
-                let caps = vendor.probe().await?;
-                if caps.name.to_lowercase().contains(priority_name) && caps.hardware_backed {
-                    return Ok(vendor.clone());
+            for i in (0..vendors.len()).rev() {
+                match vendors[i].probe().await {
+                    Ok(caps) if caps.name.to_lowercase().contains(priority_name) && caps.hardware_backed => {
+                        return Ok(vendors.swap_remove(i));
+                    }
+                    _ => continue,
                 }
             }
         }
@@ -133,10 +135,9 @@ impl PlatformTEE for LinuxPlatform {
         // Could integrate with PAM or PolicyKit
         Ok(AuthResult {
             success: true,
-            method: "password".to_string(),
-            timestamp: std::time::SystemTime::now(),
-            validity_duration: Some(std::time::Duration::from_secs(3600)), // 1 hour
-            metadata: None,
+            method: AuthMethod::Password,
+            session_token: None,
+            valid_until: Some(std::time::SystemTime::now() + std::time::Duration::from_secs(3600)),
         })
     }
 

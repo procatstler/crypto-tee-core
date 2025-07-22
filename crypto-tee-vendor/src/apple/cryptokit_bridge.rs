@@ -99,10 +99,10 @@ impl CryptoKitOperations {
         // 2. Error handling is properly implemented with ok_or_else
         // 3. Objective-C runtime safety is maintained by objc crate
         unsafe {
-            let p256_class = objc::runtime::Class::get("P256")
+            let _p256_class = objc::runtime::Class::get("P256")
                 .ok_or_else(|| VendorError::NotSupported("P256 class not found".to_string()))?;
 
-            let signing_class = objc::runtime::Class::get("Signing")
+            let _signing_class = objc::runtime::Class::get("Signing")
                 .ok_or_else(|| VendorError::NotSupported("Signing class not found".to_string()))?;
 
             let private_key_class = objc::runtime::Class::get("PrivateKey").ok_or_else(|| {
@@ -124,10 +124,10 @@ impl CryptoKitOperations {
     fn generate_p384_key() -> VendorResult<CryptoKitKey> {
         // SAFETY: P384 CryptoKit operations with proper error handling
         unsafe {
-            let p384_class = objc::runtime::Class::get("P384")
+            let _p384_class = objc::runtime::Class::get("P384")
                 .ok_or_else(|| VendorError::NotSupported("P384 class not found".to_string()))?;
 
-            let signing_class = objc::runtime::Class::get("Signing")
+            let _signing_class = objc::runtime::Class::get("Signing")
                 .ok_or_else(|| VendorError::NotSupported("Signing class not found".to_string()))?;
 
             let private_key_class = objc::runtime::Class::get("PrivateKey").ok_or_else(|| {
@@ -149,11 +149,11 @@ impl CryptoKitOperations {
     fn generate_ed25519_key() -> VendorResult<CryptoKitKey> {
         // SAFETY: Ed25519 CryptoKit operations with proper error handling
         unsafe {
-            let curve25519_class = objc::runtime::Class::get("Curve25519").ok_or_else(|| {
+            let _curve25519_class = objc::runtime::Class::get("Curve25519").ok_or_else(|| {
                 VendorError::NotSupported("Curve25519 class not found".to_string())
             })?;
 
-            let signing_class = objc::runtime::Class::get("Signing")
+            let _signing_class = objc::runtime::Class::get("Signing")
                 .ok_or_else(|| VendorError::NotSupported("Signing class not found".to_string()))?;
 
             let private_key_class = objc::runtime::Class::get("PrivateKey").ok_or_else(|| {
@@ -187,10 +187,7 @@ impl CryptoKitOperations {
             ];
 
             // Sign the data
-            let key_obj = match &key.key_object {
-                Some(obj) => *obj,
-                None => return Err(VendorError::SigningError("Key object is null".to_string())),
-            };
+            let key_obj = *key.key_object;
             let signature: *mut Object = msg_send![key_obj, signatureForData:ns_data];
 
             if signature.is_null() {
@@ -213,21 +210,18 @@ impl CryptoKitOperations {
     pub fn export_public_key(key: &CryptoKitKey) -> VendorResult<Vec<u8>> {
         unsafe {
             // Get public key
-            let key_obj = match &key.key_object {
-                Some(obj) => *obj,
-                None => return Err(VendorError::KeyExport("Key object is null".to_string())),
-            };
+            let key_obj = *key.key_object;
             let public_key: *mut Object = msg_send![key_obj, publicKey];
 
             if public_key.is_null() {
-                return Err(VendorError::KeyExport("Failed to get public key".to_string()));
+                return Err(VendorError::CryptoError("Failed to get public key".to_string()));
             }
 
             // Get raw representation
             let raw_representation: *mut Object = msg_send![public_key, rawRepresentation];
 
             if raw_representation.is_null() {
-                return Err(VendorError::KeyExport("Failed to get raw representation".to_string()));
+                return Err(VendorError::CryptoError("Failed to get raw representation".to_string()));
             }
 
             // Get bytes
@@ -266,10 +260,10 @@ impl CryptoKitOperations {
                 _ => return Err(VendorError::NotSupported("Unsupported algorithm".to_string())),
             };
 
-            let curve_class = objc::runtime::Class::get(curve_class_name)
+            let _curve_class = objc::runtime::Class::get(curve_class_name)
                 .ok_or_else(|| VendorError::NotSupported("Curve class not found".to_string()))?;
 
-            let signing_class = objc::runtime::Class::get("Signing")
+            let _signing_class = objc::runtime::Class::get("Signing")
                 .ok_or_else(|| VendorError::NotSupported("Signing class not found".to_string()))?;
 
             let public_key_class = objc::runtime::Class::get(key_class_name).ok_or_else(|| {
@@ -348,7 +342,7 @@ impl CryptoKitHash {
             let hash: *mut Object = msg_send![sha256_class, hashWithData:ns_data];
 
             if hash.is_null() {
-                return Err(VendorError::HashError("Failed to compute SHA256".to_string()));
+                return Err(VendorError::CryptoError("Failed to compute SHA256".to_string()));
             }
 
             // Get hash bytes
@@ -382,7 +376,7 @@ impl CryptoKitHash {
             let hash: *mut Object = msg_send![sha384_class, hashWithData:ns_data];
 
             if hash.is_null() {
-                return Err(VendorError::HashError("Failed to compute SHA384".to_string()));
+                return Err(VendorError::CryptoError("Failed to compute SHA384".to_string()));
             }
 
             // Get hash bytes
@@ -416,7 +410,7 @@ impl CryptoKitHash {
             let hash: *mut Object = msg_send![sha512_class, hashWithData:ns_data];
 
             if hash.is_null() {
-                return Err(VendorError::HashError("Failed to compute SHA512".to_string()));
+                return Err(VendorError::CryptoError("Failed to compute SHA512".to_string()));
             }
 
             // Get hash bytes
