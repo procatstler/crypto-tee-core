@@ -11,12 +11,14 @@ pub mod error;
 pub mod health;
 pub mod keys;
 pub mod plugins;
+pub mod rotation;
 pub mod types;
 
 pub use core::api::{CryptoTEE, CryptoTEEBuilder};
 pub use error::{CryptoTEEError, CryptoTEEResult};
 pub use health::{HealthMonitor, HealthReport, HealthStatus, ComponentHealth, TeeHealth, HealthConfig};
 pub use plugins::{CryptoPlugin, PluginManager};
+pub use rotation::{KeyRotationManager, RotationPolicy, RotationStrategy, RotationResult, RotationReason, KeyVersion, KeyVersionStatus};
 pub use types::*;
 
 // Re-export important types from lower layers

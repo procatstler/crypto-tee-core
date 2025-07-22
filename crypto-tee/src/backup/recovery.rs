@@ -3,13 +3,12 @@
 //! This module provides comprehensive recovery mechanisms for cryptographic keys
 //! from various backup sources and formats.
 
-use super::{BackupEntry, BackupMetadata, BackupStorage, BackupType, RecoveryOptions};
+use super::{BackupEntry, BackupMetadata, BackupStorage, RecoveryOptions};
 use crate::{
     audit::{AuditEvent, AuditEventType, AuditManager},
     error::{CryptoTEEError, CryptoTEEResult},
-    keys::{KeyHandle, KeyMetadata},
+    keys::KeyHandle,
 };
-use crypto_tee_vendor::types::Algorithm;
 use ring::digest;
 use serde::{Deserialize, Serialize};
 use std::{

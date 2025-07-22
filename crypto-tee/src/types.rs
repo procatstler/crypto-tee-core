@@ -76,7 +76,7 @@ pub enum PaddingScheme {
 }
 
 /// Handle to a key managed by CryptoTEE
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct KeyHandle {
     /// Unique key alias
     pub alias: String,

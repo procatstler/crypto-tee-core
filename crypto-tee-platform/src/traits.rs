@@ -52,7 +52,7 @@ pub trait PlatformTEE: Send + Sync {
 }
 
 /// Platform-wrapped key handle with additional metadata
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct PlatformKeyHandle {
     /// Original vendor key handle
     pub vendor_handle: VendorKeyHandle,

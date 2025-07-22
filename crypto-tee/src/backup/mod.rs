@@ -9,12 +9,11 @@ use crate::{
     keys::{KeyHandle, KeyMetadata},
 };
 use async_trait::async_trait;
-use crypto_tee_vendor::types::Algorithm;
 use ring::{aead, digest, rand::SecureRandom};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::PathBuf,
     time::{Duration, SystemTime},
 };
 use tracing::{debug, error, info, warn};
@@ -573,7 +572,7 @@ impl BackupManager {
     /// Decrypt backup data
     async fn decrypt_backup_data(&self, encrypted_data: &[u8]) -> CryptoTEEResult<Vec<u8>> {
         if let Some(key) = &self.encryption_key {
-            let mut nonce_bytes = [0u8; 12];
+            let nonce_bytes = [0u8; 12];
             // TODO: Extract nonce from encrypted data
             let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
 
@@ -608,7 +607,7 @@ impl BackupManager {
     async fn recover_key_from_entry(
         &self,
         entry: &BackupEntry,
-        options: &RecoveryOptions,
+        _options: &RecoveryOptions,
     ) -> CryptoTEEResult<KeyHandle> {
         // Verify entry checksum
         let calculated_checksum = digest::digest(&digest::SHA256, &entry.encrypted_key_data);

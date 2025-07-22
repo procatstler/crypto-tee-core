@@ -3,12 +3,11 @@
 //! This module provides functionality to export backups in various formats
 //! for compatibility with different systems and compliance requirements.
 
-use super::{BackupEntry, BackupMetadata, BackupType};
+use super::{BackupEntry, BackupMetadata};
 use crate::error::{CryptoTEEError, CryptoTEEResult};
 use serde::{Deserialize, Serialize};
 use std::{
     collections::HashMap,
-    io::Write,
     path::{Path, PathBuf},
     time::SystemTime,
 };
@@ -238,14 +237,14 @@ impl BackupExporter {
     pub async fn import_backup(
         &self,
         data: &[u8],
-        format: ExportFormat,
+        _format: ExportFormat,
         options: &ExportOptions,
     ) -> CryptoTEEResult<(BackupMetadata, Vec<BackupEntry>)> {
-        info!("Importing backup from format {:?}", format);
+        info!("Importing backup from format {:?}", _format);
 
         // Get format handler
-        let handler = self.format_handlers.get(&format).ok_or_else(|| {
-            CryptoTEEError::NotSupported(format!("Import format {:?} not supported", format))
+        let handler = self.format_handlers.get(&_format).ok_or_else(|| {
+            CryptoTEEError::NotSupported(format!("Import format {:?} not supported", _format))
         })?;
 
         // Import using format handler

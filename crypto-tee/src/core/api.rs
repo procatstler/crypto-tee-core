@@ -16,6 +16,7 @@ use crate::{
         MultiAuditLogger,
     },
     health::{HealthConfig, HealthMonitor, HealthReport},
+    rotation::{KeyRotationManager, RotationConfig, RotationPolicy, RotationResult, RotationReason},
     core::manager::KeyManager,
     error::{CryptoTEEError, CryptoTEEResult},
     plugins::PluginManager,
@@ -67,6 +68,12 @@ pub trait CryptoTEE: Send + Sync {
 
     /// Perform health check
     async fn health_check(&self) -> CryptoTEEResult<HealthReport>;
+
+    /// Set rotation policy for a key
+    async fn set_rotation_policy(&self, alias: &str, policy: RotationPolicy) -> CryptoTEEResult<()>;
+
+    /// Rotate a key immediately
+    async fn rotate_key(&self, alias: &str, reason: RotationReason, force: bool) -> CryptoTEEResult<RotationResult>;
 }
 
 /// CryptoTEE implementation
@@ -77,6 +84,7 @@ pub struct CryptoTEEImpl {
     plugin_manager: Arc<RwLock<PluginManager>>,
     audit_manager: Arc<RwLock<AuditManager>>,
     health_monitor: Arc<RwLock<HealthMonitor>>,
+    rotation_manager: Arc<RwLock<KeyRotationManager>>,
 }
 
 impl CryptoTEEImpl {
@@ -101,13 +109,27 @@ impl CryptoTEEImpl {
             HealthConfig::default(),
         );
 
+        let key_manager_arc = Arc::new(RwLock::new(KeyManager::new()));
+        let audit_manager_arc = Arc::new(RwLock::new(audit_manager));
+
+        // Setup rotation manager
+        let rotation_manager = KeyRotationManager::new(
+            key_manager_arc.clone(),
+            platform_arc.clone(),
+            vendor_arc.clone(),
+            Some(audit_manager_arc.clone()),
+            None, // backup_manager - would be integrated if available
+            RotationConfig::default(),
+        );
+
         let instance = Self {
             platform: platform_arc,
             vendor: vendor_arc,
-            key_manager: Arc::new(RwLock::new(KeyManager::new())),
+            key_manager: key_manager_arc,
             plugin_manager: Arc::new(RwLock::new(PluginManager::new())),
-            audit_manager: Arc::new(RwLock::new(audit_manager)),
+            audit_manager: audit_manager_arc,
             health_monitor: Arc::new(RwLock::new(health_monitor)),
+            rotation_manager: Arc::new(RwLock::new(rotation_manager)),
         };
 
         // Log system initialization
@@ -722,6 +744,85 @@ impl CryptoTEE for CryptoTEEImpl {
 
         Ok(report)
     }
+
+    async fn set_rotation_policy(&self, alias: &str, policy: RotationPolicy) -> CryptoTEEResult<()> {
+        info!("Setting rotation policy for key: {}", alias);
+        let context = AuditContext::system();
+
+        let rotation_manager = self.rotation_manager.read().await;
+        rotation_manager.set_policy(alias, policy.clone()).await?;
+
+        // Audit log
+        self.audit_manager
+            .read()
+            .await
+            .log_event(
+                AuditEvent::new(
+                    AuditEventType::ConfigurationChanged,
+                    AuditSeverity::Info,
+                    context.actor,
+                    Some(alias.to_string()),
+                    true,
+                )
+                .with_metadata("operation".to_string(), serde_json::json!("set_rotation_policy"))
+                .with_metadata("strategy".to_string(), serde_json::json!(policy.strategy)),
+            )
+            .await?;
+
+        Ok(())
+    }
+
+    async fn rotate_key(&self, alias: &str, reason: RotationReason, force: bool) -> CryptoTEEResult<RotationResult> {
+        info!("Rotating key: {} (reason: {:?}, force: {})", alias, reason, force);
+        let context = AuditContext::system();
+
+        let rotation_manager = self.rotation_manager.read().await;
+        let result = rotation_manager.rotate_key(alias, reason.clone(), force).await;
+
+        // Audit log the result
+        match &result {
+            Ok(rotation_result) => {
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_event(
+                        AuditEvent::new(
+                            AuditEventType::KeyRotated,
+                            AuditSeverity::Info,
+                            context.actor,
+                            Some(alias.to_string()),
+                            true,
+                        )
+                        .with_metadata("reason".to_string(), serde_json::json!(reason))
+                        .with_metadata("new_version".to_string(), serde_json::json!(rotation_result.new_version))
+                        .with_metadata("duration_ms".to_string(), serde_json::json!(rotation_result.duration.as_millis()))
+                        .with_metadata("force".to_string(), serde_json::json!(force)),
+                    )
+                    .await?;
+            }
+            Err(e) => {
+                self.audit_manager
+                    .read()
+                    .await
+                    .log_event(
+                        AuditEvent::new(
+                            AuditEventType::ErrorOccurred,
+                            AuditSeverity::Error,
+                            context.actor,
+                            Some(alias.to_string()),
+                            false,
+                        )
+                        .with_error(e.to_string())
+                        .with_metadata("operation".to_string(), serde_json::json!("rotate_key"))
+                        .with_metadata("reason".to_string(), serde_json::json!(reason))
+                        .with_metadata("force".to_string(), serde_json::json!(force)),
+                    )
+                    .await?;
+            }
+        }
+
+        result
+    }
 }
 
 /// Builder for CryptoTEE instances
@@ -771,13 +872,27 @@ impl CryptoTEEBuilder {
             HealthConfig::default(),
         );
 
+        let key_manager_arc = Arc::new(RwLock::new(KeyManager::new()));
+        let audit_manager_arc = Arc::new(RwLock::new(audit_manager));
+
+        // Setup rotation manager
+        let rotation_manager = KeyRotationManager::new(
+            key_manager_arc.clone(),
+            platform_arc.clone(),
+            vendor_arc.clone(),
+            Some(audit_manager_arc.clone()),
+            None, // backup_manager - would be integrated if available
+            RotationConfig::default(),
+        );
+
         let instance = CryptoTEEImpl {
             platform: platform_arc,
             vendor: vendor_arc,
-            key_manager: Arc::new(RwLock::new(KeyManager::new())),
+            key_manager: key_manager_arc,
             plugin_manager: Arc::new(RwLock::new(PluginManager::new())),
-            audit_manager: Arc::new(RwLock::new(audit_manager)),
+            audit_manager: audit_manager_arc,
             health_monitor: Arc::new(RwLock::new(health_monitor)),
+            rotation_manager: Arc::new(RwLock::new(rotation_manager)),
         };
 
         // Log system initialization
