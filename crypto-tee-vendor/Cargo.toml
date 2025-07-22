@@ -21,9 +21,24 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 tokio = { workspace = true, features = ["sync", "time"] }
 rand = "0.8"
 
+# Performance optimization dependencies
+lru = "0.12"
+crossbeam = "0.8"
+parking_lot = "0.12"
+dashmap = "5.5"
+
 [dev-dependencies]
 mockall = { workspace = true }
 tokio = { workspace = true }
+criterion = { workspace = true, features = ["html_reports", "async_tokio"] }
+
+[[bench]]
+name = "cache_optimization"
+harness = false
+
+[[example]]
+name = "performance_demo"
+required-features = ["software-fallback"]
 
 [features]
 default = []

@@ -1,5 +1,7 @@
 //! Mock vendor implementation for testing and software fallback
 
+pub mod optimized;
+
 use std::collections::HashMap;
 use std::sync::Arc;
 
