@@ -29,6 +29,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             verify: true,
             encrypt: false,
             decrypt: false,
+            wrap: false,
+            unwrap: false,
         },
         metadata: Default::default(),
         expires_at: None,

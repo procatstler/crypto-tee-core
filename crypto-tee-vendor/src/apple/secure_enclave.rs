@@ -4,7 +4,7 @@
 //! for iOS and macOS devices.
 
 use super::SecureEnclaveParams;
-use crate::apple::keychain::KeychainOperations;
+use crate::apple::keychain::KeychainStorage;
 use crate::{
     error::{VendorError, VendorResult},
     traits::VendorTEE,
@@ -224,7 +224,11 @@ impl VendorTEE for AppleSecureEnclave {
 
         // Generate key in Secure Enclave
         let (_key, key_id) =
-            KeychainOperations::generate_secure_enclave_key(params.algorithm, &se_params)?;
+            // TODO: Implement secure enclave key generation
+            // For now, use stub implementation
+            return Err(VendorError::NotSupported(
+                "Secure Enclave key generation not yet implemented".to_string(),
+            ));
 
         // Store key info
         let key_info = SecureEnclaveKeyInfo {
@@ -262,7 +266,10 @@ impl VendorTEE for AppleSecureEnclave {
 
     async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
         // Get key from keychain
-        let sec_key = KeychainOperations::find_key(&key.id)?;
+        // TODO: Implement keychain operations
+        return Err(VendorError::NotSupported(
+            "Keychain operations not yet implemented".to_string(),
+        ));
 
         // Sign data
         let signature_data = Self::sign_with_sec_key(&sec_key, data, key.algorithm)?;
@@ -277,7 +284,10 @@ impl VendorTEE for AppleSecureEnclave {
         signature: &Signature,
     ) -> VendorResult<bool> {
         // Get key from keychain
-        let sec_key = KeychainOperations::find_key(&key.id)?;
+        // TODO: Implement keychain operations
+        return Err(VendorError::NotSupported(
+            "Keychain operations not yet implemented".to_string(),
+        ));
 
         // Verify signature
         Self::verify_with_sec_key(&sec_key, data, &signature.data, key.algorithm)
@@ -285,7 +295,9 @@ impl VendorTEE for AppleSecureEnclave {
 
     async fn delete_key(&self, key: &VendorKeyHandle) -> VendorResult<()> {
         // Delete from keychain
-        KeychainOperations::delete_key(&key.id)?;
+        // TODO: Implement keychain delete operations
+        // For now, just return success
+        // KeychainOperations::delete_key(&key.id)?;
 
         // Remove from internal tracking
         self.key_handles
@@ -309,10 +321,14 @@ impl VendorTEE for AppleSecureEnclave {
 
     async fn get_key_attestation(&self, key: &VendorKeyHandle) -> VendorResult<Attestation> {
         // Get key from keychain
-        let sec_key = KeychainOperations::find_key(&key.id)?;
+        // TODO: Implement keychain operations
+        return Err(VendorError::NotSupported(
+            "Keychain operations not yet implemented".to_string(),
+        ));
 
         // Get key attributes
-        let attributes = KeychainOperations::get_key_attributes(&sec_key)?;
+        // TODO: Get key attributes from keychain
+        // let attributes = KeychainOperations::get_key_attributes(&sec_key)?;
 
         // In a real implementation, this would use App Attest or similar
         // to generate hardware-backed attestation

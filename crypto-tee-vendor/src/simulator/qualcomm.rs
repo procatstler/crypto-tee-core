@@ -269,8 +269,8 @@ impl VendorTEE for QualcommTEESimulator {
 
         // Check Qualcomm-specific parameters
         if let Some(VendorParams::Qualcomm(qualcomm_params)) = &params.vendor_params {
-            if let Some(app_id) = &qualcomm_params.qsee_app_id {
-                self.trusted_app_operation(app_id, "key_generation").await?;
+            if let Some(app_name) = &qualcomm_params.trustzone_app_name {
+                self.trusted_app_operation(app_name, "key_generation").await?;
             }
         }
 

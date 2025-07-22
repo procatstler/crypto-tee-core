@@ -187,7 +187,11 @@ impl CryptoKitOperations {
             ];
 
             // Sign the data
-            let signature: *mut Object = msg_send![**key.key_object, signatureForData:ns_data];
+            let key_obj = match &key.key_object {
+                Some(obj) => *obj,
+                None => return Err(VendorError::SigningError("Key object is null".to_string())),
+            };
+            let signature: *mut Object = msg_send![key_obj, signatureForData:ns_data];
 
             if signature.is_null() {
                 return Err(VendorError::SigningError("Failed to create signature".to_string()));
@@ -209,7 +213,11 @@ impl CryptoKitOperations {
     pub fn export_public_key(key: &CryptoKitKey) -> VendorResult<Vec<u8>> {
         unsafe {
             // Get public key
-            let public_key: *mut Object = msg_send![**key.key_object, publicKey];
+            let key_obj = match &key.key_object {
+                Some(obj) => *obj,
+                None => return Err(VendorError::KeyExport("Key object is null".to_string())),
+            };
+            let public_key: *mut Object = msg_send![key_obj, publicKey];
 
             if public_key.is_null() {
                 return Err(VendorError::KeyExport("Failed to get public key".to_string()));

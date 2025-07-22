@@ -104,7 +104,7 @@ pub struct PerformanceConfig {
 }
 
 /// Types of errors that can be simulated
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum SimulatedErrorType {
     /// Hardware communication failure
     HardwareFailure,

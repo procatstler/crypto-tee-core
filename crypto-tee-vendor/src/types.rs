@@ -69,15 +69,15 @@ impl Default for KeyUsage {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum VendorParams {
     /// Samsung Knox specific parameters
-    #[cfg(feature = "samsung")]
+    #[cfg(any(feature = "samsung", feature = "simulator"))]
     Samsung(super::samsung::KnoxParams),
 
     /// Apple Secure Enclave specific parameters
-    #[cfg(feature = "apple")]
+    #[cfg(any(feature = "apple", feature = "simulator"))]
     Apple(super::apple::SecureEnclaveParams),
 
     /// Qualcomm QSEE specific parameters
-    #[cfg(feature = "qualcomm")]
+    #[cfg(any(feature = "qualcomm", feature = "simulator"))]
     Qualcomm(super::qualcomm::QSEEParams),
 
     /// Generic parameters

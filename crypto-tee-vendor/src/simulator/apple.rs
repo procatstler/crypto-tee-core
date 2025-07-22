@@ -149,7 +149,6 @@ impl AppleTEESimulator {
                 biometric_bound: true,
                 secure_deletion: true,
             },
-            attestation: true, // Default to true for Secure Enclave
             max_keys: 32,      // Conservative estimate for Secure Enclave
         }
     }
