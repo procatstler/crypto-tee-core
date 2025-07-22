@@ -24,6 +24,15 @@ pub enum CryptoTEEError {
     #[error("Initialization error: {0}")]
     InitError(String),
 
+    #[error("IO error: {0}")]
+    IoError(String),
+
+    #[error("Serialization error: {0}")]
+    SerializationError(String),
+
+    #[error("Not found: {0}")]
+    NotFound(String),
+
     #[error("Platform error: {0}")]
     PlatformError(#[from] crypto_tee_platform::PlatformError),
 
