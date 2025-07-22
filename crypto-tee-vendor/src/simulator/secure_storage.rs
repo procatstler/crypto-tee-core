@@ -543,9 +543,8 @@ impl SecureStorage {
         let mut nonce_bytes = [0u8; 12];
         {
             let rng = self.rng.lock().unwrap();
-            rng.fill(&mut nonce_bytes).map_err(|e| {
-                VendorError::CryptoError(format!("Failed to generate nonce: {e}"))
-            })?;
+            rng.fill(&mut nonce_bytes)
+                .map_err(|e| VendorError::CryptoError(format!("Failed to generate nonce: {e}")))?;
         }
 
         let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);

@@ -67,9 +67,9 @@ impl AppleSecureEnclave {
         let sec_algorithm = Self::algorithm_to_sec_algorithm(algorithm)?;
         let data_to_sign = CFData::from_buffer(data);
 
-        let signature = key.create_signature(sec_algorithm, &data_to_sign).map_err(|e| {
-            VendorError::SigningError(format!("Failed to create signature: {e:?}"))
-        })?;
+        let signature = key
+            .create_signature(sec_algorithm, &data_to_sign)
+            .map_err(|e| VendorError::SigningError(format!("Failed to create signature: {e:?}")))?;
 
         Ok(signature.to_vec())
     }
@@ -156,9 +156,7 @@ impl AppleSecureEnclave {
 
             let output =
                 Command::new("sysctl").arg("-n").arg("hw.optional.arm64").output().map_err(
-                    |e| {
-                        VendorError::InitializationError(format!("Failed to check hardware: {e}"))
-                    },
+                    |e| VendorError::InitializationError(format!("Failed to check hardware: {e}")),
                 )?;
 
             let is_arm64 = String::from_utf8_lossy(&output.stdout).trim() == "1";
