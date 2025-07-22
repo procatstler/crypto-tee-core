@@ -5,8 +5,10 @@
 //! and vendor TEE implementations.
 
 pub mod audit;
+pub mod backup;
 pub mod core;
 pub mod error;
+pub mod keys;
 pub mod plugins;
 pub mod types;
 

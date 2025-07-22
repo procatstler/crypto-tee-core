@@ -31,7 +31,7 @@ jobs:
       run: cargo audit --json > audit-report.json
 
     - name: Upload audit results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: security-audit-report
@@ -56,7 +56,7 @@ jobs:
           p/crypto
 
     - name: Upload Semgrep results
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: always()
       with:
         name: semgrep-results
@@ -192,7 +192,7 @@ jobs:
       run: cargo sbom > crypto-tee-sbom.json
 
     - name: Upload SBOM
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: software-bill-of-materials
         path: crypto-tee-sbom.json

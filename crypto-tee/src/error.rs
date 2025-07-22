@@ -33,6 +33,21 @@ pub enum CryptoTEEError {
     #[error("Not found: {0}")]
     NotFound(String),
 
+    #[error("Key generation error: {0}")]
+    KeyGeneration(String),
+
+    #[error("Crypto error: {0}")]
+    CryptoError(String),
+
+    #[error("Configuration error: {0}")]
+    ConfigurationError(String),
+
+    #[error("Backup error: {0}")]
+    BackupError(String),
+
+    #[error("Key corrupted: {0}")]
+    KeyCorrupted(String),
+
     #[error("Platform error: {0}")]
     PlatformError(#[from] crypto_tee_platform::PlatformError),
 
