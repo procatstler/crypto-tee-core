@@ -63,7 +63,7 @@ impl MockVendor {
 
     pub fn new(name: &str) -> Self {
         let capabilities = VendorCapabilities {
-            name: format!("Mock Vendor: {}", name),
+            name: format!("Mock Vendor: {name}"),
             version: "1.0.0".to_string(),
             algorithms: vec![
                 Algorithm::Rsa2048,

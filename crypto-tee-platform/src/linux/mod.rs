@@ -14,7 +14,7 @@ use crate::{
     types::{AuthResult, PlatformConfig},
 };
 
-use self::system_info::{get_linux_distro, detect_tee_implementations, get_security_level};
+use self::system_info::{detect_tee_implementations, get_linux_distro, get_security_level};
 
 pub struct LinuxPlatform {
     config: PlatformConfig,
@@ -43,7 +43,7 @@ impl PlatformTEE for LinuxPlatform {
     async fn detect_vendors(&self) -> Vec<Box<dyn VendorTEE>> {
         // Detect available TEE implementations
         let mut vendors: Vec<Box<dyn VendorTEE>> = vec![];
-        
+
         match detect_tee_implementations() {
             Ok(tee_infos) => {
                 for tee_info in tee_infos {
@@ -52,16 +52,23 @@ impl PlatformTEE for LinuxPlatform {
                             "OP-TEE" => {
                                 // In real implementation, load OP-TEE client from separate crate
                                 // For now, use mock vendor
-                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("linux_op_tee")));
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new(
+                                    "linux_op_tee",
+                                )));
                             }
                             "Intel SGX" => {
-                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("intel_sgx")));
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new(
+                                    "intel_sgx",
+                                )));
                             }
                             "AMD SEV" => {
-                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("amd_sev")));
+                                vendors
+                                    .push(Box::new(crypto_tee_vendor::MockVendor::new("amd_sev")));
                             }
                             "Software TPM" => {
-                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("software_tpm")));
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new(
+                                    "software_tpm",
+                                )));
                             }
                             _ => {}
                         }
@@ -72,28 +79,28 @@ impl PlatformTEE for LinuxPlatform {
                 tracing::warn!("Failed to detect TEE implementations: {}", e);
             }
         }
-        
+
         // Always provide software fallback
         if vendors.is_empty() {
             vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("linux_software")));
         }
-        
+
         vendors
     }
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
         // Select best available vendor based on security level
         let vendors = self.detect_vendors().await;
-        
+
         if vendors.is_empty() {
             return Err(PlatformError::NotSupported(
                 "No TEE vendors available on Linux".to_string(),
             ));
         }
-        
+
         // Priority order: OP-TEE > Intel SGX > AMD SEV > TPM > Software
         let priority_order = ["op_tee", "intel_sgx", "amd_sev", "tpm", "software"];
-        
+
         for priority_name in &priority_order {
             for vendor in &vendors {
                 let caps = vendor.probe().await?;
@@ -102,7 +109,7 @@ impl PlatformTEE for LinuxPlatform {
                 }
             }
         }
-        
+
         // Fallback to first available vendor
         Ok(vendors.into_iter().next().unwrap())
     }
@@ -110,14 +117,14 @@ impl PlatformTEE for LinuxPlatform {
     async fn get_vendor(&self, name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
         // Get specific vendor
         let vendors = self.detect_vendors().await;
-        
+
         for vendor in vendors {
             let caps = vendor.probe().await?;
             if caps.name.to_lowercase().contains(&name.to_lowercase()) {
                 return Ok(vendor);
             }
         }
-        
+
         Err(PlatformError::NotSupported(format!("Vendor '{}' not available on Linux", name)))
     }
 

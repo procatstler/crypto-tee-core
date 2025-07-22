@@ -3,15 +3,14 @@
 //! This module contains tests for different hardware TEE implementations.
 //! Tests are designed to work with software fallback when hardware is not available.
 
-use crypto_tee::{CryptoTEE, CryptoTEEBuilder, KeyOptions, KeyUsage, Algorithm};
+use crypto_tee::{Algorithm, CryptoTEE, CryptoTEEBuilder, KeyOptions, KeyUsage};
 use std::time::Duration;
 
 /// Test hardware TEE functionality with software fallback
 #[tokio::test]
 async fn test_hardware_key_generation_with_fallback() {
-    let crypto_tee = CryptoTEEBuilder::new().build()
-        .await
-        .expect("Should initialize CryptoTEE with fallback");
+    let crypto_tee =
+        CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE with fallback");
 
     let key_options = KeyOptions {
         algorithm: Algorithm::EcdsaP256,
@@ -24,7 +23,9 @@ async fn test_hardware_key_generation_with_fallback() {
     };
 
     // Generate key (will use software fallback in CI)
-    let key = crypto_tee.generate_key("hardware_test_key", key_options).await
+    let key = crypto_tee
+        .generate_key("hardware_test_key", key_options)
+        .await
         .expect("Should generate test key with fallback");
 
     assert_eq!(key.metadata.algorithm, Algorithm::EcdsaP256);
@@ -32,46 +33,40 @@ async fn test_hardware_key_generation_with_fallback() {
 
     // Test signing
     let test_data = b"Hardware integration test data";
-    let signature = crypto_tee.sign("hardware_test_key", test_data, None).await
-        .expect("Should sign test data");
+    let signature =
+        crypto_tee.sign("hardware_test_key", test_data, None).await.expect("Should sign test data");
 
     assert!(!signature.is_empty());
 
     // Test verification
-    let is_valid = crypto_tee.verify("hardware_test_key", test_data, &signature, None).await
+    let is_valid = crypto_tee
+        .verify("hardware_test_key", test_data, &signature, None)
+        .await
         .expect("Should verify signature");
     assert!(is_valid, "Signature should be valid");
 
     // Test key info
-    let key_info = crypto_tee.get_key_info("hardware_test_key").await
-        .expect("Should get key info");
+    let key_info = crypto_tee.get_key_info("hardware_test_key").await.expect("Should get key info");
     assert_eq!(key_info.algorithm, Algorithm::EcdsaP256);
     assert!(!key_info.requires_auth);
 
     println!("✅ Hardware integration test with fallback completed");
 
     // Cleanup
-    crypto_tee.delete_key("hardware_test_key").await
-        .expect("Should cleanup test key");
+    crypto_tee.delete_key("hardware_test_key").await.expect("Should cleanup test key");
 }
 
 /// Test cross-platform compatibility
 #[tokio::test]
 async fn test_cross_platform_key_operations() {
-    let crypto_tee = CryptoTEEBuilder::new()
-        .build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
     // Test different algorithms for cross-platform compatibility
-    let test_algorithms = vec![
-        Algorithm::Ed25519,
-        Algorithm::EcdsaP256,
-    ];
+    let test_algorithms = vec![Algorithm::Ed25519, Algorithm::EcdsaP256];
 
     for algorithm in test_algorithms {
         let key_alias = format!("cross_platform_{:?}", algorithm);
-        
+
         let key_options = KeyOptions {
             algorithm,
             usage: KeyUsage::default(),
@@ -83,19 +78,25 @@ async fn test_cross_platform_key_operations() {
         };
 
         // Generate key
-        let key = crypto_tee.generate_key(&key_alias, key_options).await
+        let key = crypto_tee
+            .generate_key(&key_alias, key_options)
+            .await
             .expect("Should generate cross-platform key");
 
         assert_eq!(key.metadata.algorithm, algorithm);
 
         // Test operations
         let test_data = format!("Cross-platform test for {:?}", algorithm);
-        let signature = crypto_tee.sign(&key_alias, test_data.as_bytes(), None).await
+        let signature = crypto_tee
+            .sign(&key_alias, test_data.as_bytes(), None)
+            .await
             .expect("Should sign with cross-platform key");
 
-        let is_valid = crypto_tee.verify(&key_alias, test_data.as_bytes(), &signature, None).await
+        let is_valid = crypto_tee
+            .verify(&key_alias, test_data.as_bytes(), &signature, None)
+            .await
             .expect("Should verify cross-platform signature");
-            
+
         assert!(is_valid, "Cross-platform signature should be valid for {:?}", algorithm);
 
         println!("✅ Cross-platform compatibility verified for {:?}", algorithm);
@@ -108,10 +109,7 @@ async fn test_cross_platform_key_operations() {
 /// Test performance with multiple keys and operations
 #[tokio::test]
 async fn test_hardware_performance_simulation() {
-    let crypto_tee = CryptoTEEBuilder::new()
-        .build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
     let key_options = KeyOptions {
         algorithm: Algorithm::Ed25519, // Use fast algorithm for performance test
@@ -124,7 +122,9 @@ async fn test_hardware_performance_simulation() {
     };
 
     // Generate test key
-    let _key = crypto_tee.generate_key("perf_test_key", key_options).await
+    let _key = crypto_tee
+        .generate_key("perf_test_key", key_options)
+        .await
         .expect("Should generate performance test key");
 
     // Performance measurements
@@ -136,13 +136,17 @@ async fn test_hardware_performance_simulation() {
     for _ in 0..iterations {
         // Measure signing time
         let start = std::time::Instant::now();
-        let signature = crypto_tee.sign("perf_test_key", test_data, None).await
+        let signature = crypto_tee
+            .sign("perf_test_key", test_data, None)
+            .await
             .expect("Should sign for performance test");
         sign_times.push(start.elapsed());
 
-        // Measure verification time  
+        // Measure verification time
         let start = std::time::Instant::now();
-        let is_valid = crypto_tee.verify("perf_test_key", test_data, &signature, None).await
+        let is_valid = crypto_tee
+            .verify("perf_test_key", test_data, &signature, None)
+            .await
             .expect("Should verify for performance test");
         verify_times.push(start.elapsed());
 
@@ -158,10 +162,16 @@ async fn test_hardware_performance_simulation() {
     println!("   Average verify time: {:?}", avg_verify_time);
 
     // Basic performance assertions
-    assert!(avg_sign_time < Duration::from_millis(100), 
-        "Average signing should be reasonable: {:?}", avg_sign_time);
-    assert!(avg_verify_time < Duration::from_millis(50), 
-        "Average verification should be reasonable: {:?}", avg_verify_time);
+    assert!(
+        avg_sign_time < Duration::from_millis(100),
+        "Average signing should be reasonable: {:?}",
+        avg_sign_time
+    );
+    assert!(
+        avg_verify_time < Duration::from_millis(50),
+        "Average verification should be reasonable: {:?}",
+        avg_verify_time
+    );
 
     // Cleanup
     crypto_tee.delete_key("perf_test_key").await.expect("Should cleanup test key");
@@ -170,10 +180,7 @@ async fn test_hardware_performance_simulation() {
 /// Test sequential operations simulation (simulating concurrency)
 #[tokio::test]
 async fn test_concurrent_hardware_operations() {
-    let crypto_tee = CryptoTEEBuilder::new()
-        .build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
     // Generate multiple keys sequentially (simulating concurrent operations)
     let key_count = 10;
@@ -181,7 +188,7 @@ async fn test_concurrent_hardware_operations() {
 
     for i in 0..key_count {
         let key_alias = format!("concurrent_key_{}", i);
-        
+
         let key_options = KeyOptions {
             algorithm: Algorithm::Ed25519,
             usage: KeyUsage::default(),
@@ -192,21 +199,27 @@ async fn test_concurrent_hardware_operations() {
             metadata: None,
         };
 
-        crypto_tee.generate_key(&key_alias, key_options).await
+        crypto_tee
+            .generate_key(&key_alias, key_options)
+            .await
             .expect("Should generate concurrent key");
-        
+
         // Test signing with this key
         let test_data = format!("Concurrent test data {}", i);
-        let signature = crypto_tee.sign(&key_alias, test_data.as_bytes(), None).await
+        let signature = crypto_tee
+            .sign(&key_alias, test_data.as_bytes(), None)
+            .await
             .expect("Should sign with concurrent key");
-        
-        let is_valid = crypto_tee.verify(&key_alias, test_data.as_bytes(), &signature, None).await
+
+        let is_valid = crypto_tee
+            .verify(&key_alias, test_data.as_bytes(), &signature, None)
+            .await
             .expect("Should verify concurrent signature");
         assert!(is_valid);
 
         key_aliases.push(key_alias);
     }
-    
+
     // Cleanup all keys
     for key_alias in key_aliases {
         crypto_tee.delete_key(&key_alias).await.expect("Should cleanup concurrent test key");
@@ -218,10 +231,7 @@ async fn test_concurrent_hardware_operations() {
 /// Test error handling and edge cases
 #[tokio::test]
 async fn test_hardware_error_handling() {
-    let crypto_tee = CryptoTEEBuilder::new()
-        .build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
     // Test operations on non-existent key
     let result = crypto_tee.get_key_info("non_existent_key").await;
@@ -235,8 +245,10 @@ async fn test_hardware_error_handling() {
 
     // Test duplicate key generation
     let key_options = KeyOptions::default();
-    
-    let _key = crypto_tee.generate_key("duplicate_test", key_options.clone()).await
+
+    let _key = crypto_tee
+        .generate_key("duplicate_test", key_options.clone())
+        .await
         .expect("First key generation should succeed");
 
     let result = crypto_tee.generate_key("duplicate_test", key_options).await;
@@ -251,14 +263,10 @@ async fn test_hardware_error_handling() {
 /// Test platform capabilities using the documented API
 #[tokio::test]
 async fn test_platform_capabilities() {
-    let crypto_tee = CryptoTEEBuilder::new()
-        .build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
     // List capabilities
-    let capabilities = crypto_tee.list_capabilities().await
-        .expect("Should list capabilities");
+    let capabilities = crypto_tee.list_capabilities().await.expect("Should list capabilities");
 
     assert!(!capabilities.is_empty());
     println!("🔍 Platform Capabilities:");
@@ -267,8 +275,7 @@ async fn test_platform_capabilities() {
     }
 
     // Test that we can list keys (should be empty initially)
-    let keys = crypto_tee.list_keys().await
-        .expect("Should list keys");
+    let keys = crypto_tee.list_keys().await.expect("Should list keys");
 
     println!("   Current keys: {}", keys.len());
 

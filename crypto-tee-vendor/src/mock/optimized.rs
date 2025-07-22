@@ -23,7 +23,7 @@ pub struct OptimizedMockVendor {
     name: String,
     keys: Arc<Mutex<HashMap<String, MockKey>>>,
     capabilities: VendorCapabilities,
-    
+
     // Performance optimizations
     verification_cache: Arc<VerificationCache>,
     public_key_cache: OptimizedPublicKeyCache,
@@ -53,18 +53,14 @@ impl OptimizedMockVendor {
         cache: &Arc<VerificationCache>,
     ) -> bool {
         // Check cache first
-        if let Some(cached_result) = cache.get_cached_result(
-            public_key.as_ref(), 
-            data, 
-            signature
-        ) {
+        if let Some(cached_result) = cache.get_cached_result(public_key.as_ref(), data, signature) {
             debug!("Verification cache hit");
             return cached_result;
         }
 
         // Perform the actual verification with constant timing
         let actual_result = public_key.verify(data, signature).is_ok();
-        
+
         // Always perform a dummy verification to ensure constant timing
         let dummy_signature = vec![0u8; signature.len()];
         let _dummy_result = public_key.verify(data, &dummy_signature);
@@ -77,18 +73,15 @@ impl OptimizedMockVendor {
         // Cache the result
         cache.cache_result(public_key.as_ref(), data, signature, result);
         debug!("Verification result cached");
-        
+
         result
     }
 
     pub fn new(name: &str) -> Self {
         let capabilities = VendorCapabilities {
-            name: format!("Optimized Mock Vendor: {}", name),
+            name: format!("Optimized Mock Vendor: {name}"),
             version: "1.1.0".to_string(),
-            algorithms: vec![
-                Algorithm::EcdsaP256,
-                Algorithm::Ed25519,
-            ],
+            algorithms: vec![Algorithm::EcdsaP256, Algorithm::Ed25519],
             hardware_backed: false,
             attestation: true,
             max_keys: 1000,
@@ -166,8 +159,8 @@ impl VendorTEE for OptimizedMockVendor {
                 // Cache the public key for faster future access
                 let public_key_bytes = key_pair.public_key().as_ref().to_vec();
                 let unparsed_key = signature::UnparsedPublicKey::new(
-                    &signature::ED25519, 
-                    public_key_bytes.clone()
+                    &signature::ED25519,
+                    public_key_bytes.clone(),
                 );
                 self.public_key_cache.cache_ed25519_key(public_key_bytes.clone(), unparsed_key);
 
@@ -190,8 +183,8 @@ impl VendorTEE for OptimizedMockVendor {
                 // Cache the public key for faster future access
                 let public_key_bytes = key_pair.public_key().as_ref().to_vec();
                 let unparsed_key = signature::UnparsedPublicKey::new(
-                    &signature::ECDSA_P256_SHA256_ASN1, 
-                    public_key_bytes.clone()
+                    &signature::ECDSA_P256_SHA256_ASN1,
+                    public_key_bytes.clone(),
                 );
                 self.public_key_cache.cache_ecdsa_key(public_key_bytes.clone(), unparsed_key);
 
@@ -244,14 +237,14 @@ impl VendorTEE for OptimizedMockVendor {
             Algorithm::Ed25519 => {
                 let key_pair = signature::Ed25519KeyPair::from_pkcs8(&mock_key.private_key)
                     .map_err(|e| VendorError::CryptoError(e.to_string()))?;
-                
+
                 // Get buffer from pool for signature
                 let mut sig_buffer = self.memory_pool.get_buffer(64); // Ed25519 signatures are 64 bytes
                 let signature_bytes = key_pair.sign(data);
                 sig_buffer.clear();
                 sig_buffer.extend_from_slice(signature_bytes.as_ref());
                 let result = sig_buffer.clone();
-                
+
                 // Return buffer to pool
                 self.memory_pool.return_buffer(sig_buffer);
                 result
@@ -264,7 +257,7 @@ impl VendorTEE for OptimizedMockVendor {
                     &rng,
                 )
                 .map_err(|e| VendorError::CryptoError(e.to_string()))?;
-                
+
                 // Get buffer from pool for signature (ECDSA P256 signatures are ~70-72 bytes)
                 let mut sig_buffer = self.memory_pool.get_buffer(80);
                 let signature_bytes = key_pair
@@ -273,7 +266,7 @@ impl VendorTEE for OptimizedMockVendor {
                 sig_buffer.clear();
                 sig_buffer.extend_from_slice(signature_bytes.as_ref());
                 let result = sig_buffer.clone();
-                
+
                 // Return buffer to pool
                 self.memory_pool.return_buffer(sig_buffer);
                 result
@@ -308,29 +301,43 @@ impl VendorTEE for OptimizedMockVendor {
         // Try to get public key from cache first
         let result = match key.algorithm {
             Algorithm::Ed25519 => {
-                let peer_public_key = if let Some(cached_key) = self.public_key_cache.get_ed25519_key(public_key) {
+                let peer_public_key = if let Some(cached_key) =
+                    self.public_key_cache.get_ed25519_key(public_key)
+                {
                     cached_key
                 } else {
-                    let new_key = signature::UnparsedPublicKey::new(&signature::ED25519, public_key.clone());
+                    let new_key =
+                        signature::UnparsedPublicKey::new(&signature::ED25519, public_key.clone());
                     self.public_key_cache.cache_ed25519_key(public_key.clone(), new_key.clone());
                     new_key
                 };
-                
-                Self::cached_constant_time_verify(&peer_public_key, data, &signature.data, &self.verification_cache)
+
+                Self::cached_constant_time_verify(
+                    &peer_public_key,
+                    data,
+                    &signature.data,
+                    &self.verification_cache,
+                )
             }
             Algorithm::EcdsaP256 => {
-                let peer_public_key = if let Some(cached_key) = self.public_key_cache.get_ecdsa_key(public_key) {
-                    cached_key
-                } else {
-                    let new_key = signature::UnparsedPublicKey::new(
-                        &signature::ECDSA_P256_SHA256_ASN1,
-                        public_key.clone(),
-                    );
-                    self.public_key_cache.cache_ecdsa_key(public_key.clone(), new_key.clone());
-                    new_key
-                };
-                
-                Self::cached_constant_time_verify(&peer_public_key, data, &signature.data, &self.verification_cache)
+                let peer_public_key =
+                    if let Some(cached_key) = self.public_key_cache.get_ecdsa_key(public_key) {
+                        cached_key
+                    } else {
+                        let new_key = signature::UnparsedPublicKey::new(
+                            &signature::ECDSA_P256_SHA256_ASN1,
+                            public_key.clone(),
+                        );
+                        self.public_key_cache.cache_ecdsa_key(public_key.clone(), new_key.clone());
+                        new_key
+                    };
+
+                Self::cached_constant_time_verify(
+                    &peer_public_key,
+                    data,
+                    &signature.data,
+                    &self.verification_cache,
+                )
             }
             _ => {
                 return Err(VendorError::NotSupported(format!(
@@ -351,7 +358,7 @@ impl VendorTEE for OptimizedMockVendor {
         buffer.clear();
         buffer.extend_from_slice(b"optimized-mock-attestation-data-with-performance-improvements");
         let attestation_data = buffer.clone();
-        
+
         self.memory_pool.return_buffer(buffer);
 
         Ok(Attestation {
@@ -375,7 +382,7 @@ impl VendorTEE for OptimizedMockVendor {
         buffer.clear();
         buffer.extend_from_slice(format!("key-attestation-{}", key.id).as_bytes());
         let attestation_data = buffer.clone();
-        
+
         self.memory_pool.return_buffer(buffer);
 
         Ok(Attestation {
@@ -387,10 +394,10 @@ impl VendorTEE for OptimizedMockVendor {
 
     async fn list_keys(&self) -> VendorResult<Vec<VendorKeyHandle>> {
         debug!("Listing all keys in optimized mock vendor");
-        
+
         let keys = self.keys.lock().await;
         let handles = keys.values().map(|key| key.handle.clone()).collect();
-        
+
         info!("Listed {} keys from optimized mock vendor", keys.len());
         Ok(handles)
     }
@@ -402,7 +409,7 @@ mod tests {
     #[tokio::test]
     async fn test_optimized_cache_performance() {
         let vendor = OptimizedMockVendor::new("test-optimized");
-        
+
         // Generate a key for testing
         let params = KeyGenParams {
             algorithm: Algorithm::Ed25519,
@@ -411,40 +418,40 @@ mod tests {
             usage: Default::default(),
             vendor_params: None,
         };
-        
+
         let key_handle = vendor.generate_key(&params).await.unwrap();
         let test_data = b"test message for cache performance";
-        
+
         // Sign the data
         let signature = vendor.sign(&key_handle, test_data).await.unwrap();
-        
+
         // First verification (cache miss)
         let start = std::time::Instant::now();
         let result1 = vendor.verify(&key_handle, test_data, &signature).await.unwrap();
         let first_duration = start.elapsed();
-        
+
         // Second verification (cache hit)
         let start = std::time::Instant::now();
         let result2 = vendor.verify(&key_handle, test_data, &signature).await.unwrap();
         let second_duration = start.elapsed();
-        
+
         assert!(result1);
         assert!(result2);
-        
+
         // Cache hit should be faster (though this might not always be true in tests)
-        println!("First verification: {:?}", first_duration);
-        println!("Second verification: {:?}", second_duration);
-        
+        println!("First verification: {first_duration:?}");
+        println!("Second verification: {second_duration:?}");
+
         // Check cache statistics
         let stats = vendor.get_cache_stats();
-        println!("Cache stats: {:?}", stats);
+        println!("Cache stats: {stats:?}");
         assert!(stats.verification.total_entries > 0);
     }
 
     #[tokio::test]
     async fn test_memory_pool_usage() {
         let vendor = OptimizedMockVendor::new("test-memory-pool");
-        
+
         let params = KeyGenParams {
             algorithm: Algorithm::EcdsaP256,
             hardware_backed: false,
@@ -452,18 +459,18 @@ mod tests {
             usage: Default::default(),
             vendor_params: None,
         };
-        
+
         let key_handle = vendor.generate_key(&params).await.unwrap();
         let test_data = b"test message for memory pool";
-        
+
         // Perform multiple signing operations to test memory pool
         for _ in 0..10 {
             let _signature = vendor.sign(&key_handle, test_data).await.unwrap();
         }
-        
+
         let stats = vendor.get_cache_stats();
         println!("Memory pool stats: {:?}", stats.memory_pool);
-        
+
         // Should have some buffer reuse
         assert!(stats.memory_pool.hits > 0 || stats.memory_pool.allocations > 0);
     }
@@ -471,7 +478,7 @@ mod tests {
     #[tokio::test]
     async fn test_cache_cleanup() {
         let vendor = OptimizedMockVendor::new("test-cleanup");
-        
+
         let params = KeyGenParams {
             algorithm: Algorithm::Ed25519,
             hardware_backed: false,
@@ -479,20 +486,21 @@ mod tests {
             usage: Default::default(),
             vendor_params: None,
         };
-        
+
         // Generate some keys and perform operations
         for i in 0..5 {
             let key_handle = vendor.generate_key(&params).await.unwrap();
-            let test_data = format!("test message {}", i);
+            let test_data = format!("test message {i}");
             let signature = vendor.sign(&key_handle, test_data.as_bytes()).await.unwrap();
-            let _result = vendor.verify(&key_handle, test_data.as_bytes(), &signature).await.unwrap();
+            let _result =
+                vendor.verify(&key_handle, test_data.as_bytes(), &signature).await.unwrap();
         }
-        
+
         // Cleanup caches
         let cleaned = vendor.cleanup_caches();
-        println!("Cleaned up {} expired entries", cleaned);
-        
+        println!("Cleaned up {cleaned} expired entries");
+
         let stats = vendor.get_cache_stats();
-        println!("Stats after cleanup: {:?}", stats);
+        println!("Stats after cleanup: {stats:?}");
     }
 }

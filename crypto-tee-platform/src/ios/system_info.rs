@@ -28,7 +28,7 @@ pub fn get_ios_version() -> PlatformResult<IosVersion> {
     // - UIDevice.current.systemVersion
     // - UIDevice.current.model
     // - sysctl for hardware model
-    
+
     // For now, return mock data for development
     Ok(IosVersion {
         major: 16,
@@ -46,13 +46,14 @@ pub fn is_secure_enclave_available() -> PlatformResult<bool> {
     // - iPhone 5s and later
     // - iPad Air and later
     // - All Apple Silicon Macs
-    
+
     let version = get_ios_version()?;
-    
+
     // Check device model
     if version.model.starts_with("iPhone") {
         // Extract model number
-        if let Some(model_num) = version.model
+        if let Some(model_num) = version
+            .model
             .strip_prefix("iPhone")
             .and_then(|s| s.split(',').next())
             .and_then(|s| s.parse::<u32>().ok())
@@ -61,7 +62,7 @@ pub fn is_secure_enclave_available() -> PlatformResult<bool> {
             return Ok(model_num >= 6);
         }
     }
-    
+
     // For development, assume Secure Enclave is available
     Ok(true)
 }
@@ -69,10 +70,11 @@ pub fn is_secure_enclave_available() -> PlatformResult<bool> {
 /// Check if Face ID is available
 pub fn is_face_id_available() -> PlatformResult<bool> {
     let version = get_ios_version()?;
-    
+
     // Face ID devices start with iPhone X (iPhone10,3 and iPhone10,6)
     if version.model.starts_with("iPhone") {
-        if let Some(model_num) = version.model
+        if let Some(model_num) = version
+            .model
             .strip_prefix("iPhone")
             .and_then(|s| s.split(',').next())
             .and_then(|s| s.parse::<u32>().ok())
@@ -80,7 +82,7 @@ pub fn is_face_id_available() -> PlatformResult<bool> {
             return Ok(model_num >= 10);
         }
     }
-    
+
     Ok(false)
 }
 
@@ -111,7 +113,7 @@ pub fn get_security_capabilities() -> PlatformResult<SecurityCapabilities> {
         secure_enclave: is_secure_enclave_available()?,
         face_id: is_face_id_available()?,
         touch_id: is_touch_id_available()?,
-        passcode_set: true, // In real implementation, check LAContext
+        passcode_set: true,       // In real implementation, check LAContext
         biometric_enrolled: true, // In real implementation, check LAContext
     })
 }
@@ -132,11 +134,11 @@ pub enum SecurityLevel {
 /// Get device security level
 pub fn get_security_level() -> PlatformResult<SecurityLevel> {
     let caps = get_security_capabilities()?;
-    
+
     if !caps.secure_enclave {
         return Ok(SecurityLevel::None);
     }
-    
+
     if caps.face_id && caps.biometric_enrolled {
         Ok(SecurityLevel::SecureEnclaveFaceId)
     } else if caps.touch_id && caps.biometric_enrolled {

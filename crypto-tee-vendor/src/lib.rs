@@ -5,9 +5,9 @@
 //! Apple Secure Enclave, Qualcomm QSEE, and OP-TEE.
 
 pub mod cache;
-pub mod optimized;
 pub mod error;
 pub mod mock;
+pub mod optimized;
 pub mod traits;
 pub mod types;
 

@@ -25,13 +25,12 @@ pub struct LinuxDistro {
 /// Get Linux distribution information
 pub fn get_linux_distro() -> PlatformResult<LinuxDistro> {
     // Try to read /etc/os-release
-    let os_release = fs::read_to_string("/etc/os-release")
-        .unwrap_or_else(|_| String::new());
-    
+    let os_release = fs::read_to_string("/etc/os-release").unwrap_or_else(|_| String::new());
+
     let mut name = String::from("Linux");
     let mut version = String::from("unknown");
     let mut codename = None;
-    
+
     for line in os_release.lines() {
         if let Some(value) = line.strip_prefix("NAME=") {
             name = value.trim_matches('"').to_string();
@@ -41,23 +40,17 @@ pub fn get_linux_distro() -> PlatformResult<LinuxDistro> {
             codename = Some(value.trim_matches('"').to_string());
         }
     }
-    
+
     // Get kernel version
     let kernel_version = fs::read_to_string("/proc/version")
         .ok()
         .and_then(|v| v.split_whitespace().nth(2).map(|s| s.to_string()))
         .unwrap_or_else(|| "unknown".to_string());
-    
+
     // Get architecture
     let arch = std::env::consts::ARCH.to_string();
-    
-    Ok(LinuxDistro {
-        name,
-        version,
-        codename,
-        kernel_version,
-        arch,
-    })
+
+    Ok(LinuxDistro { name, version, codename, kernel_version, arch })
 }
 
 /// TEE implementation information
@@ -84,7 +77,7 @@ pub fn get_optee_version() -> PlatformResult<Option<String>> {
     if !is_optee_available()? {
         return Ok(None);
     }
-    
+
     // In a real implementation, this would query OP-TEE version
     // through the TEE client API
     Ok(Some("3.18.0".to_string()))
@@ -105,7 +98,7 @@ pub fn is_sev_available() -> PlatformResult<bool> {
 /// Detect available TEE implementations
 pub fn detect_tee_implementations() -> PlatformResult<Vec<TeeInfo>> {
     let mut tees = Vec::new();
-    
+
     // Check for OP-TEE
     if is_optee_available()? {
         tees.push(TeeInfo {
@@ -115,7 +108,7 @@ pub fn detect_tee_implementations() -> PlatformResult<Vec<TeeInfo>> {
             device_path: Some("/dev/tee0".to_string()),
         });
     }
-    
+
     // Check for Intel SGX
     if is_sgx_available()? {
         tees.push(TeeInfo {
@@ -125,7 +118,7 @@ pub fn detect_tee_implementations() -> PlatformResult<Vec<TeeInfo>> {
             device_path: Some("/dev/sgx_enclave".to_string()),
         });
     }
-    
+
     // Check for AMD SEV
     if is_sev_available()? {
         tees.push(TeeInfo {
@@ -135,7 +128,7 @@ pub fn detect_tee_implementations() -> PlatformResult<Vec<TeeInfo>> {
             device_path: None,
         });
     }
-    
+
     // Always include software TPM as fallback
     tees.push(TeeInfo {
         name: "Software TPM".to_string(),
@@ -143,7 +136,7 @@ pub fn detect_tee_implementations() -> PlatformResult<Vec<TeeInfo>> {
         version: Some("2.0".to_string()),
         device_path: None,
     });
-    
+
     Ok(tees)
 }
 
@@ -164,26 +157,23 @@ pub struct SecurityCapabilities {
 pub fn get_security_capabilities() -> PlatformResult<SecurityCapabilities> {
     let tees = detect_tee_implementations()?;
     let hardware_tee = tees.iter().any(|t| t.name != "Software TPM" && t.available);
-    
+
     // Check for secure boot
-    let secure_boot = Path::new("/sys/firmware/efi/efivars").exists() &&
-        fs::read_to_string("/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c")
-            .is_ok();
-    
+    let secure_boot = Path::new("/sys/firmware/efi/efivars").exists()
+        && fs::read_to_string(
+            "/sys/firmware/efi/efivars/SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c",
+        )
+        .is_ok();
+
     // Check for TPM
     let tpm = Path::new("/dev/tpm0").exists() || Path::new("/dev/tpmrm0").exists();
-    
+
     // Check for disk encryption (simplified check)
     let disk_encryption = fs::read_to_string("/proc/mounts")
         .map(|mounts| mounts.contains("dm-crypt"))
         .unwrap_or(false);
-    
-    Ok(SecurityCapabilities {
-        hardware_tee,
-        secure_boot,
-        tpm,
-        disk_encryption,
-    })
+
+    Ok(SecurityCapabilities { hardware_tee, secure_boot, tpm, disk_encryption })
 }
 
 /// Security level for Linux systems
@@ -202,7 +192,7 @@ pub enum SecurityLevel {
 /// Get system security level
 pub fn get_security_level() -> PlatformResult<SecurityLevel> {
     let caps = get_security_capabilities()?;
-    
+
     if caps.hardware_tee && caps.secure_boot && caps.tpm {
         Ok(SecurityLevel::FullHardware)
     } else if caps.hardware_tee {

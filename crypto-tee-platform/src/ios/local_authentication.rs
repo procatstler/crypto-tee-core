@@ -65,7 +65,7 @@ impl LAContext {
     pub fn new(config: LAConfig) -> Self {
         Self { config }
     }
-    
+
     /// Evaluate authentication policy
     pub async fn evaluate_policy(
         &self,
@@ -77,17 +77,17 @@ impl LAContext {
         // 2. Check canEvaluatePolicy
         // 3. Call evaluatePolicy with completion handler
         // 4. If challenge provided, use it for domain state
-        
+
         // Simulate authentication delay
         tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-        
+
         // For development, simulate successful authentication
         let method = match self.biometry_type()? {
             BiometryType::FaceId => "face_id",
             BiometryType::TouchId => "touch_id",
             BiometryType::None => "passcode",
         };
-        
+
         Ok(AuthResult {
             success: true,
             method: method.to_string(),
@@ -101,11 +101,11 @@ impl LAContext {
             }),
         })
     }
-    
+
     /// Get available biometry type
     pub fn biometry_type(&self) -> PlatformResult<BiometryType> {
         use super::system_info::{is_face_id_available, is_touch_id_available};
-        
+
         if is_face_id_available()? {
             Ok(BiometryType::FaceId)
         } else if is_touch_id_available()? {
@@ -114,7 +114,7 @@ impl LAContext {
             Ok(BiometryType::None)
         }
     }
-    
+
     /// Check if policy can be evaluated
     pub fn can_evaluate_policy(&self, policy: LAPolicy) -> PlatformResult<bool> {
         match policy {
@@ -132,11 +132,8 @@ pub async fn authenticate_with_la(
     policy: LAPolicy,
     challenge: Option<&[u8]>,
 ) -> PlatformResult<AuthResult> {
-    let config = LAConfig {
-        reason: reason.into(),
-        ..Default::default()
-    };
-    
+    let config = LAConfig { reason: reason.into(), ..Default::default() };
+
     let context = LAContext::new(config);
     context.evaluate_policy(policy, challenge).await
 }
@@ -166,38 +163,33 @@ pub struct LAContextBuilder {
 
 impl LAContextBuilder {
     pub fn new(reason: impl Into<String>) -> Self {
-        Self {
-            config: LAConfig {
-                reason: reason.into(),
-                ..Default::default()
-            },
-        }
+        Self { config: LAConfig { reason: reason.into(), ..Default::default() } }
     }
-    
+
     pub fn fallback_to_passcode(mut self, allow: bool) -> Self {
         self.config.fallback_to_passcode = allow;
         self
     }
-    
+
     pub fn cancel_title(mut self, title: impl Into<String>) -> Self {
         self.config.cancel_title = Some(title.into());
         self
     }
-    
+
     pub fn fallback_title(mut self, title: impl Into<String>) -> Self {
         self.config.fallback_title = Some(title.into());
         self
     }
-    
+
     pub fn biometry_only(mut self, only: bool) -> Self {
         self.config.biometry_only = only;
         self
     }
-    
+
     pub fn build(self) -> LAContext {
         LAContext::new(self.config)
     }
-    
+
     pub async fn authenticate(self, challenge: Option<&[u8]>) -> PlatformResult<AuthResult> {
         let context = self.build();
         let policy = if context.config.biometry_only {
@@ -227,7 +219,7 @@ mod tests {
             .authenticate(Some(b"test_challenge"))
             .await
             .unwrap();
-            
+
         assert!(result.success);
         assert!(!result.method.is_empty());
     }
@@ -236,7 +228,7 @@ mod tests {
     fn test_biometry_availability() {
         let biometry_type = get_biometry_type().unwrap();
         println!("Biometry type: {:?}", biometry_type);
-        
+
         if biometry_type != BiometryType::None {
             assert!(is_biometric_available().unwrap());
         }

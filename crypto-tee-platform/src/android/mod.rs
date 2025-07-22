@@ -15,8 +15,8 @@ use crate::{
     types::{AuthResult, PlatformConfig},
 };
 
-use self::biometric::{BiometricPromptBuilder, is_biometric_available};
-use self::system_properties::{get_android_version, detect_tee_vendors, get_security_level};
+use self::biometric::{is_biometric_available, BiometricPromptBuilder};
+use self::system_properties::{detect_tee_vendors, get_android_version, get_security_level};
 
 pub struct AndroidPlatform {
     config: PlatformConfig,
@@ -45,7 +45,7 @@ impl PlatformTEE for AndroidPlatform {
     async fn detect_vendors(&self) -> Vec<Box<dyn VendorTEE>> {
         // Detect available TEE vendors
         let mut vendors: Vec<Box<dyn VendorTEE>> = vec![];
-        
+
         match detect_tee_vendors() {
             Ok(vendor_infos) => {
                 for vendor_info in vendor_infos {
@@ -54,15 +54,21 @@ impl PlatformTEE for AndroidPlatform {
                             "samsung_knox" => {
                                 // In real implementation, load samsung vendor from separate crate
                                 // For now, use mock vendor
-                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("samsung_knox")));
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new(
+                                    "samsung_knox",
+                                )));
                             }
                             "android_trustzone" => {
                                 // Default Android Keystore with TrustZone
-                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("android_trustzone")));
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new(
+                                    "android_trustzone",
+                                )));
                             }
                             "android_strongbox" => {
                                 // StrongBox Keymaster
-                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("android_strongbox")));
+                                vendors.push(Box::new(crypto_tee_vendor::MockVendor::new(
+                                    "android_strongbox",
+                                )));
                             }
                             _ => {}
                         }
@@ -73,29 +79,29 @@ impl PlatformTEE for AndroidPlatform {
                 tracing::warn!("Failed to detect TEE vendors: {}", e);
             }
         }
-        
+
         // Always provide software fallback
         if vendors.is_empty() {
             vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("android_software")));
         }
-        
+
         vendors
     }
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
         // Select best available vendor based on device capabilities
         let vendors = self.detect_vendors().await;
-        
+
         if vendors.is_empty() {
             return Err(PlatformError::NotSupported(
                 "No TEE vendors available on this device".to_string(),
             ));
         }
-        
+
         // Priority order: StrongBox > Knox > TrustZone > Software
-        let security_level = get_security_level()
-            .unwrap_or(system_properties::SecurityLevel::Software);
-            
+        let security_level =
+            get_security_level().unwrap_or(system_properties::SecurityLevel::Software);
+
         match security_level {
             system_properties::SecurityLevel::StrongBox => {
                 // Prefer StrongBox if available
@@ -117,7 +123,7 @@ impl PlatformTEE for AndroidPlatform {
             }
             _ => {}
         }
-        
+
         // Default to first hardware-backed vendor
         for vendor in vendors {
             let caps = vendor.probe().await?;
@@ -125,7 +131,7 @@ impl PlatformTEE for AndroidPlatform {
                 return Ok(vendor);
             }
         }
-        
+
         // Fallback to first available vendor
         Ok(vendors.into_iter().next().unwrap())
     }
@@ -133,29 +139,31 @@ impl PlatformTEE for AndroidPlatform {
     async fn get_vendor(&self, name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
         // Get specific vendor implementation
         let vendors = self.detect_vendors().await;
-        
+
         for vendor in vendors {
             let caps = vendor.probe().await?;
             if caps.name.to_lowercase().contains(&name.to_lowercase()) {
                 return Ok(vendor);
             }
         }
-        
+
         Err(PlatformError::NotSupported(format!("Vendor '{}' not available on this device", name)))
     }
 
     async fn authenticate(&self, challenge: &[u8]) -> PlatformResult<AuthResult> {
         // Implement BiometricPrompt integration
         if !is_biometric_available()? {
-            return Err(PlatformError::AuthFailed("Biometric authentication not available".to_string()));
+            return Err(PlatformError::AuthFailed(
+                "Biometric authentication not available".to_string(),
+            ));
         }
-        
+
         let result = BiometricPromptBuilder::new("Authenticate to access secure key")
             .subtitle("Your biometric is required to use this key")
             .allow_device_credential(self.config.allow_device_credential)
             .authenticate(Some(challenge))
             .await?;
-            
+
         Ok(result.into())
     }
 

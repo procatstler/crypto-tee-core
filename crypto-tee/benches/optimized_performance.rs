@@ -258,7 +258,8 @@ fn bench_optimized_concurrency(c: &mut Criterion) {
                     for _ in 0..concurrency {
                         let vendor_clone = vendor.clone();
                         let key_handle_clone = key_handle.clone();
-                        let task = async move { vendor_clone.sign(&key_handle_clone, test_data).await };
+                        let task =
+                            async move { vendor_clone.sign(&key_handle_clone, test_data).await };
                         tasks.push(task);
                     }
 

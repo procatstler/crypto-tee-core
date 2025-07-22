@@ -41,7 +41,7 @@ pub fn get_android_version() -> PlatformResult<AndroidVersion> {
     // - android.os.Build.ID
     // - android.os.Build.MANUFACTURER
     // - android.os.Build.MODEL
-    
+
     // For now, return mock data for development
     Ok(AndroidVersion {
         api_level: 31, // Android 12
@@ -55,7 +55,7 @@ pub fn get_android_version() -> PlatformResult<AndroidVersion> {
 /// Detect available TEE vendors on this device
 pub fn detect_tee_vendors() -> PlatformResult<Vec<TeeVendorInfo>> {
     let mut vendors = Vec::new();
-    
+
     // Check for Samsung Knox
     if is_samsung_knox_available()? {
         vendors.push(TeeVendorInfo {
@@ -65,7 +65,7 @@ pub fn detect_tee_vendors() -> PlatformResult<Vec<TeeVendorInfo>> {
             hardware_backed: true,
         });
     }
-    
+
     // Check for default Android Keystore with TrustZone
     if is_trustzone_available()? {
         vendors.push(TeeVendorInfo {
@@ -75,7 +75,7 @@ pub fn detect_tee_vendors() -> PlatformResult<Vec<TeeVendorInfo>> {
             hardware_backed: true,
         });
     }
-    
+
     // Check for StrongBox
     if is_strongbox_available()? {
         vendors.push(TeeVendorInfo {
@@ -85,7 +85,7 @@ pub fn detect_tee_vendors() -> PlatformResult<Vec<TeeVendorInfo>> {
             hardware_backed: true,
         });
     }
-    
+
     Ok(vendors)
 }
 
@@ -95,7 +95,7 @@ fn is_samsung_knox_available() -> PlatformResult<bool> {
     // - Device manufacturer is Samsung
     // - Knox SDK is available
     // - Knox attestation is supported
-    
+
     let version = get_android_version()?;
     Ok(version.manufacturer.to_lowercase() == "samsung" && version.api_level >= 28)
 }
@@ -119,7 +119,7 @@ fn is_strongbox_available() -> PlatformResult<bool> {
     // StrongBox is available on Android 9+ with hardware support
     // In a real implementation, this would check:
     // - PackageManager.FEATURE_STRONGBOX_KEYSTORE
-    
+
     let version = get_android_version()?;
     Ok(version.api_level >= 28) // Android 9+
 }
@@ -128,7 +128,7 @@ fn is_strongbox_available() -> PlatformResult<bool> {
 pub fn get_security_level() -> PlatformResult<SecurityLevel> {
     let version = get_android_version()?;
     let vendors = detect_tee_vendors()?;
-    
+
     if vendors.iter().any(|v| v.name == "android_strongbox" && v.available) {
         Ok(SecurityLevel::StrongBox)
     } else if vendors.iter().any(|v| v.name == "samsung_knox" && v.available) {
@@ -168,7 +168,7 @@ mod tests {
     fn test_vendor_detection() {
         let vendors = detect_tee_vendors().unwrap();
         assert!(!vendors.is_empty());
-        
+
         // Should at least have TrustZone
         assert!(vendors.iter().any(|v| v.name == "android_trustzone"));
     }

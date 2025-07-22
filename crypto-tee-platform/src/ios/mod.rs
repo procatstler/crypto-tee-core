@@ -15,8 +15,8 @@ use crate::{
     types::{AuthResult, PlatformConfig},
 };
 
-use self::local_authentication::{LAContextBuilder, LAPolicy, is_biometric_available};
-use self::system_info::{get_ios_version, is_secure_enclave_available, get_security_level};
+use self::local_authentication::{is_biometric_available, LAContextBuilder, LAPolicy};
+use self::system_info::{get_ios_version, get_security_level, is_secure_enclave_available};
 
 pub struct IOSPlatform {
     config: PlatformConfig,
@@ -45,29 +45,27 @@ impl PlatformTEE for IOSPlatform {
     async fn detect_vendors(&self) -> Vec<Box<dyn VendorTEE>> {
         // Detect Secure Enclave availability
         let mut vendors: Vec<Box<dyn VendorTEE>> = vec![];
-        
+
         if is_secure_enclave_available().unwrap_or(false) {
             // In real implementation, load Apple Secure Enclave vendor from separate crate
             // For now, use mock vendor
             vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("apple_secure_enclave")));
         }
-        
+
         // Always provide software fallback through Keychain
         vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("ios_keychain")));
-        
+
         vendors
     }
 
     async fn select_best_vendor(&self) -> PlatformResult<Box<dyn VendorTEE>> {
         // Select Secure Enclave if available
         let vendors = self.detect_vendors().await;
-        
+
         if vendors.is_empty() {
-            return Err(PlatformError::NotSupported(
-                "No vendors available on iOS".to_string(),
-            ));
+            return Err(PlatformError::NotSupported("No vendors available on iOS".to_string()));
         }
-        
+
         // Prefer Secure Enclave over Keychain
         for vendor in vendors {
             let caps = vendor.probe().await?;
@@ -75,7 +73,7 @@ impl PlatformTEE for IOSPlatform {
                 return Ok(vendor);
             }
         }
-        
+
         // Fallback to first available (Keychain)
         Ok(vendors.into_iter().next().unwrap())
     }
@@ -83,34 +81,36 @@ impl PlatformTEE for IOSPlatform {
     async fn get_vendor(&self, name: &str) -> PlatformResult<Box<dyn VendorTEE>> {
         // Get specific vendor
         let vendors = self.detect_vendors().await;
-        
+
         for vendor in vendors {
             let caps = vendor.probe().await?;
             if caps.name.to_lowercase().contains(&name.to_lowercase()) {
                 return Ok(vendor);
             }
         }
-        
+
         Err(PlatformError::NotSupported(format!("Vendor '{}' not available on iOS", name)))
     }
 
     async fn authenticate(&self, challenge: &[u8]) -> PlatformResult<AuthResult> {
         // Implement LAContext biometric authentication
         if !is_biometric_available()? {
-            return Err(PlatformError::AuthFailed("Biometric authentication not available".to_string()));
+            return Err(PlatformError::AuthFailed(
+                "Biometric authentication not available".to_string(),
+            ));
         }
-        
+
         let policy = if self.config.require_biometric_only {
             LAPolicy::BiometryOnly
         } else {
             LAPolicy::BiometryOrPasscode
         };
-        
+
         let result = LAContextBuilder::new("Authenticate to access secure key")
             .fallback_to_passcode(!self.config.require_biometric_only)
             .authenticate(Some(challenge))
             .await?;
-            
+
         Ok(result)
     }
 

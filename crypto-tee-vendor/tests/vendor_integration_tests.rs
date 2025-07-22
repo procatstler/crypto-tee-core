@@ -3,12 +3,7 @@
 //! These tests focus on testing vendor-specific functionality through the mock vendor
 //! since hardware vendors require specific platform features.
 
-use crypto_tee_vendor::{
-    mock::MockVendor,
-    traits::VendorTEE,
-    types::*,
-    VendorError,
-};
+use crypto_tee_vendor::{mock::MockVendor, traits::VendorTEE, types::*};
 
 /// Test mock vendor basic operations
 #[tokio::test]
@@ -16,8 +11,7 @@ async fn test_mock_vendor_basic_operations() {
     let vendor = MockVendor::new("test-vendor");
 
     // Test vendor capabilities
-    let capabilities = vendor.probe().await
-        .expect("Should probe mock vendor capabilities");
+    let capabilities = vendor.probe().await.expect("Should probe mock vendor capabilities");
 
     assert!(!capabilities.name.is_empty());
     assert!(!capabilities.version.is_empty());
@@ -39,22 +33,22 @@ async fn test_mock_vendor_basic_operations() {
         vendor_params: None,
     };
 
-    let key = vendor.generate_key(&params).await
-        .expect("Should generate mock vendor key");
+    let key = vendor.generate_key(&params).await.expect("Should generate mock vendor key");
 
     assert_eq!(key.algorithm, Algorithm::Ed25519);
     assert!(!key.id.is_empty());
 
     // Test signing
     let test_data = b"Mock vendor integration test";
-    let signature = vendor.sign(&key, test_data).await
-        .expect("Should sign with mock vendor");
+    let signature = vendor.sign(&key, test_data).await.expect("Should sign with mock vendor");
 
     assert_eq!(signature.algorithm, Algorithm::Ed25519);
     assert!(!signature.data.is_empty());
 
     // Test verification
-    let is_valid = vendor.verify(&key, test_data, &signature).await
+    let is_valid = vendor
+        .verify(&key, test_data, &signature)
+        .await
         .expect("Should verify mock vendor signature");
     assert!(is_valid);
 
@@ -69,17 +63,16 @@ async fn test_mock_vendor_basic_operations() {
 async fn test_vendor_algorithm_support() {
     let vendor = MockVendor::new("algorithm-test-vendor");
 
-    let capabilities = vendor.probe().await
-        .expect("Should probe capabilities");
+    let capabilities = vendor.probe().await.expect("Should probe capabilities");
 
     // Test each supported algorithm (only test implemented algorithms)
     let working_algorithms = vec![Algorithm::Ed25519, Algorithm::EcdsaP256];
-    
+
     for algorithm in working_algorithms {
         if !capabilities.algorithms.contains(&algorithm) {
             continue;
         }
-        
+
         println!("Testing algorithm: {:?}", algorithm);
 
         let params = KeyGenParams {
@@ -90,19 +83,25 @@ async fn test_vendor_algorithm_support() {
             vendor_params: None,
         };
 
-        let key = vendor.generate_key(&params).await
+        let key = vendor
+            .generate_key(&params)
+            .await
             .expect(&format!("Should generate key with {:?}", algorithm));
 
         assert_eq!(key.algorithm, algorithm);
 
         // Test operations with this algorithm
         let test_data = format!("Algorithm test data for {:?}", algorithm);
-        let signature = vendor.sign(&key, test_data.as_bytes()).await
+        let signature = vendor
+            .sign(&key, test_data.as_bytes())
+            .await
             .expect(&format!("Should sign with {:?}", algorithm));
 
         assert_eq!(signature.algorithm, algorithm);
 
-        let is_valid = vendor.verify(&key, test_data.as_bytes(), &signature).await
+        let is_valid = vendor
+            .verify(&key, test_data.as_bytes(), &signature)
+            .await
             .expect(&format!("Should verify with {:?}", algorithm));
 
         assert!(is_valid, "Signature should be valid for {:?}", algorithm);
@@ -128,34 +127,32 @@ async fn test_vendor_key_isolation() {
         vendor_params: None,
     };
 
-    let key1 = vendor.generate_key(&params).await
-        .expect("Should generate first key");
-    let key2 = vendor.generate_key(&params).await
-        .expect("Should generate second key");
+    let key1 = vendor.generate_key(&params).await.expect("Should generate first key");
+    let key2 = vendor.generate_key(&params).await.expect("Should generate second key");
 
     assert_ne!(key1.id, key2.id, "Keys should have unique IDs");
 
     let test_data = b"Key isolation test";
 
     // Sign with key1
-    let signature1 = vendor.sign(&key1, test_data).await
-        .expect("Should sign with key1");
+    let signature1 = vendor.sign(&key1, test_data).await.expect("Should sign with key1");
 
     // Verify with key1 should succeed
-    assert!(vendor.verify(&key1, test_data, &signature1).await
-        .expect("Should verify with key1"));
+    assert!(vendor.verify(&key1, test_data, &signature1).await.expect("Should verify with key1"));
 
     // Verify with key2 should fail (keys are isolated)
-    assert!(!vendor.verify(&key2, test_data, &signature1).await
+    assert!(!vendor
+        .verify(&key2, test_data, &signature1)
+        .await
         .expect("Should not cross-verify with key2"));
 
     // Test in the other direction
-    let signature2 = vendor.sign(&key2, test_data).await
-        .expect("Should sign with key2");
+    let signature2 = vendor.sign(&key2, test_data).await.expect("Should sign with key2");
 
-    assert!(vendor.verify(&key2, test_data, &signature2).await
-        .expect("Should verify with key2"));
-    assert!(!vendor.verify(&key1, test_data, &signature2).await
+    assert!(vendor.verify(&key2, test_data, &signature2).await.expect("Should verify with key2"));
+    assert!(!vendor
+        .verify(&key1, test_data, &signature2)
+        .await
         .expect("Should not cross-verify with key1"));
 
     // Cleanup
@@ -179,8 +176,7 @@ async fn test_vendor_performance() {
         vendor_params: None,
     };
 
-    let key = vendor.generate_key(&params).await
-        .expect("Should generate performance test key");
+    let key = vendor.generate_key(&params).await.expect("Should generate performance test key");
 
     let test_data = b"Performance test data";
     let iterations = 100;
@@ -189,8 +185,8 @@ async fn test_vendor_performance() {
     let sign_start = std::time::Instant::now();
     let mut signatures = Vec::new();
     for _ in 0..iterations {
-        let signature = vendor.sign(&key, test_data).await
-            .expect("Should sign for performance test");
+        let signature =
+            vendor.sign(&key, test_data).await.expect("Should sign for performance test");
         signatures.push(signature);
     }
     let sign_total_time = sign_start.elapsed();
@@ -199,7 +195,9 @@ async fn test_vendor_performance() {
     // Measure verification performance
     let verify_start = std::time::Instant::now();
     for signature in &signatures {
-        let is_valid = vendor.verify(&key, test_data, signature).await
+        let is_valid = vendor
+            .verify(&key, test_data, signature)
+            .await
             .expect("Should verify for performance test");
         assert!(is_valid);
     }
@@ -212,10 +210,14 @@ async fn test_vendor_performance() {
     println!("   Total iterations: {}", iterations);
 
     // Basic performance expectations for mock vendor
-    assert!(avg_sign_time < std::time::Duration::from_millis(10), 
-        "Mock vendor signing should be fast");
-    assert!(avg_verify_time < std::time::Duration::from_millis(5), 
-        "Mock vendor verification should be fast");
+    assert!(
+        avg_sign_time < std::time::Duration::from_millis(10),
+        "Mock vendor signing should be fast"
+    );
+    assert!(
+        avg_verify_time < std::time::Duration::from_millis(5),
+        "Mock vendor verification should be fast"
+    );
 
     // Cleanup
     vendor.delete_key(&key).await.expect("Should delete performance test key");
@@ -239,10 +241,9 @@ async fn test_vendor_error_handling() {
     let sign_result = vendor.sign(&fake_key, b"test").await;
     assert!(sign_result.is_err(), "Should fail to sign with invalid key");
 
-    let verify_result = vendor.verify(&fake_key, b"test", &Signature {
-        algorithm: Algorithm::Ed25519,
-        data: vec![0; 64],
-    }).await;
+    let verify_result = vendor
+        .verify(&fake_key, b"test", &Signature { algorithm: Algorithm::Ed25519, data: vec![0; 64] })
+        .await;
     assert!(verify_result.is_err(), "Should fail to verify with invalid key");
 
     let delete_result = vendor.delete_key(&fake_key).await;
@@ -281,21 +282,22 @@ async fn test_vendor_concurrent_operations() {
             vendor_params: None,
         };
 
-        let key = vendor.generate_key(&params).await
-            .expect("Should generate concurrent key");
-        
+        let key = vendor.generate_key(&params).await.expect("Should generate concurrent key");
+
         // Test operations
         let test_data = format!("Concurrent test {}", i);
-        let signature = vendor.sign(&key, test_data.as_bytes()).await
-            .expect("Should sign concurrent data");
-        let is_valid = vendor.verify(&key, test_data.as_bytes(), &signature).await
+        let signature =
+            vendor.sign(&key, test_data.as_bytes()).await.expect("Should sign concurrent data");
+        let is_valid = vendor
+            .verify(&key, test_data.as_bytes(), &signature)
+            .await
             .expect("Should verify concurrent signature");
-        
+
         assert!(is_valid, "Concurrent signature should be valid");
 
         // Cleanup
         vendor.delete_key(&key).await.expect("Should delete concurrent key");
-        
+
         results.push(i);
     }
 
@@ -323,12 +325,12 @@ async fn test_vendor_capability_consistency() {
 
     // Test that reported algorithms actually work (only test implemented ones)
     let working_algorithms = vec![Algorithm::Ed25519, Algorithm::EcdsaP256];
-    
+
     for algorithm in working_algorithms {
         if !cap1.algorithms.contains(&algorithm) {
             continue;
         }
-        
+
         let params = KeyGenParams {
             algorithm,
             hardware_backed: false,
@@ -338,17 +340,23 @@ async fn test_vendor_capability_consistency() {
         };
 
         // Should be able to generate key with reported algorithm
-        let key = vendor.generate_key(&params).await
+        let key = vendor
+            .generate_key(&params)
+            .await
             .expect(&format!("Should generate key with reported algorithm {:?}", algorithm));
 
         assert_eq!(key.algorithm, algorithm);
 
         // Test basic operation
-        let signature = vendor.sign(&key, b"capability test").await
+        let signature = vendor
+            .sign(&key, b"capability test")
+            .await
             .expect(&format!("Should sign with reported algorithm {:?}", algorithm));
         assert_eq!(signature.algorithm, algorithm);
 
-        let is_valid = vendor.verify(&key, b"capability test", &signature).await
+        let is_valid = vendor
+            .verify(&key, b"capability test", &signature)
+            .await
             .expect(&format!("Should verify with reported algorithm {:?}", algorithm));
         assert!(is_valid);
 

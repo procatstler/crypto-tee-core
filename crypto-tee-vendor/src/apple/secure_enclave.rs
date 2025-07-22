@@ -111,70 +111,76 @@ impl AppleSecureEnclave {
 impl AppleSecureEnclave {
     /// Check if Secure Enclave is available on this device
     pub fn is_secure_enclave_available() -> VendorResult<bool> {
-    #[cfg(target_os = "ios")]
-    {
-        // On iOS, check if we're on a device with Secure Enclave
-        // iPhone 5s and later, iPad Air and later have Secure Enclave
-        use std::ffi::CString;
-        use std::os::raw::c_char;
+        #[cfg(target_os = "ios")]
+        {
+            // On iOS, check if we're on a device with Secure Enclave
+            // iPhone 5s and later, iPad Air and later have Secure Enclave
+            use std::ffi::CString;
+            use std::os::raw::c_char;
 
-        extern "C" {
-            fn sysctlbyname(
-                name: *const c_char,
-                oldp: *mut std::ffi::c_void,
-                oldlenp: *mut usize,
-                newp: *mut std::ffi::c_void,
-                newlen: usize,
-            ) -> i32;
+            extern "C" {
+                fn sysctlbyname(
+                    name: *const c_char,
+                    oldp: *mut std::ffi::c_void,
+                    oldlenp: *mut usize,
+                    newp: *mut std::ffi::c_void,
+                    newlen: usize,
+                ) -> i32;
+            }
+
+            let key = CString::new("hw.optional.arm.FEAT_SEP").map_err(|e| {
+                VendorError::InternalError(format!("Failed to create CString: {}", e))
+            })?;
+            let mut has_sep: i32 = 0;
+            let mut size = std::mem::size_of::<i32>();
+
+            unsafe {
+                let result = sysctlbyname(
+                    key.as_ptr(),
+                    &mut has_sep as *mut _ as *mut std::ffi::c_void,
+                    &mut size,
+                    std::ptr::null_mut(),
+                    0,
+                );
+
+                Ok(result == 0 && has_sep == 1)
+            }
         }
 
-        let key = CString::new("hw.optional.arm.FEAT_SEP")
-            .map_err(|e| VendorError::InternalError(format!("Failed to create CString: {}", e)))?;
-        let mut has_sep: i32 = 0;
-        let mut size = std::mem::size_of::<i32>();
+        #[cfg(target_os = "macos")]
+        {
+            // On macOS, check if we're on Apple Silicon with Secure Enclave
+            use std::process::Command;
 
-        unsafe {
-            let result = sysctlbyname(
-                key.as_ptr(),
-                &mut has_sep as *mut _ as *mut std::ffi::c_void,
-                &mut size,
-                std::ptr::null_mut(),
-                0,
-            );
+            let output =
+                Command::new("sysctl").arg("-n").arg("hw.optional.arm64").output().map_err(
+                    |e| {
+                        VendorError::InitializationError(format!("Failed to check hardware: {}", e))
+                    },
+                )?;
 
-            Ok(result == 0 && has_sep == 1)
+            let is_arm64 = String::from_utf8_lossy(&output.stdout).trim() == "1";
+
+            // Also check for Secure Enclave specifically
+            let sep_output =
+                Command::new("system_profiler").arg("SPiBridgeDataType").output().map_err(|e| {
+                    VendorError::InitializationError(format!(
+                        "Failed to check Secure Enclave: {}",
+                        e
+                    ))
+                })?;
+
+            let has_secure_enclave = String::from_utf8_lossy(&sep_output.stdout)
+                .contains("Apple T2 Security Chip")
+                || is_arm64;
+
+            Ok(has_secure_enclave)
         }
-    }
 
-    #[cfg(target_os = "macos")]
-    {
-        // On macOS, check if we're on Apple Silicon with Secure Enclave
-        use std::process::Command;
-
-        let output =
-            Command::new("sysctl").arg("-n").arg("hw.optional.arm64").output().map_err(|e| {
-                VendorError::InitializationError(format!("Failed to check hardware: {}", e))
-            })?;
-
-        let is_arm64 = String::from_utf8_lossy(&output.stdout).trim() == "1";
-
-        // Also check for Secure Enclave specifically
-        let sep_output =
-            Command::new("system_profiler").arg("SPiBridgeDataType").output().map_err(|e| {
-                VendorError::InitializationError(format!("Failed to check Secure Enclave: {}", e))
-            })?;
-
-        let has_secure_enclave = String::from_utf8_lossy(&sep_output.stdout)
-            .contains("Apple T2 Security Chip")
-            || is_arm64;
-
-        Ok(has_secure_enclave)
-    }
-
-    #[cfg(not(any(target_os = "ios", target_os = "macos")))]
-    {
-        Ok(false)
-    }
+        #[cfg(not(any(target_os = "ios", target_os = "macos")))]
+        {
+            Ok(false)
+        }
     }
 }
 

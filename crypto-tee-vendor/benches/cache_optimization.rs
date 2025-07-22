@@ -11,7 +11,7 @@ use tokio::runtime::Runtime;
 /// Benchmark standard mock vendor performance
 fn bench_standard_vendor(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    
+
     c.bench_function("standard_vendor_sign_verify", |b| {
         b.to_async(&rt).iter(|| async {
             let vendor = MockVendor::new("bench-standard");
@@ -22,13 +22,13 @@ fn bench_standard_vendor(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
             let test_data = black_box(b"benchmark test data for standard vendor");
-            
+
             // Sign
             let signature = vendor.sign(&key_handle, test_data).await.unwrap();
-            
+
             // Verify
             let result = vendor.verify(&key_handle, test_data, &signature).await.unwrap();
             assert!(result);
@@ -39,7 +39,7 @@ fn bench_standard_vendor(c: &mut Criterion) {
 /// Benchmark optimized mock vendor performance
 fn bench_optimized_vendor(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    
+
     c.bench_function("optimized_vendor_sign_verify", |b| {
         b.to_async(&rt).iter(|| async {
             let vendor = OptimizedMockVendor::new("bench-optimized");
@@ -50,13 +50,13 @@ fn bench_optimized_vendor(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
             let test_data = black_box(b"benchmark test data for optimized vendor");
-            
+
             // Sign
             let signature = vendor.sign(&key_handle, test_data).await.unwrap();
-            
+
             // Verify
             let result = vendor.verify(&key_handle, test_data, &signature).await.unwrap();
             assert!(result);
@@ -67,7 +67,7 @@ fn bench_optimized_vendor(c: &mut Criterion) {
 /// Benchmark repeated verification (cache benefits)
 fn bench_repeated_verification(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    
+
     c.bench_function("standard_vendor_repeated_verify", |b| {
         b.to_async(&rt).iter(|| async {
             let vendor = MockVendor::new("bench-standard-repeat");
@@ -78,11 +78,11 @@ fn bench_repeated_verification(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
             let test_data = black_box(b"repeated verification test data");
             let signature = vendor.sign(&key_handle, test_data).await.unwrap();
-            
+
             // Perform multiple verifications
             for _ in 0..10 {
                 let result = vendor.verify(&key_handle, test_data, &signature).await.unwrap();
@@ -90,7 +90,7 @@ fn bench_repeated_verification(c: &mut Criterion) {
             }
         });
     });
-    
+
     c.bench_function("optimized_vendor_repeated_verify", |b| {
         b.to_async(&rt).iter(|| async {
             let vendor = OptimizedMockVendor::new("bench-optimized-repeat");
@@ -101,11 +101,11 @@ fn bench_repeated_verification(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
             let test_data = black_box(b"repeated verification test data");
             let signature = vendor.sign(&key_handle, test_data).await.unwrap();
-            
+
             // Perform multiple verifications (should benefit from cache)
             for _ in 0..10 {
                 let result = vendor.verify(&key_handle, test_data, &signature).await.unwrap();
@@ -118,7 +118,7 @@ fn bench_repeated_verification(c: &mut Criterion) {
 /// Benchmark concurrent operations
 fn bench_concurrent_operations(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    
+
     c.bench_function("standard_vendor_concurrent", |b| {
         b.to_async(&rt).iter(|| async {
             let vendor = std::sync::Arc::new(MockVendor::new("bench-standard-concurrent"));
@@ -129,11 +129,11 @@ fn bench_concurrent_operations(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
             let test_data = black_box(b"concurrent test data");
             let signature = vendor.sign(&key_handle, test_data).await.unwrap();
-            
+
             // Perform concurrent verifications
             let mut handles = Vec::new();
             for _ in 0..5 {
@@ -145,17 +145,18 @@ fn bench_concurrent_operations(c: &mut Criterion) {
                 });
                 handles.push(handle);
             }
-            
+
             for handle in handles {
                 let result = handle.await.unwrap();
                 assert!(result);
             }
         });
     });
-    
+
     c.bench_function("optimized_vendor_concurrent", |b| {
         b.to_async(&rt).iter(|| async {
-            let vendor = std::sync::Arc::new(OptimizedMockVendor::new("bench-optimized-concurrent"));
+            let vendor =
+                std::sync::Arc::new(OptimizedMockVendor::new("bench-optimized-concurrent"));
             let params = KeyGenParams {
                 algorithm: Algorithm::Ed25519,
                 hardware_backed: false,
@@ -163,11 +164,11 @@ fn bench_concurrent_operations(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
             let test_data = black_box(b"concurrent test data");
             let signature = vendor.sign(&key_handle, test_data).await.unwrap();
-            
+
             // Perform concurrent verifications (should benefit from lock-free caches)
             let mut handles = Vec::new();
             for _ in 0..5 {
@@ -179,7 +180,7 @@ fn bench_concurrent_operations(c: &mut Criterion) {
                 });
                 handles.push(handle);
             }
-            
+
             for handle in handles {
                 let result = handle.await.unwrap();
                 assert!(result);
@@ -191,7 +192,7 @@ fn bench_concurrent_operations(c: &mut Criterion) {
 /// Benchmark memory pool efficiency
 fn bench_memory_operations(c: &mut Criterion) {
     let rt = Runtime::new().unwrap();
-    
+
     c.bench_function("standard_vendor_memory", |b| {
         b.to_async(&rt).iter(|| async {
             let vendor = MockVendor::new("bench-standard-memory");
@@ -202,9 +203,9 @@ fn bench_memory_operations(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
-            
+
             // Perform multiple signing operations (memory intensive)
             for i in 0..20 {
                 let test_data = black_box(format!("memory test data {}", i));
@@ -212,7 +213,7 @@ fn bench_memory_operations(c: &mut Criterion) {
             }
         });
     });
-    
+
     c.bench_function("optimized_vendor_memory", |b| {
         b.to_async(&rt).iter(|| async {
             let vendor = OptimizedMockVendor::new("bench-optimized-memory");
@@ -223,9 +224,9 @@ fn bench_memory_operations(c: &mut Criterion) {
                 usage: KeyUsage::default(),
                 vendor_params: None,
             };
-            
+
             let key_handle = vendor.generate_key(&params).await.unwrap();
-            
+
             // Perform multiple signing operations (should benefit from memory pool)
             for i in 0..20 {
                 let test_data = black_box(format!("memory test data {}", i));

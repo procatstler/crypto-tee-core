@@ -30,10 +30,15 @@ impl<T> CacheEntry<T> {
     }
 }
 
+/// Type alias for public key cache entry
+type PublicKeyCacheEntry = CacheEntry<signature::UnparsedPublicKey<Vec<u8>>>;
+/// Type alias for public key cache map
+type PublicKeyCacheMap = HashMap<Vec<u8>, PublicKeyCacheEntry>;
+
 /// Pre-parsed public key cache to avoid repeated parsing
 pub struct PublicKeyCache {
-    ed25519_keys: Arc<RwLock<HashMap<Vec<u8>, CacheEntry<signature::UnparsedPublicKey<Vec<u8>>>>>>,
-    ecdsa_keys: Arc<RwLock<HashMap<Vec<u8>, CacheEntry<signature::UnparsedPublicKey<Vec<u8>>>>>>,
+    ed25519_keys: Arc<RwLock<PublicKeyCacheMap>>,
+    ecdsa_keys: Arc<RwLock<PublicKeyCacheMap>>,
     max_entries: usize,
     ttl: Duration,
 }

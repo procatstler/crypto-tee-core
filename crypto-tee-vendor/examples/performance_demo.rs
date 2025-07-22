@@ -6,9 +6,11 @@ use crypto_tee_vendor::{
     types::{Algorithm, KeyGenParams, KeyUsage},
 };
 use std::time::Instant;
-use tokio;
 
-async fn benchmark_vendor<T: VendorTEE>(vendor: &T, vendor_name: &str) -> Result<(), Box<dyn std::error::Error>> {
+async fn benchmark_vendor<T: VendorTEE>(
+    vendor: &T,
+    vendor_name: &str,
+) -> Result<(), Box<dyn std::error::Error>> {
     println!("=== Benchmarking {} ===", vendor_name);
 
     let params = KeyGenParams {
@@ -54,9 +56,11 @@ async fn benchmark_vendor<T: VendorTEE>(vendor: &T, vendor_name: &str) -> Result
         assert!(result);
     }
     let batch_verify_time = start.elapsed();
-    println!("100 verifications: {:?} ({:?} per verification)", 
-             batch_verify_time, 
-             batch_verify_time / 100);
+    println!(
+        "100 verifications: {:?} ({:?} per verification)",
+        batch_verify_time,
+        batch_verify_time / 100
+    );
 
     println!();
     Ok(())

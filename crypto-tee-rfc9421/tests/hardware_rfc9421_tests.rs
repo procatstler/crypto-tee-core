@@ -3,13 +3,13 @@
 //! This module tests RFC 9421 HTTP Message Signatures with software fallback
 //! when hardware is not available.
 
-use crypto_tee::{CryptoTEE, CryptoTEEBuilder, KeyOptions, KeyUsage, Algorithm};
+use chrono::Utc;
+use crypto_tee::{Algorithm, CryptoTEE, CryptoTEEBuilder, KeyOptions, KeyUsage};
 use crypto_tee_rfc9421::{
     types::{HttpMessage, SignatureAlgorithm, SignatureComponent, SignatureInputBuilder},
     Rfc9421Adapter,
 };
 use std::collections::HashMap;
-use chrono::Utc;
 
 /// Helper for creating test HTTP messages
 pub struct HttpMessageBuilder {
@@ -55,15 +55,17 @@ impl HttpMessageBuilder {
             self.headers.insert("host".to_string(), vec!["api.example.com".to_string()]);
         }
         if !self.headers.contains_key("date") {
-            self.headers.insert("date".to_string(), vec![
-                Utc::now().format("%a, %d %b %Y %H:%M:%S GMT").to_string()
-            ]);
+            self.headers.insert(
+                "date".to_string(),
+                vec![Utc::now().format("%a, %d %b %Y %H:%M:%S GMT").to_string()],
+            );
         }
         if self.body.is_some() {
             let body_len = self.body.as_ref().unwrap().len();
             self.headers.insert("content-length".to_string(), vec![body_len.to_string()]);
             if !self.headers.contains_key("content-type") {
-                self.headers.insert("content-type".to_string(), vec!["application/json".to_string()]);
+                self.headers
+                    .insert("content-type".to_string(), vec!["application/json".to_string()]);
             }
         }
 
@@ -80,15 +82,14 @@ impl HttpMessageBuilder {
 /// Test RFC 9421 with Ed25519 algorithm
 #[tokio::test]
 async fn test_rfc9421_with_ed25519() {
-    let crypto_tee = CryptoTEEBuilder::new().build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
-    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone()).await
+    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone())
+        .await
         .expect("Should create RFC 9421 adapter");
 
     let key_alias = "rfc9421_ed25519_key";
-    
+
     let key_options = KeyOptions {
         algorithm: Algorithm::Ed25519,
         usage: KeyUsage::default(),
@@ -100,7 +101,9 @@ async fn test_rfc9421_with_ed25519() {
     };
 
     // Generate signing key
-    let _key = crypto_tee.generate_key(key_alias, key_options).await
+    let _key = crypto_tee
+        .generate_key(key_alias, key_options)
+        .await
         .expect("Should generate RFC 9421 signing key");
 
     // Create test HTTP message
@@ -113,23 +116,23 @@ async fn test_rfc9421_with_ed25519() {
         .build();
 
     // Build signature parameters
-    let signature_params = SignatureInputBuilder::new(
-        key_alias.to_string(),
-        SignatureAlgorithm::Ed25519
-    )
-    .add_component(SignatureComponent::Method)
-    .add_component(SignatureComponent::Path)
-    .add_component(SignatureComponent::Authority)
-    .add_component(SignatureComponent::Header("authorization".to_string()))
-    .add_component(SignatureComponent::Header("x-request-id".to_string()))
-    .add_component(SignatureComponent::ContentDigest)
-    .created(Utc::now())
-    .expires(Utc::now() + chrono::Duration::hours(1))
-    .nonce(Some("test-nonce-123".to_string()))
-    .build();
+    let signature_params =
+        SignatureInputBuilder::new(key_alias.to_string(), SignatureAlgorithm::Ed25519)
+            .add_component(SignatureComponent::Method)
+            .add_component(SignatureComponent::Path)
+            .add_component(SignatureComponent::Authority)
+            .add_component(SignatureComponent::Header("authorization".to_string()))
+            .add_component(SignatureComponent::Header("x-request-id".to_string()))
+            .add_component(SignatureComponent::ContentDigest)
+            .created(Utc::now())
+            .expires(Utc::now() + chrono::Duration::hours(1))
+            .nonce(Some("test-nonce-123".to_string()))
+            .build();
 
     // Sign the message
-    let signed_message = adapter.sign_message(&message, &signature_params).await
+    let signed_message = adapter
+        .sign_message(&message, &signature_params)
+        .await
         .expect("Should sign HTTP message with Ed25519");
 
     // Verify required signature headers are present
@@ -137,7 +140,9 @@ async fn test_rfc9421_with_ed25519() {
     assert!(signed_message.headers.contains_key("signature"));
 
     // Verify the signature
-    let is_valid = adapter.verify_message(&signed_message, &signature_params).await
+    let is_valid = adapter
+        .verify_message(&signed_message, &signature_params)
+        .await
         .expect("Should verify HTTP signature");
     assert!(is_valid, "HTTP signature should be valid");
 
@@ -150,15 +155,14 @@ async fn test_rfc9421_with_ed25519() {
 /// Test RFC 9421 with ECDSA P-256 algorithm
 #[tokio::test]
 async fn test_rfc9421_with_ecdsa_p256() {
-    let crypto_tee = CryptoTEEBuilder::new().build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
-    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone()).await
+    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone())
+        .await
         .expect("Should create RFC 9421 adapter");
 
     let key_alias = "rfc9421_ecdsa_key";
-    
+
     let key_options = KeyOptions {
         algorithm: Algorithm::EcdsaP256,
         usage: KeyUsage::default(),
@@ -170,8 +174,8 @@ async fn test_rfc9421_with_ecdsa_p256() {
     };
 
     // Generate signing key
-    let _key = crypto_tee.generate_key(key_alias, key_options).await
-        .expect("Should generate ECDSA key");
+    let _key =
+        crypto_tee.generate_key(key_alias, key_options).await.expect("Should generate ECDSA key");
 
     // Create test HTTP message for mobile API
     let message = HttpMessageBuilder::new()
@@ -184,24 +188,24 @@ async fn test_rfc9421_with_ecdsa_p256() {
         .build();
 
     // Build signature parameters
-    let signature_params = SignatureInputBuilder::new(
-        key_alias.to_string(),
-        SignatureAlgorithm::EcdsaP256
-    )
-    .add_component(SignatureComponent::Method)
-    .add_component(SignatureComponent::Path)
-    .add_component(SignatureComponent::Authority)
-    .add_component(SignatureComponent::Header("user-agent".to_string()))
-    .add_component(SignatureComponent::Header("x-device-id".to_string()))
-    .add_component(SignatureComponent::Header("x-app-version".to_string()))
-    .add_component(SignatureComponent::ContentDigest)
-    .created(Utc::now())
-    .expires(Utc::now() + chrono::Duration::minutes(30))
-    .nonce(Some("ecdsa-test-nonce-456".to_string()))
-    .build();
+    let signature_params =
+        SignatureInputBuilder::new(key_alias.to_string(), SignatureAlgorithm::EcdsaP256)
+            .add_component(SignatureComponent::Method)
+            .add_component(SignatureComponent::Path)
+            .add_component(SignatureComponent::Authority)
+            .add_component(SignatureComponent::Header("user-agent".to_string()))
+            .add_component(SignatureComponent::Header("x-device-id".to_string()))
+            .add_component(SignatureComponent::Header("x-app-version".to_string()))
+            .add_component(SignatureComponent::ContentDigest)
+            .created(Utc::now())
+            .expires(Utc::now() + chrono::Duration::minutes(30))
+            .nonce(Some("ecdsa-test-nonce-456".to_string()))
+            .build();
 
     // Sign the message
-    let signed_message = adapter.sign_message(&message, &signature_params).await
+    let signed_message = adapter
+        .sign_message(&message, &signature_params)
+        .await
         .expect("Should sign HTTP message with ECDSA P-256");
 
     // Verify signature headers
@@ -209,7 +213,9 @@ async fn test_rfc9421_with_ecdsa_p256() {
     assert!(signed_message.headers.contains_key("signature"));
 
     // Verify the signature
-    let is_valid = adapter.verify_message(&signed_message, &signature_params).await
+    let is_valid = adapter
+        .verify_message(&signed_message, &signature_params)
+        .await
         .expect("Should verify HTTP signature");
     assert!(is_valid, "ECDSA HTTP signature should be valid");
 
@@ -222,11 +228,10 @@ async fn test_rfc9421_with_ecdsa_p256() {
 /// Test RFC 9421 performance
 #[tokio::test]
 async fn test_rfc9421_signing_performance() {
-    let crypto_tee = CryptoTEEBuilder::new().build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
-    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone()).await
+    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone())
+        .await
         .expect("Should create RFC 9421 adapter");
 
     // Test performance with different algorithms
@@ -247,7 +252,9 @@ async fn test_rfc9421_signing_performance() {
         };
 
         // Generate key
-        let _key = crypto_tee.generate_key(key_alias, key_options).await
+        let _key = crypto_tee
+            .generate_key(key_alias, key_options)
+            .await
             .expect("Should generate performance test key");
 
         // Create test HTTP message
@@ -259,18 +266,15 @@ async fn test_rfc9421_signing_performance() {
             .body(b"{\"test\": \"performance data\"}")
             .build();
 
-        let signature_params = SignatureInputBuilder::new(
-            key_alias.to_string(),
-            sig_algorithm
-        )
-        .add_component(SignatureComponent::Method)
-        .add_component(SignatureComponent::Path)
-        .add_component(SignatureComponent::Authority)
-        .add_component(SignatureComponent::Header("content-type".to_string()))
-        .add_component(SignatureComponent::Header("x-test-iteration".to_string()))
-        .add_component(SignatureComponent::ContentDigest)
-        .created(Utc::now())
-        .build();
+        let signature_params = SignatureInputBuilder::new(key_alias.to_string(), sig_algorithm)
+            .add_component(SignatureComponent::Method)
+            .add_component(SignatureComponent::Path)
+            .add_component(SignatureComponent::Authority)
+            .add_component(SignatureComponent::Header("content-type".to_string()))
+            .add_component(SignatureComponent::Header("x-test-iteration".to_string()))
+            .add_component(SignatureComponent::ContentDigest)
+            .created(Utc::now())
+            .build();
 
         // Performance test
         let iterations = 10;
@@ -280,13 +284,17 @@ async fn test_rfc9421_signing_performance() {
         for _ in 0..iterations {
             // Measure signing time
             let sign_start = std::time::Instant::now();
-            let signed_message = adapter.sign_message(&message, &signature_params).await
+            let signed_message = adapter
+                .sign_message(&message, &signature_params)
+                .await
                 .expect("Should sign for performance test");
             sign_times.push(sign_start.elapsed());
 
             // Measure verification time
             let verify_start = std::time::Instant::now();
-            let is_valid = adapter.verify_message(&signed_message, &signature_params).await
+            let is_valid = adapter
+                .verify_message(&signed_message, &signature_params)
+                .await
                 .expect("Should verify for performance test");
             verify_times.push(verify_start.elapsed());
 
@@ -302,10 +310,16 @@ async fn test_rfc9421_signing_performance() {
         println!("   Average verify time: {:?}", avg_verify_time);
 
         // Basic performance assertions
-        assert!(avg_sign_time < std::time::Duration::from_millis(500), 
-            "Average signing should be reasonable for {:?}", key_algorithm);
-        assert!(avg_verify_time < std::time::Duration::from_millis(200), 
-            "Average verification should be reasonable for {:?}", key_algorithm);
+        assert!(
+            avg_sign_time < std::time::Duration::from_millis(500),
+            "Average signing should be reasonable for {:?}",
+            key_algorithm
+        );
+        assert!(
+            avg_verify_time < std::time::Duration::from_millis(200),
+            "Average verification should be reasonable for {:?}",
+            key_algorithm
+        );
 
         // Cleanup
         crypto_tee.delete_key(key_alias).await.expect("Should cleanup performance test key");
@@ -315,11 +329,10 @@ async fn test_rfc9421_signing_performance() {
 /// Test RFC 9421 concurrent signing
 #[tokio::test]
 async fn test_rfc9421_concurrent_signing() {
-    let crypto_tee = CryptoTEEBuilder::new().build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
-    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone()).await
+    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone())
+        .await
         .expect("Should create RFC 9421 adapter");
 
     // Generate signing key
@@ -334,7 +347,9 @@ async fn test_rfc9421_concurrent_signing() {
         metadata: None,
     };
 
-    let _key = crypto_tee.generate_key(key_alias, key_options).await
+    let _key = crypto_tee
+        .generate_key(key_alias, key_options)
+        .await
         .expect("Should generate concurrent test key");
 
     // Create multiple HTTP messages to sign concurrently
@@ -350,27 +365,25 @@ async fn test_rfc9421_concurrent_signing() {
             .body(format!("{{\"data\": \"concurrent test {}\"}}", i).as_bytes())
             .build();
 
-        let signature_params = SignatureInputBuilder::new(
-            key_alias.to_string(),
-            SignatureAlgorithm::Ed25519
-        )
-        .add_component(SignatureComponent::Method)
-        .add_component(SignatureComponent::Path)
-        .add_component(SignatureComponent::Authority)
-        .add_component(SignatureComponent::Header("x-request-id".to_string()))
-        .add_component(SignatureComponent::ContentDigest)
-        .created(Utc::now())
-        .nonce(Some(format!("concurrent-nonce-{}", i)))
-        .build();
+        let signature_params =
+            SignatureInputBuilder::new(key_alias.to_string(), SignatureAlgorithm::Ed25519)
+                .add_component(SignatureComponent::Method)
+                .add_component(SignatureComponent::Path)
+                .add_component(SignatureComponent::Authority)
+                .add_component(SignatureComponent::Header("x-request-id".to_string()))
+                .add_component(SignatureComponent::ContentDigest)
+                .created(Utc::now())
+                .nonce(Some(format!("concurrent-nonce-{}", i)))
+                .build();
 
         let future = async move {
             let signed_message = adapter_clone.sign_message(&message, &signature_params).await?;
             let is_valid = adapter_clone.verify_message(&signed_message, &signature_params).await?;
-            
+
             if !is_valid {
                 return Err("Concurrent signature verification failed".into());
             }
-            
+
             Result::<i32, Box<dyn std::error::Error + Send + Sync>>::Ok(i)
         };
 
@@ -378,7 +391,8 @@ async fn test_rfc9421_concurrent_signing() {
     }
 
     // Wait for all concurrent operations
-    let results = futures::future::try_join_all(sign_futures).await
+    let results = futures::future::try_join_all(sign_futures)
+        .await
         .expect("All concurrent signing operations should succeed");
 
     assert_eq!(results.len(), concurrent_requests);
@@ -391,11 +405,10 @@ async fn test_rfc9421_concurrent_signing() {
 /// Test RFC 9421 with different message types
 #[tokio::test]
 async fn test_rfc9421_message_variations() {
-    let crypto_tee = CryptoTEEBuilder::new().build()
-        .await
-        .expect("Should initialize CryptoTEE");
+    let crypto_tee = CryptoTEEBuilder::new().build().await.expect("Should initialize CryptoTEE");
 
-    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone()).await
+    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone())
+        .await
         .expect("Should create RFC 9421 adapter");
 
     let key_alias = "rfc9421_variation_test";
@@ -409,7 +422,9 @@ async fn test_rfc9421_message_variations() {
         metadata: None,
     };
 
-    let _key = crypto_tee.generate_key(key_alias, key_options).await
+    let _key = crypto_tee
+        .generate_key(key_alias, key_options)
+        .await
         .expect("Should generate variation test key");
 
     // Test different HTTP methods and message types
@@ -421,9 +436,7 @@ async fn test_rfc9421_message_variations() {
     ];
 
     for (i, (method, uri, body)) in test_cases.into_iter().enumerate() {
-        let mut message_builder = HttpMessageBuilder::new()
-            .method(method)
-            .uri(uri);
+        let mut message_builder = HttpMessageBuilder::new().method(method).uri(uri);
 
         if let Some(body_data) = body {
             message_builder = message_builder.body(body_data);
@@ -431,13 +444,11 @@ async fn test_rfc9421_message_variations() {
 
         let message = message_builder.build();
 
-        let mut signature_builder = SignatureInputBuilder::new(
-            key_alias.to_string(),
-            SignatureAlgorithm::Ed25519
-        )
-        .add_component(SignatureComponent::Method)
-        .add_component(SignatureComponent::Path)
-        .add_component(SignatureComponent::Authority);
+        let mut signature_builder =
+            SignatureInputBuilder::new(key_alias.to_string(), SignatureAlgorithm::Ed25519)
+                .add_component(SignatureComponent::Method)
+                .add_component(SignatureComponent::Path)
+                .add_component(SignatureComponent::Authority);
 
         if body.is_some() {
             signature_builder = signature_builder.add_component(SignatureComponent::ContentDigest);
@@ -448,14 +459,18 @@ async fn test_rfc9421_message_variations() {
             .nonce(Some(format!("variation-test-{}", i)))
             .build();
 
-        let signed_message = adapter.sign_message(&message, &signature_params).await
+        let signed_message = adapter
+            .sign_message(&message, &signature_params)
+            .await
             .expect(&format!("Should sign {} request", method));
 
-        let is_valid = adapter.verify_message(&signed_message, &signature_params).await
+        let is_valid = adapter
+            .verify_message(&signed_message, &signature_params)
+            .await
             .expect(&format!("Should verify {} signature", method));
 
         assert!(is_valid, "{} signature should be valid", method);
-        
+
         println!("✅ RFC 9421 {} request signed and verified", method);
     }
 

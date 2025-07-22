@@ -26,11 +26,7 @@ struct VerificationEntry {
 
 impl VerificationEntry {
     fn new(result: bool, ttl: Duration) -> Self {
-        Self {
-            result,
-            timestamp: Instant::now(),
-            ttl,
-        }
+        Self { result, timestamp: Instant::now(), ttl }
     }
 
     fn is_expired(&self) -> bool {
@@ -79,6 +75,11 @@ impl<K: Hash + Eq + Clone, V: Clone> OptimizedLruCache<K, V> {
     pub fn len(&self) -> usize {
         let cache = self.cache.read();
         cache.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        let cache = self.cache.read();
+        cache.is_empty()
     }
 
     /// Clean up expired entries in batch
@@ -145,13 +146,7 @@ impl VerificationCache {
     }
 
     /// Cache verification result
-    pub fn cache_result(
-        &self,
-        public_key: &[u8],
-        message: &[u8],
-        signature: &[u8],
-        result: bool,
-    ) {
+    pub fn cache_result(&self, public_key: &[u8], message: &[u8], signature: &[u8], result: bool) {
         if self.cache.len() >= self.max_entries {
             // Don't cache if at capacity (background cleanup will make space)
             return;
@@ -216,11 +211,7 @@ impl VerificationCache {
     /// Get cache statistics
     pub fn stats(&self) -> VerificationCacheStats {
         let total_entries = self.cache.len();
-        let expired_entries = self
-            .cache
-            .iter()
-            .filter(|entry| entry.value().is_expired())
-            .count();
+        let expired_entries = self.cache.iter().filter(|entry| entry.value().is_expired()).count();
 
         VerificationCacheStats {
             total_entries,
@@ -258,14 +249,21 @@ impl OptimizedPublicKeyCache {
     }
 
     /// Get cached Ed25519 public key
-    pub fn get_ed25519_key(&self, key_bytes: &[u8]) -> Option<signature::UnparsedPublicKey<Vec<u8>>> {
+    pub fn get_ed25519_key(
+        &self,
+        key_bytes: &[u8],
+    ) -> Option<signature::UnparsedPublicKey<Vec<u8>>> {
         let result = self.ed25519_cache.get(&key_bytes.to_vec());
         self.update_stats(result.is_some());
         result
     }
 
     /// Cache Ed25519 public key
-    pub fn cache_ed25519_key(&self, key_bytes: Vec<u8>, public_key: signature::UnparsedPublicKey<Vec<u8>>) {
+    pub fn cache_ed25519_key(
+        &self,
+        key_bytes: Vec<u8>,
+        public_key: signature::UnparsedPublicKey<Vec<u8>>,
+    ) {
         self.ed25519_cache.insert(key_bytes, public_key);
     }
 
@@ -277,7 +275,11 @@ impl OptimizedPublicKeyCache {
     }
 
     /// Cache ECDSA public key
-    pub fn cache_ecdsa_key(&self, key_bytes: Vec<u8>, public_key: signature::UnparsedPublicKey<Vec<u8>>) {
+    pub fn cache_ecdsa_key(
+        &self,
+        key_bytes: Vec<u8>,
+        public_key: signature::UnparsedPublicKey<Vec<u8>>,
+    ) {
         self.ecdsa_cache.insert(key_bytes, public_key);
     }
 
@@ -359,7 +361,15 @@ impl OptimizedMemoryPool {
             stats: Arc::new(parking_lot::Mutex::new(MemoryPoolStats::default())),
         }
     }
+}
 
+impl Default for OptimizedMemoryPool {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
+impl OptimizedMemoryPool {
     /// Get a buffer of appropriate size from the pool
     pub fn get_buffer(&self, size: usize) -> Vec<u8> {
         let queue = if size <= Self::SMALL_SIZE {
@@ -387,7 +397,7 @@ impl OptimizedMemoryPool {
     /// Return a buffer to the pool
     pub fn return_buffer(&self, buffer: Vec<u8>) {
         let capacity = buffer.capacity();
-        
+
         let queue = if capacity <= Self::SMALL_SIZE {
             &self.small_buffers
         } else if capacity <= Self::MEDIUM_SIZE {
@@ -449,7 +459,7 @@ mod tests {
     #[tokio::test]
     async fn test_verification_cache() {
         let cache = VerificationCache::new(100, Duration::from_secs(1));
-        
+
         let public_key = b"test_public_key";
         let message = b"test_message";
         let signature = b"test_signature";
@@ -459,13 +469,13 @@ mod tests {
 
         // Cache a result
         cache.cache_result(public_key, message, signature, true);
-        
+
         // Should return cached result
         assert_eq!(cache.get_cached_result(public_key, message, signature), Some(true));
 
         // Wait for expiration
         sleep(Duration::from_secs(2)).await;
-        
+
         // Should return None after expiration
         assert!(cache.get_cached_result(public_key, message, signature).is_none());
     }
@@ -473,13 +483,13 @@ mod tests {
     #[test]
     fn test_optimized_lru_cache() {
         let cache = OptimizedLruCache::new(2, Duration::from_millis(100));
-        
+
         cache.insert("key1".to_string(), "value1".to_string());
         cache.insert("key2".to_string(), "value2".to_string());
-        
+
         assert_eq!(cache.get(&"key1".to_string()), Some("value1".to_string()));
         assert_eq!(cache.get(&"key2".to_string()), Some("value2".to_string()));
-        
+
         // Should evict oldest when inserting third item
         cache.insert("key3".to_string(), "value3".to_string());
         assert_eq!(cache.len(), 2);
@@ -488,18 +498,18 @@ mod tests {
     #[test]
     fn test_memory_pool() {
         let pool = OptimizedMemoryPool::new();
-        
+
         // Get a small buffer
         let buffer1 = pool.get_buffer(512);
         assert_eq!(buffer1.len(), 512);
-        
+
         // Return it
         pool.return_buffer(buffer1);
-        
+
         // Get another buffer of same size (should reuse)
         let buffer2 = pool.get_buffer(512);
         assert_eq!(buffer2.len(), 512);
-        
+
         let stats = pool.stats();
         assert!(stats.hits >= 1);
     }

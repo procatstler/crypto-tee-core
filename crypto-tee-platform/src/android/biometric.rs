@@ -73,10 +73,10 @@ pub async fn authenticate_biometric(
     // 3. Configure allowed authenticators
     // 4. Show prompt and wait for result
     // 5. If challenge provided, use CryptoObject for key binding
-    
+
     // For now, simulate successful authentication
     tokio::time::sleep(std::time::Duration::from_millis(500)).await;
-    
+
     Ok(BiometricResult {
         success: true,
         method: AuthMethod::Fingerprint,
@@ -94,7 +94,7 @@ pub fn is_biometric_available() -> PlatformResult<bool> {
     // In a real implementation, this would check:
     // - BiometricManager.canAuthenticate(BIOMETRIC_WEAK)
     // - Device has enrolled biometrics
-    
+
     Ok(true) // Assume available for development
 }
 
@@ -102,7 +102,7 @@ pub fn is_biometric_available() -> PlatformResult<bool> {
 pub fn is_strong_biometric_available() -> PlatformResult<bool> {
     // In a real implementation, this would check:
     // - BiometricManager.canAuthenticate(BIOMETRIC_STRONG)
-    
+
     Ok(true) // Assume available for development
 }
 
@@ -112,11 +112,8 @@ pub fn get_enrolled_biometrics() -> PlatformResult<Vec<BiometricType>> {
     // - FingerprintManager for fingerprints
     // - FaceManager for face
     // - Device capabilities
-    
-    Ok(vec![
-        BiometricType::Fingerprint,
-        BiometricType::Face,
-    ])
+
+    Ok(vec![BiometricType::Fingerprint, BiometricType::Face])
 }
 
 /// Types of biometric authentication
@@ -160,39 +157,34 @@ pub struct BiometricPromptBuilder {
 
 impl BiometricPromptBuilder {
     pub fn new(title: impl Into<String>) -> Self {
-        Self {
-            config: BiometricConfig {
-                title: title.into(),
-                ..Default::default()
-            },
-        }
+        Self { config: BiometricConfig { title: title.into(), ..Default::default() } }
     }
-    
+
     pub fn subtitle(mut self, subtitle: impl Into<String>) -> Self {
         self.config.subtitle = Some(subtitle.into());
         self
     }
-    
+
     pub fn description(mut self, description: impl Into<String>) -> Self {
         self.config.description = Some(description.into());
         self
     }
-    
+
     pub fn allow_device_credential(mut self, allow: bool) -> Self {
         self.config.allow_device_credential = allow;
         self
     }
-    
+
     pub fn require_strong_biometric(mut self, require: bool) -> Self {
         self.config.require_strong_biometric = require;
         self
     }
-    
+
     pub fn confirmation_required(mut self, required: bool) -> Self {
         self.config.confirmation_required = required;
         self
     }
-    
+
     pub async fn authenticate(self, challenge: Option<&[u8]>) -> PlatformResult<BiometricResult> {
         authenticate_biometric(self.config, challenge).await
     }
@@ -231,7 +223,7 @@ mod tests {
             .authenticate(Some(b"test_challenge"))
             .await
             .unwrap();
-            
+
         assert!(result.success);
         assert_eq!(result.method, AuthMethod::Fingerprint);
         assert!(result.crypto_object.is_some());
@@ -241,7 +233,7 @@ mod tests {
     fn test_biometric_availability() {
         assert!(is_biometric_available().unwrap());
         assert!(is_strong_biometric_available().unwrap());
-        
+
         let biometrics = get_enrolled_biometrics().unwrap();
         assert!(!biometrics.is_empty());
     }
