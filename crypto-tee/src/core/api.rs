@@ -15,6 +15,7 @@ use crate::{
         AuditSeverity, ConsoleAuditLogger, FileAuditLogger, LogFormat, MemoryAuditStorage,
         MultiAuditLogger,
     },
+    health::{HealthConfig, HealthMonitor, HealthReport},
     core::manager::KeyManager,
     error::{CryptoTEEError, CryptoTEEResult},
     plugins::PluginManager,
@@ -63,6 +64,9 @@ pub trait CryptoTEE: Send + Sync {
 
     /// Get key information
     async fn get_key_info(&self, alias: &str) -> CryptoTEEResult<KeyInfo>;
+
+    /// Perform health check
+    async fn health_check(&self) -> CryptoTEEResult<HealthReport>;
 }
 
 /// CryptoTEE implementation
@@ -72,6 +76,7 @@ pub struct CryptoTEEImpl {
     key_manager: Arc<RwLock<KeyManager>>,
     plugin_manager: Arc<RwLock<PluginManager>>,
     audit_manager: Arc<RwLock<AuditManager>>,
+    health_monitor: Arc<RwLock<HealthMonitor>>,
 }
 
 impl CryptoTEEImpl {
@@ -86,12 +91,23 @@ impl CryptoTEEImpl {
         // Setup audit logging
         let audit_manager = Self::setup_default_audit_manager().await?;
 
+        let platform_arc = Arc::new(RwLock::new(platform));
+        let vendor_arc = Arc::new(RwLock::new(vendor));
+
+        // Setup health monitoring
+        let health_monitor = HealthMonitor::new(
+            platform_arc.clone(),
+            vendor_arc.clone(),
+            HealthConfig::default(),
+        );
+
         let instance = Self {
-            platform: Arc::new(RwLock::new(platform)),
-            vendor: Arc::new(RwLock::new(vendor)),
+            platform: platform_arc,
+            vendor: vendor_arc,
             key_manager: Arc::new(RwLock::new(KeyManager::new())),
             plugin_manager: Arc::new(RwLock::new(PluginManager::new())),
             audit_manager: Arc::new(RwLock::new(audit_manager)),
+            health_monitor: Arc::new(RwLock::new(health_monitor)),
         };
 
         // Log system initialization
@@ -677,6 +693,35 @@ impl CryptoTEE for CryptoTEEImpl {
             requires_auth: key_handle.platform_handle.requires_auth,
         })
     }
+
+    async fn health_check(&self) -> CryptoTEEResult<HealthReport> {
+        info!("Performing health check");
+        let context = AuditContext::system();
+
+        let health_monitor = self.health_monitor.read().await;
+        let report = health_monitor.check_health().await?;
+
+        // Audit log the health check
+        self.audit_manager
+            .read()
+            .await
+            .log_event(
+                AuditEvent::new(
+                    AuditEventType::ConfigurationChanged,
+                    AuditSeverity::Info,
+                    context.actor,
+                    None,
+                    true,
+                )
+                .with_metadata("operation".to_string(), serde_json::json!("health_check"))
+                .with_metadata("status".to_string(), serde_json::json!(report.overall_status))
+                .with_metadata("components".to_string(), serde_json::json!(report.components.len()))
+                .with_metadata("duration_ms".to_string(), serde_json::json!(report.check_duration_ms)),
+            )
+            .await?;
+
+        Ok(report)
+    }
 }
 
 /// Builder for CryptoTEE instances
@@ -716,12 +761,23 @@ impl CryptoTEEBuilder {
         // Setup audit logging
         let audit_manager = CryptoTEEImpl::setup_default_audit_manager().await?;
 
+        let platform_arc = Arc::new(RwLock::new(platform));
+        let vendor_arc = Arc::new(RwLock::new(vendor));
+
+        // Setup health monitoring
+        let health_monitor = HealthMonitor::new(
+            platform_arc.clone(),
+            vendor_arc.clone(),
+            HealthConfig::default(),
+        );
+
         let instance = CryptoTEEImpl {
-            platform: Arc::new(RwLock::new(platform)),
-            vendor: Arc::new(RwLock::new(vendor)),
+            platform: platform_arc,
+            vendor: vendor_arc,
             key_manager: Arc::new(RwLock::new(KeyManager::new())),
             plugin_manager: Arc::new(RwLock::new(PluginManager::new())),
             audit_manager: Arc::new(RwLock::new(audit_manager)),
+            health_monitor: Arc::new(RwLock::new(health_monitor)),
         };
 
         // Log system initialization

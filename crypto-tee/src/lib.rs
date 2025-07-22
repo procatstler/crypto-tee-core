@@ -8,12 +8,14 @@ pub mod audit;
 pub mod backup;
 pub mod core;
 pub mod error;
+pub mod health;
 pub mod keys;
 pub mod plugins;
 pub mod types;
 
 pub use core::api::{CryptoTEE, CryptoTEEBuilder};
 pub use error::{CryptoTEEError, CryptoTEEResult};
+pub use health::{HealthMonitor, HealthReport, HealthStatus, ComponentHealth, TeeHealth, HealthConfig};
 pub use plugins::{CryptoPlugin, PluginManager};
 pub use types::*;
 
