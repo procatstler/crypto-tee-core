@@ -143,11 +143,7 @@ pub struct BackupExporter {
 /// Trait for format-specific export handlers
 trait FormatHandler: Send + Sync {
     /// Export backup in specific format
-    fn export(
-        &self,
-        backup: &ExportedBackup,
-        options: &ExportOptions,
-    ) -> CryptoTEEResult<Vec<u8>>;
+    fn export(&self, backup: &ExportedBackup, options: &ExportOptions) -> CryptoTEEResult<Vec<u8>>;
 
     /// Import backup from specific format
     fn import(&self, data: &[u8], options: &ExportOptions) -> CryptoTEEResult<ExportedBackup>;
@@ -199,7 +195,10 @@ impl BackupExporter {
 
         // Get format handler
         let handler = self.format_handlers.get(&options.format).ok_or_else(|| {
-            CryptoTEEError::NotSupported(format!("Export format {:?} not supported", options.format))
+            CryptoTEEError::NotSupported(format!(
+                "Export format {:?} not supported",
+                options.format
+            ))
         })?;
 
         // Validate export options
@@ -285,7 +284,11 @@ impl BackupExporter {
         options: &ExportOptions,
     ) -> CryptoTEEResult<(BackupMetadata, Vec<BackupEntry>)> {
         let data = tokio::fs::read(file_path).await.map_err(|e| {
-            CryptoTEEError::BackupError(format!("Failed to read import file {}: {}", file_path.display(), e))
+            CryptoTEEError::BackupError(format!(
+                "Failed to read import file {}: {}",
+                file_path.display(),
+                e
+            ))
         })?;
 
         self.import_backup(&data, format, options).await
@@ -315,7 +318,10 @@ impl BackupExporter {
     }
 
     /// Collect audit trail for export
-    async fn collect_audit_trail(&self, _metadata: &BackupMetadata) -> CryptoTEEResult<Vec<AuditEntry>> {
+    async fn collect_audit_trail(
+        &self,
+        _metadata: &BackupMetadata,
+    ) -> CryptoTEEResult<Vec<AuditEntry>> {
         // TODO: Implement audit trail collection from audit manager
         Ok(vec![])
     }
@@ -348,7 +354,11 @@ impl BackupExporter {
         };
 
         tokio::fs::write(&final_path, data).await.map_err(|e| {
-            CryptoTEEError::BackupError(format!("Failed to write export file {}: {}", final_path.display(), e))
+            CryptoTEEError::BackupError(format!(
+                "Failed to write export file {}: {}",
+                final_path.display(),
+                e
+            ))
         })?;
 
         debug!("Export written to: {}", final_path.display());
@@ -397,13 +407,19 @@ impl FormatHandler for BinaryFormatHandler {
         _options: &ExportOptions,
     ) -> CryptoTEEResult<Vec<u8>> {
         bincode::serialize(backup).map_err(|e| {
-            CryptoTEEError::SerializationError(format!("Failed to serialize backup to binary: {}", e))
+            CryptoTEEError::SerializationError(format!(
+                "Failed to serialize backup to binary: {}",
+                e
+            ))
         })
     }
 
     fn import(&self, data: &[u8], _options: &ExportOptions) -> CryptoTEEResult<ExportedBackup> {
         bincode::deserialize(data).map_err(|e| {
-            CryptoTEEError::SerializationError(format!("Failed to deserialize binary backup: {}", e))
+            CryptoTEEError::SerializationError(format!(
+                "Failed to deserialize binary backup: {}",
+                e
+            ))
         })
     }
 
@@ -470,11 +486,7 @@ impl FormatHandler for PemFormatHandler {
 }
 
 impl FormatHandler for EncryptedFormatHandler {
-    fn export(
-        &self,
-        backup: &ExportedBackup,
-        options: &ExportOptions,
-    ) -> CryptoTEEResult<Vec<u8>> {
+    fn export(&self, backup: &ExportedBackup, options: &ExportOptions) -> CryptoTEEResult<Vec<u8>> {
         // First serialize to JSON
         let json_data = serde_json::to_vec(backup).map_err(|e| {
             CryptoTEEError::SerializationError(format!("Failed to serialize backup: {}", e))
@@ -497,7 +509,10 @@ impl FormatHandler for EncryptedFormatHandler {
             // TODO: Implement decryption with password
             // For now, try to deserialize as JSON
             serde_json::from_slice(data).map_err(|e| {
-                CryptoTEEError::SerializationError(format!("Failed to deserialize encrypted backup: {}", e))
+                CryptoTEEError::SerializationError(format!(
+                    "Failed to deserialize encrypted backup: {}",
+                    e
+                ))
             })
         } else {
             Err(CryptoTEEError::ConfigurationError(
@@ -589,20 +604,15 @@ mod tests {
         let exporter = BackupExporter::new();
         let (metadata, entries) = create_test_backup();
 
-        let options = ExportOptions {
-            format: ExportFormat::Json,
-            ..Default::default()
-        };
+        let options = ExportOptions { format: ExportFormat::Json, ..Default::default() };
 
         // Test export
         let exported_data = exporter.export_backup(&metadata, &entries, &options).await.unwrap();
         assert!(!exported_data.is_empty());
 
         // Test import
-        let (imported_metadata, imported_entries) = exporter
-            .import_backup(&exported_data, ExportFormat::Json, &options)
-            .await
-            .unwrap();
+        let (imported_metadata, imported_entries) =
+            exporter.import_backup(&exported_data, ExportFormat::Json, &options).await.unwrap();
 
         assert_eq!(imported_metadata.backup_id, metadata.backup_id);
         assert_eq!(imported_entries.len(), entries.len());
@@ -614,20 +624,15 @@ mod tests {
         let exporter = BackupExporter::new();
         let (metadata, entries) = create_test_backup();
 
-        let options = ExportOptions {
-            format: ExportFormat::Binary,
-            ..Default::default()
-        };
+        let options = ExportOptions { format: ExportFormat::Binary, ..Default::default() };
 
         // Test export
         let exported_data = exporter.export_backup(&metadata, &entries, &options).await.unwrap();
         assert!(!exported_data.is_empty());
 
         // Test import
-        let (imported_metadata, imported_entries) = exporter
-            .import_backup(&exported_data, ExportFormat::Binary, &options)
-            .await
-            .unwrap();
+        let (imported_metadata, imported_entries) =
+            exporter.import_backup(&exported_data, ExportFormat::Binary, &options).await.unwrap();
 
         assert_eq!(imported_metadata.backup_id, metadata.backup_id);
         assert_eq!(imported_entries.len(), entries.len());
@@ -641,10 +646,7 @@ mod tests {
         let exporter = BackupExporter::new();
         let (metadata, entries) = create_test_backup();
 
-        let options = ExportOptions {
-            format: ExportFormat::Json,
-            ..Default::default()
-        };
+        let options = ExportOptions { format: ExportFormat::Json, ..Default::default() };
 
         // Export to file
         exporter
@@ -657,10 +659,8 @@ mod tests {
         assert!(final_path.exists());
 
         // Import from file
-        let (imported_metadata, imported_entries) = exporter
-            .import_from_file(&final_path, ExportFormat::Json, &options)
-            .await
-            .unwrap();
+        let (imported_metadata, imported_entries) =
+            exporter.import_from_file(&final_path, ExportFormat::Json, &options).await.unwrap();
 
         assert_eq!(imported_metadata.backup_id, metadata.backup_id);
         assert_eq!(imported_entries.len(), entries.len());

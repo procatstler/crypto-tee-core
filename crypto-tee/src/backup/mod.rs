@@ -8,8 +8,8 @@ use crate::{
     error::{CryptoTEEError, CryptoTEEResult},
     keys::{KeyHandle, KeyMetadata},
 };
-use crypto_tee_vendor::types::Algorithm;
 use async_trait::async_trait;
+use crypto_tee_vendor::types::Algorithm;
 use ring::{aead, digest, rand::SecureRandom};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -210,7 +210,8 @@ pub struct BackupManager {
 #[async_trait]
 pub trait BackupStorage: Send + Sync {
     /// Store a backup
-    async fn store_backup(&mut self, metadata: &BackupMetadata, data: &[u8]) -> CryptoTEEResult<()>;
+    async fn store_backup(&mut self, metadata: &BackupMetadata, data: &[u8])
+        -> CryptoTEEResult<()>;
 
     /// Retrieve a backup
     async fn retrieve_backup(&self, backup_id: &str) -> CryptoTEEResult<(BackupMetadata, Vec<u8>)>;
@@ -255,8 +256,10 @@ impl BackupManager {
             CryptoTEEError::KeyGeneration(format!("Failed to generate backup encryption key: {e}"))
         })?;
 
-        let unbound_key = aead::UnboundKey::new(&aead::CHACHA20_POLY1305, &key_bytes)
-            .map_err(|e| CryptoTEEError::KeyGeneration(format!("Failed to create backup key: {e}")))?;
+        let unbound_key =
+            aead::UnboundKey::new(&aead::CHACHA20_POLY1305, &key_bytes).map_err(|e| {
+                CryptoTEEError::KeyGeneration(format!("Failed to create backup key: {e}"))
+            })?;
 
         self.encryption_key = Some(aead::LessSafeKey::new(unbound_key));
 
@@ -270,7 +273,7 @@ impl BackupManager {
         keys: &HashMap<String, (KeyHandle, KeyMetadata)>,
     ) -> CryptoTEEResult<String> {
         let backup_id = self.generate_backup_id();
-        
+
         info!("Creating full backup: {}", backup_id);
 
         // Create backup entries
@@ -353,7 +356,9 @@ impl BackupManager {
 
         // Verify backup integrity if requested
         if options.verify_integrity && !self.verify_backup(backup_id).await? {
-            return Err(CryptoTEEError::BackupError("Backup integrity verification failed".to_string()));
+            return Err(CryptoTEEError::BackupError(
+                "Backup integrity verification failed".to_string(),
+            ));
         }
 
         // Retrieve backup
@@ -370,7 +375,9 @@ impl BackupManager {
         let entries: Vec<BackupEntry> = self.deserialize_backup(&backup_data).await?;
 
         // Filter entries if selective recovery
-        let filtered_entries: Vec<&BackupEntry> = if let Some(selective_keys) = &options.selective_keys {
+        let filtered_entries: Vec<&BackupEntry> = if let Some(selective_keys) =
+            &options.selective_keys
+        {
             entries.iter().filter(|entry| selective_keys.contains(&entry.key_handle.id)).collect()
         } else {
             entries.iter().collect()
@@ -420,7 +427,11 @@ impl BackupManager {
             }
         }
 
-        info!("Recovery completed. Recovered {} out of {} keys", recovered_keys.len(), filtered_entries_count);
+        info!(
+            "Recovery completed. Recovered {} out of {} keys",
+            recovered_keys.len(),
+            filtered_entries_count
+        );
 
         Ok(recovered_keys)
     }
@@ -462,11 +473,12 @@ impl BackupManager {
         sorted_backups.sort_by(|a, b| b.created_at.cmp(&a.created_at));
 
         // Keep minimum number of backups
-        let backups_to_check = if sorted_backups.len() > self.config.retention_policy.min_backups as usize {
-            &sorted_backups[self.config.retention_policy.min_backups as usize..]
-        } else {
-            &[]
-        };
+        let backups_to_check =
+            if sorted_backups.len() > self.config.retention_policy.min_backups as usize {
+                &sorted_backups[self.config.retention_policy.min_backups as usize..]
+            } else {
+                &[]
+            };
 
         // Delete backups older than max_age
         for backup in backups_to_check {
@@ -493,10 +505,8 @@ impl BackupManager {
 
     /// Generate unique backup ID
     fn generate_backup_id(&self) -> String {
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let timestamp =
+            SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_secs();
 
         let mut random_bytes = [0u8; 8];
         self.rng.fill(&mut random_bytes).unwrap_or_default();
@@ -544,7 +554,8 @@ impl BackupManager {
             let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
             let mut encrypted_data = data.to_vec();
 
-            let tag = key.seal_in_place_separate_tag(nonce, aead::Aad::empty(), &mut encrypted_data)
+            let tag = key
+                .seal_in_place_separate_tag(nonce, aead::Aad::empty(), &mut encrypted_data)
                 .map_err(|e| CryptoTEEError::CryptoError(format!("Encryption failed: {e}")))?;
 
             encrypted_data.extend_from_slice(tag.as_ref());
@@ -567,7 +578,8 @@ impl BackupManager {
             let nonce = aead::Nonce::assume_unique_for_key(nonce_bytes);
 
             let mut data = encrypted_data.to_vec();
-            let decrypted_len = key.open_in_place(nonce, aead::Aad::empty(), &mut data)
+            let decrypted_len = key
+                .open_in_place(nonce, aead::Aad::empty(), &mut data)
                 .map_err(|e| CryptoTEEError::CryptoError(format!("Decryption failed: {e}")))?
                 .len();
 
@@ -580,14 +592,16 @@ impl BackupManager {
 
     /// Serialize backup entries
     async fn serialize_backup(&self, entries: &[BackupEntry]) -> CryptoTEEResult<Vec<u8>> {
-        serde_json::to_vec(entries)
-            .map_err(|e| CryptoTEEError::SerializationError(format!("Failed to serialize backup: {e}")))
+        serde_json::to_vec(entries).map_err(|e| {
+            CryptoTEEError::SerializationError(format!("Failed to serialize backup: {e}"))
+        })
     }
 
     /// Deserialize backup entries
     async fn deserialize_backup(&self, data: &[u8]) -> CryptoTEEResult<Vec<BackupEntry>> {
-        serde_json::from_slice(data)
-            .map_err(|e| CryptoTEEError::SerializationError(format!("Failed to deserialize backup: {e}")))
+        serde_json::from_slice(data).map_err(|e| {
+            CryptoTEEError::SerializationError(format!("Failed to deserialize backup: {e}"))
+        })
     }
 
     /// Recover a key from a backup entry
@@ -599,7 +613,9 @@ impl BackupManager {
         // Verify entry checksum
         let calculated_checksum = digest::digest(&digest::SHA256, &entry.encrypted_key_data);
         if calculated_checksum.as_ref() != entry.checksum.as_slice() {
-            return Err(CryptoTEEError::BackupError("Entry checksum verification failed".to_string()));
+            return Err(CryptoTEEError::BackupError(
+                "Entry checksum verification failed".to_string(),
+            ));
         }
 
         // Decrypt key data
@@ -683,23 +699,29 @@ mod tests {
 
     impl MockStorage {
         fn new() -> Self {
-            Self {
-                backups: Arc::new(Mutex::new(HashMap::new())),
-            }
+            Self { backups: Arc::new(Mutex::new(HashMap::new())) }
         }
     }
 
     #[async_trait]
     impl BackupStorage for MockStorage {
-        async fn store_backup(&mut self, metadata: &BackupMetadata, data: &[u8]) -> CryptoTEEResult<()> {
+        async fn store_backup(
+            &mut self,
+            metadata: &BackupMetadata,
+            data: &[u8],
+        ) -> CryptoTEEResult<()> {
             let mut backups = self.backups.lock().await;
             backups.insert(metadata.backup_id.clone(), (metadata.clone(), data.to_vec()));
             Ok(())
         }
 
-        async fn retrieve_backup(&self, backup_id: &str) -> CryptoTEEResult<(BackupMetadata, Vec<u8>)> {
+        async fn retrieve_backup(
+            &self,
+            backup_id: &str,
+        ) -> CryptoTEEResult<(BackupMetadata, Vec<u8>)> {
             let backups = self.backups.lock().await;
-            backups.get(backup_id)
+            backups
+                .get(backup_id)
                 .cloned()
                 .ok_or_else(|| CryptoTEEError::BackupError("Backup not found".to_string()))
         }
@@ -789,7 +811,8 @@ mod tests {
 
         // Recover from backup
         let recovery_options = RecoveryOptions::default();
-        let recovered_keys = backup_manager.recover_from_backup(&backup_id, &recovery_options).await.unwrap();
+        let recovered_keys =
+            backup_manager.recover_from_backup(&backup_id, &recovery_options).await.unwrap();
 
         assert_eq!(recovered_keys.len(), 1);
         assert_eq!(recovered_keys[0].id, "test_key_1");

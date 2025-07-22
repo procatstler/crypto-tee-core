@@ -78,29 +78,17 @@ pub struct KeyUsage {
 impl KeyUsage {
     /// Create usage for signing keys
     pub fn signing() -> Self {
-        Self {
-            sign: true,
-            verify: true,
-            ..Default::default()
-        }
+        Self { sign: true, verify: true, ..Default::default() }
     }
 
     /// Create usage for encryption keys
     pub fn encryption() -> Self {
-        Self {
-            encrypt: true,
-            decrypt: true,
-            ..Default::default()
-        }
+        Self { encrypt: true, decrypt: true, ..Default::default() }
     }
 
     /// Create usage for key agreement
     pub fn key_agreement() -> Self {
-        Self {
-            key_agreement: true,
-            derive: true,
-            ..Default::default()
-        }
+        Self { key_agreement: true, derive: true, ..Default::default() }
     }
 
     /// Create usage allowing all operations

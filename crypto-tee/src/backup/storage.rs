@@ -45,26 +45,13 @@ pub struct CloudStorage {
 #[derive(Debug, Clone)]
 pub enum CloudProviderConfig {
     /// AWS S3 configuration
-    AwsS3 {
-        bucket: String,
-        region: String,
-        access_key_id: String,
-        secret_access_key: String,
-    },
+    AwsS3 { bucket: String, region: String, access_key_id: String, secret_access_key: String },
 
     /// Azure Blob Storage configuration
-    AzureBlob {
-        account_name: String,
-        account_key: String,
-        container_name: String,
-    },
+    AzureBlob { account_name: String, account_key: String, container_name: String },
 
     /// Google Cloud Storage configuration
-    GoogleCloud {
-        project_id: String,
-        bucket_name: String,
-        service_account_key: String,
-    },
+    GoogleCloud { project_id: String, bucket_name: String, service_account_key: String },
 }
 
 impl FileSystemStorage {
@@ -135,7 +122,11 @@ impl FileSystemStorage {
 
 #[async_trait]
 impl BackupStorage for FileSystemStorage {
-    async fn store_backup(&mut self, metadata: &BackupMetadata, data: &[u8]) -> CryptoTEEResult<()> {
+    async fn store_backup(
+        &mut self,
+        metadata: &BackupMetadata,
+        data: &[u8],
+    ) -> CryptoTEEResult<()> {
         let backup_id = &metadata.backup_id;
 
         // Check file size limit
@@ -196,9 +187,10 @@ impl BackupStorage for FileSystemStorage {
                 ))
             })?;
 
-        metadata_file.write_all(metadata_json.as_bytes()).await.map_err(|e| {
-            CryptoTEEError::BackupError(format!("Failed to write metadata: {}", e))
-        })?;
+        metadata_file
+            .write_all(metadata_json.as_bytes())
+            .await
+            .map_err(|e| CryptoTEEError::BackupError(format!("Failed to write metadata: {}", e)))?;
 
         metadata_file.sync_all().await.map_err(|e| {
             CryptoTEEError::BackupError(format!("Failed to sync metadata file: {}", e))
@@ -229,9 +221,10 @@ impl BackupStorage for FileSystemStorage {
         })?;
 
         let mut metadata_json = String::new();
-        metadata_file.read_to_string(&mut metadata_json).await.map_err(|e| {
-            CryptoTEEError::BackupError(format!("Failed to read metadata: {}", e))
-        })?;
+        metadata_file
+            .read_to_string(&mut metadata_json)
+            .await
+            .map_err(|e| CryptoTEEError::BackupError(format!("Failed to read metadata: {}", e)))?;
 
         let metadata: BackupMetadata = serde_json::from_str(&metadata_json).map_err(|e| {
             CryptoTEEError::SerializationError(format!("Failed to deserialize metadata: {}", e))
@@ -377,7 +370,11 @@ impl FileSystemStorage {
     /// Read metadata from a file
     async fn read_metadata_file(&self, path: &Path) -> CryptoTEEResult<BackupMetadata> {
         let mut file = File::open(path).await.map_err(|e| {
-            CryptoTEEError::BackupError(format!("Failed to open metadata file {}: {}", path.display(), e))
+            CryptoTEEError::BackupError(format!(
+                "Failed to open metadata file {}: {}",
+                path.display(),
+                e
+            ))
         })?;
 
         let mut contents = String::new();
@@ -394,11 +391,7 @@ impl FileSystemStorage {
 impl CloudStorage {
     /// Create new cloud storage backend
     pub fn new(provider_config: CloudProviderConfig) -> Self {
-        Self {
-            provider_config,
-            encrypt_in_transit: true,
-            redundancy_level: 3,
-        }
+        Self { provider_config, encrypt_in_transit: true, redundancy_level: 3 }
     }
 
     /// Set encryption in transit
@@ -414,12 +407,19 @@ impl CloudStorage {
 
 #[async_trait]
 impl BackupStorage for CloudStorage {
-    async fn store_backup(&mut self, _metadata: &BackupMetadata, _data: &[u8]) -> CryptoTEEResult<()> {
+    async fn store_backup(
+        &mut self,
+        _metadata: &BackupMetadata,
+        _data: &[u8],
+    ) -> CryptoTEEResult<()> {
         // TODO: Implement cloud storage backend
         Err(CryptoTEEError::NotSupported("Cloud storage not yet implemented".to_string()))
     }
 
-    async fn retrieve_backup(&self, _backup_id: &str) -> CryptoTEEResult<(BackupMetadata, Vec<u8>)> {
+    async fn retrieve_backup(
+        &self,
+        _backup_id: &str,
+    ) -> CryptoTEEResult<(BackupMetadata, Vec<u8>)> {
         // TODO: Implement cloud storage backend
         Err(CryptoTEEError::NotSupported("Cloud storage not yet implemented".to_string()))
     }
@@ -472,7 +472,8 @@ mod tests {
         storage.store_backup(&metadata, test_data).await.unwrap();
 
         // Test retrieve
-        let (retrieved_metadata, retrieved_data) = storage.retrieve_backup("test_backup_1").await.unwrap();
+        let (retrieved_metadata, retrieved_data) =
+            storage.retrieve_backup("test_backup_1").await.unwrap();
         assert_eq!(retrieved_metadata.backup_id, metadata.backup_id);
         assert_eq!(retrieved_data, test_data);
 

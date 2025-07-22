@@ -352,12 +352,7 @@ impl RecoveryManager {
         audit_manager: Option<AuditManager>,
         config: RecoveryConfig,
     ) -> Self {
-        Self {
-            storage,
-            audit_manager,
-            active_sessions: HashMap::new(),
-            config,
-        }
+        Self { storage, audit_manager, active_sessions: HashMap::new(), config }
     }
 
     /// Create recovery plan
@@ -378,10 +373,18 @@ impl RecoveryManager {
         let steps = match strategy {
             RecoveryStrategy::Full => self.create_full_recovery_steps(&analyzed_sources).await?,
             RecoveryStrategy::Selective => {
-                self.create_selective_recovery_steps(&analyzed_sources, target_keys.unwrap_or_default()).await?
+                self.create_selective_recovery_steps(
+                    &analyzed_sources,
+                    target_keys.unwrap_or_default(),
+                )
+                .await?
             }
-            RecoveryStrategy::Incremental => self.create_incremental_recovery_steps(&analyzed_sources).await?,
-            RecoveryStrategy::PointInTime => self.create_point_in_time_recovery_steps(&analyzed_sources).await?,
+            RecoveryStrategy::Incremental => {
+                self.create_incremental_recovery_steps(&analyzed_sources).await?
+            }
+            RecoveryStrategy::PointInTime => {
+                self.create_point_in_time_recovery_steps(&analyzed_sources).await?
+            }
             RecoveryStrategy::Merge => self.create_merge_recovery_steps(&analyzed_sources).await?,
         };
 
@@ -473,7 +476,8 @@ impl RecoveryManager {
 
         if let Ok(total_duration) = SystemTime::now().duration_since(start_time) {
             progress.stats.total_time = Some(total_duration);
-            progress.stats.keys_per_second = recovered_keys.len() as f64 / total_duration.as_secs_f64();
+            progress.stats.keys_per_second =
+                recovered_keys.len() as f64 / total_duration.as_secs_f64();
         }
 
         self.update_progress(session_id, &progress);
@@ -491,7 +495,11 @@ impl RecoveryManager {
                 .await;
         }
 
-        info!("Recovery plan {} completed successfully. Recovered {} keys", session_id, recovered_keys.len());
+        info!(
+            "Recovery plan {} completed successfully. Recovered {} keys",
+            session_id,
+            recovered_keys.len()
+        );
 
         Ok(recovered_keys)
     }
@@ -528,16 +536,17 @@ impl RecoveryManager {
 
     /// Generate unique session ID
     fn generate_session_id(&self) -> String {
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
+        let timestamp =
+            SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_secs();
 
         format!("recovery_{}_{:x}", timestamp, rand::random::<u32>())
     }
 
     /// Analyze backup sources
-    async fn analyze_backup_sources(&self, sources: Vec<BackupSource>) -> CryptoTEEResult<Vec<BackupSource>> {
+    async fn analyze_backup_sources(
+        &self,
+        sources: Vec<BackupSource>,
+    ) -> CryptoTEEResult<Vec<BackupSource>> {
         let mut analyzed_sources = Vec::new();
 
         for mut source in sources {
@@ -558,7 +567,8 @@ impl RecoveryManager {
         // Sort by priority and health
         analyzed_sources.sort_by(|a, b| {
             b.priority.cmp(&a.priority).then_with(|| {
-                self.health_status_priority(a.health_status).cmp(&self.health_status_priority(b.health_status))
+                self.health_status_priority(a.health_status)
+                    .cmp(&self.health_status_priority(b.health_status))
             })
         });
 
@@ -585,7 +595,10 @@ impl RecoveryManager {
     }
 
     /// Create full recovery steps
-    async fn create_full_recovery_steps(&self, sources: &[BackupSource]) -> CryptoTEEResult<Vec<RecoveryStep>> {
+    async fn create_full_recovery_steps(
+        &self,
+        sources: &[BackupSource],
+    ) -> CryptoTEEResult<Vec<RecoveryStep>> {
         let mut steps = Vec::new();
 
         for (i, source) in sources.iter().enumerate() {
@@ -637,7 +650,10 @@ impl RecoveryManager {
             if !available_keys.is_empty() {
                 steps.push(RecoveryStep {
                     step_id: format!("selective_recovery_{}", i),
-                    description: format!("Recover selected keys from backup {}", source.metadata.backup_id),
+                    description: format!(
+                        "Recover selected keys from backup {}",
+                        source.metadata.backup_id
+                    ),
                     key_ids: available_keys.clone(),
                     backup_source: source.clone(),
                     dependencies: Vec::new(),
@@ -650,21 +666,30 @@ impl RecoveryManager {
     }
 
     /// Create incremental recovery steps
-    async fn create_incremental_recovery_steps(&self, sources: &[BackupSource]) -> CryptoTEEResult<Vec<RecoveryStep>> {
+    async fn create_incremental_recovery_steps(
+        &self,
+        sources: &[BackupSource],
+    ) -> CryptoTEEResult<Vec<RecoveryStep>> {
         // TODO: Implement incremental recovery logic
         // This would analyze current key state and only recover missing keys
         self.create_full_recovery_steps(sources).await
     }
 
     /// Create point-in-time recovery steps
-    async fn create_point_in_time_recovery_steps(&self, sources: &[BackupSource]) -> CryptoTEEResult<Vec<RecoveryStep>> {
+    async fn create_point_in_time_recovery_steps(
+        &self,
+        sources: &[BackupSource],
+    ) -> CryptoTEEResult<Vec<RecoveryStep>> {
         // TODO: Implement point-in-time recovery logic
         // This would select backups from a specific time point
         self.create_full_recovery_steps(sources).await
     }
 
     /// Create merge recovery steps
-    async fn create_merge_recovery_steps(&self, sources: &[BackupSource]) -> CryptoTEEResult<Vec<RecoveryStep>> {
+    async fn create_merge_recovery_steps(
+        &self,
+        sources: &[BackupSource],
+    ) -> CryptoTEEResult<Vec<RecoveryStep>> {
         // TODO: Implement merge recovery logic
         // This would merge keys from multiple backup sources
         self.create_full_recovery_steps(sources).await
@@ -682,7 +707,7 @@ impl RecoveryManager {
         RecoveryResources {
             memory_bytes: (total_keys * 1024) as u64, // 1KB per key estimate
             disk_space_bytes: (total_keys * 4096) as u64, // 4KB per key estimate
-            network_bandwidth: 1_000_000, // 1MB/s estimate
+            network_bandwidth: 1_000_000,             // 1MB/s estimate
             cpu_cores: 2,
             tee_sessions: 1,
         }
@@ -809,7 +834,8 @@ impl RecoveryManager {
         step: &RecoveryStep,
         options: &RecoveryOptions,
     ) -> CryptoTEEResult<Vec<KeyHandle>> {
-        let (_, backup_data) = self.storage.retrieve_backup(&step.backup_source.metadata.backup_id).await?;
+        let (_, backup_data) =
+            self.storage.retrieve_backup(&step.backup_source.metadata.backup_id).await?;
         let entries: Vec<BackupEntry> = serde_json::from_slice(&backup_data)
             .map_err(|e| CryptoTEEError::SerializationError(e.to_string()))?;
 
@@ -897,25 +923,31 @@ mod tests {
 
     impl MockRecoveryStorage {
         fn new() -> Self {
-            Self {
-                backups: Arc::new(Mutex::new(HashMap::new())),
-            }
+            Self { backups: Arc::new(Mutex::new(HashMap::new())) }
         }
     }
 
     #[async_trait::async_trait]
     impl BackupStorage for MockRecoveryStorage {
-        async fn store_backup(&mut self, metadata: &BackupMetadata, data: &[u8]) -> CryptoTEEResult<()> {
+        async fn store_backup(
+            &mut self,
+            metadata: &BackupMetadata,
+            data: &[u8],
+        ) -> CryptoTEEResult<()> {
             let mut backups = self.backups.lock().await;
             backups.insert(metadata.backup_id.clone(), (metadata.clone(), data.to_vec()));
             Ok(())
         }
 
-        async fn retrieve_backup(&self, backup_id: &str) -> CryptoTEEResult<(BackupMetadata, Vec<u8>)> {
+        async fn retrieve_backup(
+            &self,
+            backup_id: &str,
+        ) -> CryptoTEEResult<(BackupMetadata, Vec<u8>)> {
             let backups = self.backups.lock().await;
-            backups.get(backup_id).cloned().ok_or_else(|| {
-                CryptoTEEError::BackupError("Backup not found".to_string())
-            })
+            backups
+                .get(backup_id)
+                .cloned()
+                .ok_or_else(|| CryptoTEEError::BackupError("Backup not found".to_string()))
         }
 
         async fn list_backups(&self) -> CryptoTEEResult<Vec<BackupMetadata>> {
