@@ -15,11 +15,13 @@ use crate::{
         AuditSeverity, ConsoleAuditLogger, FileAuditLogger, LogFormat, MemoryAuditStorage,
         MultiAuditLogger,
     },
-    health::{HealthConfig, HealthMonitor, HealthReport},
-    rotation::{KeyRotationManager, RotationConfig, RotationPolicy, RotationResult, RotationReason},
     core::manager::KeyManager,
     error::{CryptoTEEError, CryptoTEEResult},
+    health::{HealthConfig, HealthMonitor, HealthReport},
     plugins::PluginManager,
+    rotation::{
+        KeyRotationManager, RotationConfig, RotationPolicy, RotationReason, RotationResult,
+    },
     types::*,
 };
 
@@ -70,10 +72,16 @@ pub trait CryptoTEE: Send + Sync {
     async fn health_check(&self) -> CryptoTEEResult<HealthReport>;
 
     /// Set rotation policy for a key
-    async fn set_rotation_policy(&self, alias: &str, policy: RotationPolicy) -> CryptoTEEResult<()>;
+    async fn set_rotation_policy(&self, alias: &str, policy: RotationPolicy)
+        -> CryptoTEEResult<()>;
 
     /// Rotate a key immediately
-    async fn rotate_key(&self, alias: &str, reason: RotationReason, force: bool) -> CryptoTEEResult<RotationResult>;
+    async fn rotate_key(
+        &self,
+        alias: &str,
+        reason: RotationReason,
+        force: bool,
+    ) -> CryptoTEEResult<RotationResult>;
 }
 
 /// CryptoTEE implementation
@@ -103,11 +111,8 @@ impl CryptoTEEImpl {
         let vendor_arc = Arc::new(RwLock::new(vendor));
 
         // Setup health monitoring
-        let health_monitor = HealthMonitor::new(
-            platform_arc.clone(),
-            vendor_arc.clone(),
-            HealthConfig::default(),
-        );
+        let health_monitor =
+            HealthMonitor::new(platform_arc.clone(), vendor_arc.clone(), HealthConfig::default());
 
         let key_manager_arc = Arc::new(RwLock::new(KeyManager::new()));
         let audit_manager_arc = Arc::new(RwLock::new(audit_manager));
@@ -738,14 +743,21 @@ impl CryptoTEE for CryptoTEEImpl {
                 .with_metadata("operation".to_string(), serde_json::json!("health_check"))
                 .with_metadata("status".to_string(), serde_json::json!(report.overall_status))
                 .with_metadata("components".to_string(), serde_json::json!(report.components.len()))
-                .with_metadata("duration_ms".to_string(), serde_json::json!(report.check_duration_ms)),
+                .with_metadata(
+                    "duration_ms".to_string(),
+                    serde_json::json!(report.check_duration_ms),
+                ),
             )
             .await?;
 
         Ok(report)
     }
 
-    async fn set_rotation_policy(&self, alias: &str, policy: RotationPolicy) -> CryptoTEEResult<()> {
+    async fn set_rotation_policy(
+        &self,
+        alias: &str,
+        policy: RotationPolicy,
+    ) -> CryptoTEEResult<()> {
         info!("Setting rotation policy for key: {}", alias);
         let context = AuditContext::system();
 
@@ -772,7 +784,12 @@ impl CryptoTEE for CryptoTEEImpl {
         Ok(())
     }
 
-    async fn rotate_key(&self, alias: &str, reason: RotationReason, force: bool) -> CryptoTEEResult<RotationResult> {
+    async fn rotate_key(
+        &self,
+        alias: &str,
+        reason: RotationReason,
+        force: bool,
+    ) -> CryptoTEEResult<RotationResult> {
         info!("Rotating key: {} (reason: {:?}, force: {})", alias, reason, force);
         let context = AuditContext::system();
 
@@ -794,8 +811,14 @@ impl CryptoTEE for CryptoTEEImpl {
                             true,
                         )
                         .with_metadata("reason".to_string(), serde_json::json!(reason))
-                        .with_metadata("new_version".to_string(), serde_json::json!(rotation_result.new_version))
-                        .with_metadata("duration_ms".to_string(), serde_json::json!(rotation_result.duration.as_millis()))
+                        .with_metadata(
+                            "new_version".to_string(),
+                            serde_json::json!(rotation_result.new_version),
+                        )
+                        .with_metadata(
+                            "duration_ms".to_string(),
+                            serde_json::json!(rotation_result.duration.as_millis()),
+                        )
                         .with_metadata("force".to_string(), serde_json::json!(force)),
                     )
                     .await?;
@@ -866,11 +889,8 @@ impl CryptoTEEBuilder {
         let vendor_arc = Arc::new(RwLock::new(vendor));
 
         // Setup health monitoring
-        let health_monitor = HealthMonitor::new(
-            platform_arc.clone(),
-            vendor_arc.clone(),
-            HealthConfig::default(),
-        );
+        let health_monitor =
+            HealthMonitor::new(platform_arc.clone(), vendor_arc.clone(), HealthConfig::default());
 
         let key_manager_arc = Arc::new(RwLock::new(KeyManager::new()));
         let audit_manager_arc = Arc::new(RwLock::new(audit_manager));

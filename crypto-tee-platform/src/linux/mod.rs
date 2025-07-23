@@ -14,7 +14,7 @@ use crate::{
     types::{AuthMethod, AuthResult, PlatformConfig},
 };
 
-use self::system_info::{detect_tee_implementations, get_linux_distro, get_security_level};
+use self::system_info::{detect_tee_implementations, get_distro_info, get_security_capabilities};
 
 pub struct LinuxPlatform {
     config: PlatformConfig,
@@ -34,8 +34,8 @@ impl PlatformTEE for LinuxPlatform {
 
     fn version(&self) -> &str {
         // Get kernel version
-        match get_linux_distro() {
-            Ok(distro) => Box::leak(Box::new(format!("{}-{}", distro.name, distro.kernel_version))),
+        match get_distro_info() {
+            Ok(distro) => Box::leak(Box::new(distro.name.to_string())),
             Err(_) => "linux-unknown",
         }
     }

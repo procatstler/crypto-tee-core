@@ -168,7 +168,6 @@ struct AuditEventIndex {
     event_type: AuditEventType,
     severity: AuditSeverity,
     actor: String,
-    target: Option<String>,
     success: bool,
     file_path: PathBuf,
     offset: u64,
@@ -266,7 +265,6 @@ impl FileAuditStorage {
                     event_type: event.event_type,
                     severity: event.severity,
                     actor: event.actor,
-                    target: event.target,
                     success: event.success,
                     file_path: path.clone(),
                     offset,
@@ -347,10 +345,9 @@ impl AuditStorage for FileAuditStorage {
             event_type: event.event_type.clone(),
             severity: event.severity,
             actor: event.actor.clone(),
-            target: event.target.clone(),
             success: event.success,
             file_path,
-            offset: metadata.len() - bytes_written as u64,
+            offset: metadata.len().saturating_sub(bytes_written as u64),
         });
 
         debug!("Stored audit event to file: {}", event.id);

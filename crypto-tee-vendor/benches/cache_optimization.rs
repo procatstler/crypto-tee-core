@@ -208,7 +208,7 @@ fn bench_memory_operations(c: &mut Criterion) {
 
             // Perform multiple signing operations (memory intensive)
             for i in 0..20 {
-                let test_data = black_box(format!("memory test data {}", i));
+                let test_data = black_box(format!("memory test data {i}"));
                 let _signature = vendor.sign(&key_handle, test_data.as_bytes()).await.unwrap();
             }
         });
@@ -229,7 +229,7 @@ fn bench_memory_operations(c: &mut Criterion) {
 
             // Perform multiple signing operations (should benefit from memory pool)
             for i in 0..20 {
-                let test_data = black_box(format!("memory test data {}", i));
+                let test_data = black_box(format!("memory test data {i}"));
                 let _signature = vendor.sign(&key_handle, test_data.as_bytes()).await.unwrap();
             }
         });

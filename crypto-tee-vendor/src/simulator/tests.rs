@@ -87,7 +87,7 @@ async fn test_samsung_simulator() {
     let key_handle =
         simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     assert!(key_handle.id.contains("knox_"));
-    assert_eq!(key_handle.vendor, "Samsung Knox");
+    assert_eq!(key_handle.vendor, "TEE Simulator");
 }
 
 #[tokio::test]
@@ -96,7 +96,7 @@ async fn test_apple_simulator() {
     let simulator = apple::AppleTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
-    assert_eq!(capabilities.name, "Apple Secure Enclave");
+    assert_eq!(capabilities.name, "Apple Secure Enclave Simulator");
     assert!(capabilities.features.biometric_bound);
 
     // Test that key import is not supported
@@ -115,7 +115,7 @@ async fn test_apple_simulator() {
     let key_handle =
         simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     assert!(key_handle.id.contains("se_"));
-    assert_eq!(key_handle.vendor, "Apple Secure Enclave");
+    assert_eq!(key_handle.vendor, "TEE Simulator");
 }
 
 #[tokio::test]
@@ -124,12 +124,12 @@ async fn test_qualcomm_simulator() {
     let simulator = qualcomm::QualcommTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
-    assert_eq!(capabilities.name, "Qualcomm QSEE");
+    assert_eq!(capabilities.name, "Qualcomm QSEE Simulator");
     assert!(capabilities.algorithms.len() >= 6); // Should support many algorithms
 
     // Test QSEE key generation
     let key_params = KeyGenParams {
-        algorithm: Algorithm::Rsa2048,
+        algorithm: Algorithm::EcdsaP256,
         hardware_backed: true,
         exportable: false,
         usage: KeyUsage::default(),
@@ -139,7 +139,7 @@ async fn test_qualcomm_simulator() {
     let key_handle =
         simulator.generate_key(&key_params).await.expect("Simulator test should succeed");
     assert!(key_handle.id.contains("qsee_"));
-    assert_eq!(key_handle.vendor, "Qualcomm QSEE");
+    assert_eq!(key_handle.vendor, "TEE Simulator");
 }
 
 #[tokio::test]

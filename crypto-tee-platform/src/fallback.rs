@@ -136,8 +136,7 @@ mod tests {
         let mut platform = FallbackPlatform::new();
         assert!(!platform.requires_authentication().await);
 
-        let mut config = PlatformConfig::default();
-        config.require_auth = true;
+        let config = PlatformConfig { require_auth: true, ..Default::default() };
         platform.configure(config).await.unwrap();
 
         assert!(platform.requires_authentication().await);

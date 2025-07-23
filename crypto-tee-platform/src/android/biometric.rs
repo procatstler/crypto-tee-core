@@ -8,31 +8,17 @@ use crate::types::AuthResult;
 
 /// Biometric authentication configuration
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct BiometricConfig {
-    /// Title shown in the prompt
-    pub title: String,
     /// Subtitle shown in the prompt
     pub subtitle: Option<String>,
-    /// Description shown in the prompt
-    pub description: Option<String>,
     /// Allow device credential as fallback
     pub allow_device_credential: bool,
-    /// Require strong biometric (Class 3)
-    pub require_strong_biometric: bool,
-    /// Confirmation required after biometric
-    pub confirmation_required: bool,
 }
 
 impl Default for BiometricConfig {
     fn default() -> Self {
-        Self {
-            title: "Authenticate to access secure key".to_string(),
-            subtitle: None,
-            description: None,
-            allow_device_credential: true,
-            require_strong_biometric: false,
-            confirmation_required: false,
-        }
+        Self { subtitle: None, allow_device_credential: true }
     }
 }
 
@@ -64,7 +50,7 @@ pub enum AuthMethod {
 
 /// Show biometric prompt and authenticate user
 pub async fn authenticate_biometric(
-    config: BiometricConfig,
+    _config: BiometricConfig,
     challenge: Option<&[u8]>,
 ) -> PlatformResult<BiometricResult> {
     // In a real implementation, this would:
@@ -80,51 +66,8 @@ pub async fn authenticate_biometric(
     Ok(BiometricResult {
         success: true,
         method: AuthMethod::Fingerprint,
-        crypto_object: challenge.map(|c| {
-            // In real implementation, this would be a signed challenge
-            let mut result = vec![0u8; 64]; // Simulated signature
-            result[..c.len().min(64)].copy_from_slice(&c[..c.len().min(64)]);
-            result
-        }),
+        crypto_object: challenge.map(|c| c.to_vec()),
     })
-}
-
-/// Check if biometric authentication is available
-pub fn is_biometric_available() -> PlatformResult<bool> {
-    // In a real implementation, this would check:
-    // - BiometricManager.canAuthenticate(BIOMETRIC_WEAK)
-    // - Device has enrolled biometrics
-
-    Ok(true) // Assume available for development
-}
-
-/// Check if strong biometric is available
-pub fn is_strong_biometric_available() -> PlatformResult<bool> {
-    // In a real implementation, this would check:
-    // - BiometricManager.canAuthenticate(BIOMETRIC_STRONG)
-
-    Ok(true) // Assume available for development
-}
-
-/// Get enrolled biometric types
-pub fn get_enrolled_biometrics() -> PlatformResult<Vec<BiometricType>> {
-    // In a real implementation, this would query:
-    // - FingerprintManager for fingerprints
-    // - FaceManager for face
-    // - Device capabilities
-
-    Ok(vec![BiometricType::Fingerprint, BiometricType::Face])
-}
-
-/// Types of biometric authentication
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BiometricType {
-    /// Fingerprint sensor
-    Fingerprint,
-    /// Face recognition
-    Face,
-    /// Iris scanner
-    Iris,
 }
 
 /// Convert BiometricResult to generic AuthResult
@@ -145,50 +88,10 @@ impl From<BiometricResult> for AuthResult {
     }
 }
 
-/// Biometric prompt builder for fluent API
-pub struct BiometricPromptBuilder {
-    config: BiometricConfig,
-}
-
-impl BiometricPromptBuilder {
-    pub fn new(title: impl Into<String>) -> Self {
-        Self { config: BiometricConfig { title: title.into(), ..Default::default() } }
+impl Default for crate::android::AndroidPlatform {
+    fn default() -> Self {
+        Self::new()
     }
-
-    pub fn subtitle(mut self, subtitle: impl Into<String>) -> Self {
-        self.config.subtitle = Some(subtitle.into());
-        self
-    }
-
-    pub fn description(mut self, description: impl Into<String>) -> Self {
-        self.config.description = Some(description.into());
-        self
-    }
-
-    pub fn allow_device_credential(mut self, allow: bool) -> Self {
-        self.config.allow_device_credential = allow;
-        self
-    }
-
-    pub fn require_strong_biometric(mut self, require: bool) -> Self {
-        self.config.require_strong_biometric = require;
-        self
-    }
-
-    pub fn confirmation_required(mut self, required: bool) -> Self {
-        self.config.confirmation_required = required;
-        self
-    }
-
-    pub async fn authenticate(self, challenge: Option<&[u8]>) -> PlatformResult<BiometricResult> {
-        authenticate_biometric(self.config, challenge).await
-    }
-}
-
-// Helper function to encode base64
-fn base64_encode(data: &[u8]) -> String {
-    use base64::Engine as _;
-    base64::engine::general_purpose::STANDARD.encode(data)
 }
 
 #[cfg(test)]
@@ -198,30 +101,16 @@ mod tests {
     #[test]
     fn test_biometric_config() {
         let config = BiometricConfig::default();
-        assert!(!config.title.is_empty());
         assert!(config.allow_device_credential);
     }
 
     #[tokio::test]
     async fn test_biometric_authentication() {
-        let result = BiometricPromptBuilder::new("Test Authentication")
-            .subtitle("Test subtitle")
-            .description("Test description")
-            .authenticate(Some(b"test_challenge"))
-            .await
-            .unwrap();
+        let config = BiometricConfig::default();
+        let result = authenticate_biometric(config, Some(b"test_challenge")).await.unwrap();
 
         assert!(result.success);
         assert_eq!(result.method, AuthMethod::Fingerprint);
         assert!(result.crypto_object.is_some());
-    }
-
-    #[test]
-    fn test_biometric_availability() {
-        assert!(is_biometric_available().unwrap());
-        assert!(is_strong_biometric_available().unwrap());
-
-        let biometrics = get_enrolled_biometrics().unwrap();
-        assert!(!biometrics.is_empty());
     }
 }

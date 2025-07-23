@@ -15,7 +15,7 @@ use crate::{
     types::{AuthResult, PlatformConfig},
 };
 
-use self::biometric::{is_biometric_available, BiometricPromptBuilder};
+use self::biometric::authenticate_biometric;
 use self::system_properties::{detect_tee_vendors, get_android_version, get_security_level};
 
 pub struct AndroidPlatform {
@@ -158,18 +158,12 @@ impl PlatformTEE for AndroidPlatform {
 
     async fn authenticate(&self, challenge: &[u8]) -> PlatformResult<AuthResult> {
         // Implement BiometricPrompt integration
-        if !is_biometric_available()? {
-            return Err(PlatformError::AuthenticationRequired(
-                "Biometric authentication not available".to_string(),
-            ));
-        }
+        let config = biometric::BiometricConfig {
+            subtitle: Some("Your biometric is required to use this key".to_string()),
+            allow_device_credential: !self.config.require_strong_biometric,
+        };
 
-        let result = BiometricPromptBuilder::new("Authenticate to access secure key")
-            .subtitle("Your biometric is required to use this key")
-            .allow_device_credential(!self.config.require_strong_biometric)
-            .authenticate(Some(challenge))
-            .await?;
-
+        let result = authenticate_biometric(config, Some(challenge)).await?;
         Ok(result.into())
     }
 

@@ -330,7 +330,7 @@ impl BackupManager {
 
         // Audit log
         if let Some(audit_manager) = &self.audit_manager {
-            audit_manager
+            let _ = audit_manager
                 .log_event(AuditEvent::new(
                     AuditEventType::KeyGenerated,
                     crate::audit::AuditSeverity::Info,
@@ -393,7 +393,7 @@ impl BackupManager {
                     // Audit log if enabled
                     if let Some(audit_manager) = &self.audit_manager {
                         if options.audit_recovery {
-                            audit_manager
+                            let _ = audit_manager
                                 .log_event(AuditEvent::new(
                                     AuditEventType::KeyGenerated,
                                     crate::audit::AuditSeverity::Info,
@@ -411,7 +411,7 @@ impl BackupManager {
                     // Audit log failure
                     if let Some(audit_manager) = &self.audit_manager {
                         if options.audit_recovery {
-                            audit_manager
+                            let _ = audit_manager
                                 .log_event(AuditEvent::new(
                                     AuditEventType::ErrorOccurred,
                                     crate::audit::AuditSeverity::Error,
@@ -516,7 +516,7 @@ impl BackupManager {
     /// Create a backup entry for a key
     async fn create_backup_entry(
         &self,
-        key_id: &str,
+        _key_id: &str,
         handle: &KeyHandle,
         metadata: &KeyMetadata,
     ) -> CryptoTEEResult<BackupEntry> {
@@ -579,7 +579,7 @@ impl BackupManager {
             if encrypted_data.len() < 12 {
                 return Err(CryptoTEEError::CryptoError("Encrypted data too short".to_string()));
             }
-            
+
             let (nonce_bytes, ciphertext_with_tag) = encrypted_data.split_at(12);
             let mut nonce_array = [0u8; 12];
             nonce_array.copy_from_slice(nonce_bytes);

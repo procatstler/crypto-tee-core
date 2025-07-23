@@ -8,6 +8,7 @@ targets = [
 ]
 
 [licenses]
+version = 2
 confidence-threshold = 0.8
 allow = [
     "MIT",
@@ -17,15 +18,8 @@ allow = [
     "BSD-3-Clause",
     "ISC",
     "Unicode-DFS-2016",
-]
-deny = [
-    "GPL-2.0",
-    "GPL-3.0", 
-    "AGPL-1.0",
-    "AGPL-3.0",
-    "LGPL-2.0",
-    "LGPL-2.1",
-    "LGPL-3.0",
+    "Zlib",
+    "Unicode-3.0",
 ]
 
 [[licenses.clarify]]
@@ -40,10 +34,13 @@ multiple-versions = "warn"
 wildcards = "allow"
 
 # Security-critical dependencies that should be monitored
-deny = [
-    { name = "openssl-sys", version = "*" },  # Prefer ring or rustls
-    { name = "native-tls", version = "*" },   # Prefer rustls
-]
+[[bans.deny]]
+name = "openssl-sys"
+version = "*"  # Prefer ring or rustls
+
+[[bans.deny]]
+name = "native-tls"
+version = "*"  # Prefer rustls
 
 # Known problematic crates
 [[bans.deny]]
@@ -54,22 +51,18 @@ version = "< 0.4.20"  # CVE-2020-26235
 name = "time"
 version = "< 0.2.23"  # CVE-2020-26235
 
-# Skip duplicate version checks for these crates
-skip = [
-    { name = "windows-sys" },  # Many versions used across ecosystem
-    { name = "windows_x86_64_msvc" },
-]
+# Allow certain crates to have multiple versions
+[[bans.skip]]
+name = "windows-sys"  # Many versions used across ecosystem
 
-# Skip these during graph analysis
-skip-tree = [
-    { name = "windows-sys" },
-]
+[[bans.skip]]
+name = "windows_x86_64_msvc"
 
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
-unsound = "warn"
-notice = "warn"
+version = 2
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "warn"
 ignore = [
     # Ignore specific advisories if needed
     # "RUSTSEC-YYYY-NNNN",

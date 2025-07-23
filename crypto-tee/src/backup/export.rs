@@ -265,7 +265,7 @@ impl BackupExporter {
         metadata: &BackupMetadata,
         entries: &[BackupEntry],
         output_path: &Path,
-        format: ExportFormat,
+        _format: ExportFormat,
         options: &ExportOptions,
     ) -> CryptoTEEResult<()> {
         let mut export_options = options.clone();

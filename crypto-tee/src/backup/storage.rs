@@ -32,7 +32,7 @@ pub struct FileSystemStorage {
 /// Cloud storage backend (placeholder for future implementation)
 pub struct CloudStorage {
     /// Cloud provider configuration
-    provider_config: CloudProviderConfig,
+    _provider_config: CloudProviderConfig,
 
     /// Encryption at transit
     encrypt_in_transit: bool,
@@ -391,7 +391,7 @@ impl FileSystemStorage {
 impl CloudStorage {
     /// Create new cloud storage backend
     pub fn new(provider_config: CloudProviderConfig) -> Self {
-        Self { provider_config, encrypt_in_transit: true, redundancy_level: 3 }
+        Self { _provider_config: provider_config, encrypt_in_transit: true, redundancy_level: 3 }
     }
 
     /// Set encryption in transit

@@ -7,6 +7,7 @@ use crate::error::PlatformResult;
 
 /// Android version information
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct AndroidVersion {
     /// API level (e.g., 30 for Android 11)
     pub api_level: u32,
@@ -22,6 +23,7 @@ pub struct AndroidVersion {
 
 /// TEE vendor availability
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct TeeVendorInfo {
     /// Vendor name
     pub name: String,
@@ -126,7 +128,7 @@ fn is_strongbox_available() -> PlatformResult<bool> {
 
 /// Get device security level
 pub fn get_security_level() -> PlatformResult<SecurityLevel> {
-    let version = get_android_version()?;
+    let _version = get_android_version()?;
     let vendors = detect_tee_vendors()?;
 
     if vendors.iter().any(|v| v.name == "android_strongbox" && v.available) {

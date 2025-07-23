@@ -200,7 +200,7 @@ pub struct HealthMonitor {
     /// Health configuration
     config: HealthConfig,
     /// Performance metrics history
-    metrics_history: Arc<RwLock<Vec<PerformanceMetrics>>>,
+    _metrics_history: Arc<RwLock<Vec<PerformanceMetrics>>>,
     /// Last health report
     last_report: Arc<RwLock<Option<HealthReport>>>,
 }
@@ -216,7 +216,7 @@ impl HealthMonitor {
             platform,
             vendor,
             config,
-            metrics_history: Arc::new(RwLock::new(Vec::new())),
+            _metrics_history: Arc::new(RwLock::new(Vec::new())),
             last_report: Arc::new(RwLock::new(None)),
         }
     }
@@ -288,12 +288,14 @@ impl HealthMonitor {
 
         // Generate recommendations
         if resources.cpu_percent > self.config.warning_thresholds.cpu_percent {
-            recommendations.push("High CPU usage detected - consider reducing workload".to_string());
+            recommendations
+                .push("High CPU usage detected - consider reducing workload".to_string());
         }
         if (resources.memory_used_bytes as f64 / resources.memory_total_bytes as f64) * 100.0
             > self.config.warning_thresholds.memory_percent
         {
-            recommendations.push("High memory usage detected - monitor for memory leaks".to_string());
+            recommendations
+                .push("High memory usage detected - monitor for memory leaks".to_string());
         }
         if performance.error_rate_percent > self.config.warning_thresholds.error_rate_percent {
             recommendations.push("High error rate detected - check system logs".to_string());
@@ -405,14 +407,14 @@ impl HealthMonitor {
         let platform_name = platform.name();
         let platform_version = platform.version();
         let requires_auth = platform.requires_authentication().await;
-        
+
         metrics.insert("platform_name".to_string(), serde_json::json!(platform_name));
         metrics.insert("platform_version".to_string(), serde_json::json!(platform_version));
         metrics.insert("requires_authentication".to_string(), serde_json::json!(requires_auth));
 
         let (status, message) = (
             HealthStatus::Healthy,
-            format!("Platform {} v{} is operational", platform_name, platform_version)
+            format!("Platform {} v{} is operational", platform_name, platform_version),
         );
 
         let response_time_ms = check_start.elapsed().as_millis() as u64;
@@ -438,14 +440,16 @@ impl HealthMonitor {
         let (status, message) = match vendor.probe().await {
             Ok(caps) => {
                 metrics.insert("max_keys".to_string(), serde_json::json!(caps.max_keys));
-                metrics.insert("hardware_backed".to_string(), serde_json::json!(caps.hardware_backed));
-                metrics.insert("algorithm_count".to_string(), serde_json::json!(caps.algorithms.len()));
+                metrics
+                    .insert("hardware_backed".to_string(), serde_json::json!(caps.hardware_backed));
+                metrics.insert(
+                    "algorithm_count".to_string(),
+                    serde_json::json!(caps.algorithms.len()),
+                );
 
                 (HealthStatus::Healthy, format!("Vendor {} is operational", caps.name))
             }
-            Err(e) => {
-                (HealthStatus::Critical, format!("Vendor health check failed: {}", e))
-            }
+            Err(e) => (HealthStatus::Critical, format!("Vendor health check failed: {}", e)),
         };
 
         let response_time_ms = check_start.elapsed().as_millis() as u64;
@@ -467,10 +471,10 @@ impl HealthMonitor {
         // TODO: Implement actual resource monitoring
         // This is a placeholder implementation
         ResourceUtilization {
-            cpu_percent: 15.0,   // Mock data
-            memory_used_bytes: 1024 * 1024 * 100, // 100MB
-            memory_total_bytes: 1024 * 1024 * 1024, // 1GB
-            disk_used_bytes: 1024 * 1024 * 500,   // 500MB
+            cpu_percent: 15.0,                         // Mock data
+            memory_used_bytes: 1024 * 1024 * 100,      // 100MB
+            memory_total_bytes: 1024 * 1024 * 1024,    // 1GB
+            disk_used_bytes: 1024 * 1024 * 500,        // 500MB
             disk_total_bytes: 1024 * 1024 * 1024 * 10, // 10GB
             network_active: true,
         }
@@ -504,8 +508,10 @@ impl HealthMonitor {
         }
 
         // Check resource thresholds
-        let memory_percent = (resources.memory_used_bytes as f64 / resources.memory_total_bytes as f64) * 100.0;
-        let disk_percent = (resources.disk_used_bytes as f64 / resources.disk_total_bytes as f64) * 100.0;
+        let memory_percent =
+            (resources.memory_used_bytes as f64 / resources.memory_total_bytes as f64) * 100.0;
+        let disk_percent =
+            (resources.disk_used_bytes as f64 / resources.disk_total_bytes as f64) * 100.0;
 
         if resources.cpu_percent > self.config.critical_thresholds.cpu_percent
             || memory_percent > self.config.critical_thresholds.memory_percent
@@ -535,11 +541,9 @@ impl HealthMonitor {
 
     /// Generate unique report ID
     fn generate_report_id(&self) -> String {
-        let timestamp = SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap_or_default()
-            .as_secs();
-        
+        let timestamp =
+            SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap_or_default().as_secs();
+
         format!("health_report_{}_{:x}", timestamp, rand::random::<u32>())
     }
 }
@@ -596,15 +600,24 @@ mod tests {
             vec![Box::new(MockVendorTEE)]
         }
 
-        async fn select_best_vendor(&self) -> Result<Box<dyn VendorTEE>, crypto_tee_platform::error::PlatformError> {
+        async fn select_best_vendor(
+            &self,
+        ) -> Result<Box<dyn VendorTEE>, crypto_tee_platform::error::PlatformError> {
             Ok(Box::new(MockVendorTEE))
         }
 
-        async fn get_vendor(&self, _name: &str) -> Result<Box<dyn VendorTEE>, crypto_tee_platform::error::PlatformError> {
+        async fn get_vendor(
+            &self,
+            _name: &str,
+        ) -> Result<Box<dyn VendorTEE>, crypto_tee_platform::error::PlatformError> {
             Ok(Box::new(MockVendorTEE))
         }
 
-        async fn authenticate(&self, _challenge: &[u8]) -> Result<crypto_tee_platform::types::AuthResult, crypto_tee_platform::error::PlatformError> {
+        async fn authenticate(
+            &self,
+            _challenge: &[u8],
+        ) -> Result<crypto_tee_platform::types::AuthResult, crypto_tee_platform::error::PlatformError>
+        {
             Ok(crypto_tee_platform::types::AuthResult {
                 success: true,
                 method: crypto_tee_platform::types::AuthMethod::None,
@@ -617,7 +630,10 @@ mod tests {
             false
         }
 
-        async fn configure(&mut self, _config: crypto_tee_platform::types::PlatformConfig) -> Result<(), crypto_tee_platform::error::PlatformError> {
+        async fn configure(
+            &mut self,
+            _config: crypto_tee_platform::types::PlatformConfig,
+        ) -> Result<(), crypto_tee_platform::error::PlatformError> {
             Ok(())
         }
 
@@ -627,7 +643,13 @@ mod tests {
             CONFIG.get_or_init(crypto_tee_platform::types::PlatformConfig::default)
         }
 
-        async fn wrap_key_handle(&self, vendor_handle: crypto_tee_vendor::types::VendorKeyHandle) -> Result<crypto_tee_platform::traits::PlatformKeyHandle, crypto_tee_platform::error::PlatformError> {
+        async fn wrap_key_handle(
+            &self,
+            vendor_handle: crypto_tee_vendor::types::VendorKeyHandle,
+        ) -> Result<
+            crypto_tee_platform::traits::PlatformKeyHandle,
+            crypto_tee_platform::error::PlatformError,
+        > {
             Ok(crypto_tee_platform::traits::PlatformKeyHandle {
                 vendor_handle,
                 platform: "MockPlatform".to_string(),
@@ -638,14 +660,25 @@ mod tests {
             })
         }
 
-        async fn unwrap_key_handle(&self, platform_handle: &crypto_tee_platform::traits::PlatformKeyHandle) -> Result<crypto_tee_vendor::types::VendorKeyHandle, crypto_tee_platform::error::PlatformError> {
+        async fn unwrap_key_handle(
+            &self,
+            platform_handle: &crypto_tee_platform::traits::PlatformKeyHandle,
+        ) -> Result<
+            crypto_tee_vendor::types::VendorKeyHandle,
+            crypto_tee_platform::error::PlatformError,
+        > {
             Ok(platform_handle.vendor_handle.clone())
         }
     }
 
     #[async_trait::async_trait]
     impl VendorTEE for MockVendorTEE {
-        async fn probe(&self) -> Result<crypto_tee_vendor::types::VendorCapabilities, crypto_tee_vendor::error::VendorError> {
+        async fn probe(
+            &self,
+        ) -> Result<
+            crypto_tee_vendor::types::VendorCapabilities,
+            crypto_tee_vendor::error::VendorError,
+        > {
             Ok(crypto_tee_vendor::types::VendorCapabilities {
                 name: "MockVendor".to_string(),
                 version: "1.0.0".to_string(),
@@ -665,7 +698,11 @@ mod tests {
             })
         }
 
-        async fn generate_key(&self, _params: &crypto_tee_vendor::types::KeyGenParams) -> Result<crypto_tee_vendor::types::VendorKeyHandle, crypto_tee_vendor::error::VendorError> {
+        async fn generate_key(
+            &self,
+            _params: &crypto_tee_vendor::types::KeyGenParams,
+        ) -> Result<crypto_tee_vendor::types::VendorKeyHandle, crypto_tee_vendor::error::VendorError>
+        {
             Ok(crypto_tee_vendor::types::VendorKeyHandle {
                 id: "test_key".to_string(),
                 algorithm: crypto_tee_vendor::types::Algorithm::Ed25519,
@@ -675,7 +712,12 @@ mod tests {
             })
         }
 
-        async fn import_key(&self, _key_data: &[u8], _params: &crypto_tee_vendor::types::KeyGenParams) -> Result<crypto_tee_vendor::types::VendorKeyHandle, crypto_tee_vendor::error::VendorError> {
+        async fn import_key(
+            &self,
+            _key_data: &[u8],
+            _params: &crypto_tee_vendor::types::KeyGenParams,
+        ) -> Result<crypto_tee_vendor::types::VendorKeyHandle, crypto_tee_vendor::error::VendorError>
+        {
             Ok(crypto_tee_vendor::types::VendorKeyHandle {
                 id: "imported_key".to_string(),
                 algorithm: crypto_tee_vendor::types::Algorithm::Ed25519,
@@ -685,50 +727,84 @@ mod tests {
             })
         }
 
-        async fn delete_key(&self, _handle: &crypto_tee_vendor::types::VendorKeyHandle) -> Result<(), crypto_tee_vendor::error::VendorError> {
+        async fn delete_key(
+            &self,
+            _handle: &crypto_tee_vendor::types::VendorKeyHandle,
+        ) -> Result<(), crypto_tee_vendor::error::VendorError> {
             Ok(())
         }
 
-        async fn sign(&self, _handle: &crypto_tee_vendor::types::VendorKeyHandle, _data: &[u8]) -> Result<crypto_tee_vendor::types::Signature, crypto_tee_vendor::error::VendorError> {
+        async fn sign(
+            &self,
+            _handle: &crypto_tee_vendor::types::VendorKeyHandle,
+            _data: &[u8],
+        ) -> Result<crypto_tee_vendor::types::Signature, crypto_tee_vendor::error::VendorError>
+        {
             Ok(crypto_tee_vendor::types::Signature {
                 algorithm: crypto_tee_vendor::types::Algorithm::Ed25519,
                 data: b"mock_signature".to_vec(),
             })
         }
 
-        async fn verify(&self, _handle: &crypto_tee_vendor::types::VendorKeyHandle, _data: &[u8], _signature: &crypto_tee_vendor::types::Signature) -> Result<bool, crypto_tee_vendor::error::VendorError> {
+        async fn verify(
+            &self,
+            _handle: &crypto_tee_vendor::types::VendorKeyHandle,
+            _data: &[u8],
+            _signature: &crypto_tee_vendor::types::Signature,
+        ) -> Result<bool, crypto_tee_vendor::error::VendorError> {
             Ok(true)
         }
 
-        async fn export_key(&self, _handle: &crypto_tee_vendor::types::VendorKeyHandle) -> Result<Vec<u8>, crypto_tee_vendor::error::VendorError> {
+        async fn export_key(
+            &self,
+            _handle: &crypto_tee_vendor::types::VendorKeyHandle,
+        ) -> Result<Vec<u8>, crypto_tee_vendor::error::VendorError> {
             Ok(b"mock_key_data".to_vec())
         }
 
-        async fn get_attestation(&self) -> Result<crypto_tee_vendor::types::Attestation, crypto_tee_vendor::error::VendorError> {
+        async fn get_attestation(
+            &self,
+        ) -> Result<crypto_tee_vendor::types::Attestation, crypto_tee_vendor::error::VendorError>
+        {
             Ok(crypto_tee_vendor::types::Attestation {
-                format: crypto_tee_vendor::types::AttestationFormat::Custom("MockAttestation".to_string()),
+                format: crypto_tee_vendor::types::AttestationFormat::Custom(
+                    "MockAttestation".to_string(),
+                ),
                 data: b"mock_attestation_data".to_vec(),
                 certificates: vec![],
             })
         }
 
-        async fn get_key_attestation(&self, _handle: &crypto_tee_vendor::types::VendorKeyHandle) -> Result<crypto_tee_vendor::types::Attestation, crypto_tee_vendor::error::VendorError> {
+        async fn get_key_attestation(
+            &self,
+            _handle: &crypto_tee_vendor::types::VendorKeyHandle,
+        ) -> Result<crypto_tee_vendor::types::Attestation, crypto_tee_vendor::error::VendorError>
+        {
             Ok(crypto_tee_vendor::types::Attestation {
-                format: crypto_tee_vendor::types::AttestationFormat::Custom("MockKeyAttestation".to_string()),
+                format: crypto_tee_vendor::types::AttestationFormat::Custom(
+                    "MockKeyAttestation".to_string(),
+                ),
                 data: b"mock_key_attestation_data".to_vec(),
                 certificates: vec![],
             })
         }
 
-        async fn list_keys(&self) -> Result<Vec<crypto_tee_vendor::types::VendorKeyHandle>, crypto_tee_vendor::error::VendorError> {
+        async fn list_keys(
+            &self,
+        ) -> Result<
+            Vec<crypto_tee_vendor::types::VendorKeyHandle>,
+            crypto_tee_vendor::error::VendorError,
+        > {
             Ok(vec![])
         }
     }
 
     #[tokio::test]
     async fn test_health_check() {
-        let platform: Arc<RwLock<Box<dyn PlatformTEE>>> = Arc::new(RwLock::new(Box::new(MockPlatformTEE)));
-        let vendor: Arc<RwLock<Box<dyn VendorTEE>>> = Arc::new(RwLock::new(Box::new(MockVendorTEE)));
+        let platform: Arc<RwLock<Box<dyn PlatformTEE>>> =
+            Arc::new(RwLock::new(Box::new(MockPlatformTEE)));
+        let vendor: Arc<RwLock<Box<dyn VendorTEE>>> =
+            Arc::new(RwLock::new(Box::new(MockVendorTEE)));
         let config = HealthConfig::default();
 
         let health_monitor = HealthMonitor::new(platform, vendor, config);
@@ -737,13 +813,15 @@ mod tests {
         assert_eq!(report.overall_status, HealthStatus::Healthy);
         assert!(report.components.len() >= 3); // TEE, Platform, Vendor
         assert!(report.tee_health.available);
-        assert!(report.check_duration_ms >= 0); // May be 0 on very fast systems
+        // Duration is always >= 0 as it's u64
     }
 
     #[tokio::test]
     async fn test_health_status_determination() {
-        let platform: Arc<RwLock<Box<dyn PlatformTEE>>> = Arc::new(RwLock::new(Box::new(MockPlatformTEE)));
-        let vendor: Arc<RwLock<Box<dyn VendorTEE>>> = Arc::new(RwLock::new(Box::new(MockVendorTEE)));
+        let platform: Arc<RwLock<Box<dyn PlatformTEE>>> =
+            Arc::new(RwLock::new(Box::new(MockPlatformTEE)));
+        let vendor: Arc<RwLock<Box<dyn VendorTEE>>> =
+            Arc::new(RwLock::new(Box::new(MockVendorTEE)));
         let config = HealthConfig::default();
 
         let health_monitor = HealthMonitor::new(platform, vendor, config);

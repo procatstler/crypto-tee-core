@@ -320,7 +320,7 @@ impl KeyRotationManager {
     /// Set rotation policy for a key
     pub async fn set_policy(&self, key_alias: &str, policy: RotationPolicy) -> CryptoTEEResult<()> {
         info!("Setting rotation policy for key: {}", key_alias);
-        
+
         // Validate key exists
         {
             let key_manager = self.key_manager.read().await;
@@ -340,7 +340,7 @@ impl KeyRotationManager {
 
         // Audit log
         if let Some(audit_manager) = &self.audit_manager {
-            audit_manager
+            let _ = audit_manager
                 .read()
                 .await
                 .log_event(
@@ -374,11 +374,13 @@ impl KeyRotationManager {
         let (current_key, policy) = {
             let key_manager = self.key_manager.read().await;
             let policies = self.policies.read().await;
-            
+
             let current_key = key_manager.get_key(key_alias)?.clone();
-            let policy = policies.get(key_alias).cloned()
+            let policy = policies
+                .get(key_alias)
+                .cloned()
                 .unwrap_or_else(|| self.config.default_policy.clone());
-            
+
             (current_key, policy)
         };
 
@@ -395,7 +397,11 @@ impl KeyRotationManager {
                 // TODO: Implement backup integration
                 // In production, this would create a backup before rotation
                 info!("Backup before rotation would be created here for key: {}", key_alias);
-                Some(format!("backup-{}-{}", key_alias, SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()))
+                Some(format!(
+                    "backup-{}-{}",
+                    key_alias,
+                    SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs()
+                ))
             } else {
                 None
             }
@@ -421,7 +427,14 @@ impl KeyRotationManager {
         }
 
         // Update version tracking
-        self.add_key_version(key_alias, new_key.clone(), new_version, reason.clone(), backup_id.clone()).await?;
+        self.add_key_version(
+            key_alias,
+            new_key.clone(),
+            new_version,
+            reason.clone(),
+            backup_id.clone(),
+        )
+        .await?;
         self.transition_previous_versions(key_alias, &policy).await?;
 
         // Calculate duration
@@ -441,7 +454,7 @@ impl KeyRotationManager {
 
         // Audit log
         if let Some(audit_manager) = &self.audit_manager {
-            audit_manager
+            let _ = audit_manager
                 .read()
                 .await
                 .log_event(
@@ -454,7 +467,10 @@ impl KeyRotationManager {
                     )
                     .with_metadata("reason".to_string(), serde_json::json!(reason))
                     .with_metadata("new_version".to_string(), serde_json::json!(new_version))
-                    .with_metadata("duration_ms".to_string(), serde_json::json!(duration.as_millis())),
+                    .with_metadata(
+                        "duration_ms".to_string(),
+                        serde_json::json!(duration.as_millis()),
+                    ),
                 )
                 .await;
         }
@@ -466,10 +482,7 @@ impl KeyRotationManager {
     /// Get key version history
     pub async fn get_key_versions(&self, key_alias: &str) -> CryptoTEEResult<Vec<KeyVersion>> {
         let versions = self.key_versions.read().await;
-        Ok(versions
-            .get(key_alias)
-            .map(|deque| deque.iter().cloned().collect())
-            .unwrap_or_default())
+        Ok(versions.get(key_alias).map(|deque| deque.iter().cloned().collect()).unwrap_or_default())
     }
 
     /// Get current active version for a key
@@ -534,23 +547,22 @@ impl KeyRotationManager {
         match policy.strategy {
             RotationStrategy::Manual => Ok(false),
             RotationStrategy::TimeBased => {
-                let age = SystemTime::now().duration_since(key.metadata.created_at)
-                    .unwrap_or_default();
+                let age =
+                    SystemTime::now().duration_since(key.metadata.created_at).unwrap_or_default();
                 Ok(age >= policy.max_key_age)
             }
-            RotationStrategy::UsageBased => {
-                Ok(key.metadata.usage_count >= policy.max_usage_count)
-            }
+            RotationStrategy::UsageBased => Ok(key.metadata.usage_count >= policy.max_usage_count),
             RotationStrategy::Hybrid => {
-                let age = SystemTime::now().duration_since(key.metadata.created_at)
-                    .unwrap_or_default();
+                let age =
+                    SystemTime::now().duration_since(key.metadata.created_at).unwrap_or_default();
                 let age_exceeded = age >= policy.max_key_age;
                 let usage_exceeded = key.metadata.usage_count >= policy.max_usage_count;
                 Ok(age_exceeded || usage_exceeded)
             }
             RotationStrategy::ComplianceBased => {
                 if let Some(freq) = policy.compliance_requirements.required_rotation_frequency {
-                    let age = SystemTime::now().duration_since(key.metadata.created_at)
+                    let age = SystemTime::now()
+                        .duration_since(key.metadata.created_at)
                         .unwrap_or_default();
                     Ok(age >= freq)
                 } else {
@@ -682,11 +694,13 @@ impl KeyRotationManager {
         // Execute rotations (limited by max_concurrent_rotations)
         for entry in executions.into_iter().take(config.max_concurrent_rotations as usize) {
             debug!("Executing scheduled rotation for key: {}", entry.key_alias);
-            
+
             // TODO: Execute rotation
             // This would call the actual rotation logic
             // For now, mark as completed
-            if let Some(schedule_entry) = schedule.iter_mut().find(|e| e.key_alias == entry.key_alias) {
+            if let Some(schedule_entry) =
+                schedule.iter_mut().find(|e| e.key_alias == entry.key_alias)
+            {
                 schedule_entry.status = ScheduleStatus::Completed;
             }
         }

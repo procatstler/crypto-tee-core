@@ -483,7 +483,7 @@ impl RecoveryManager {
 
         // Audit log
         if let Some(audit_manager) = &self.audit_manager {
-            audit_manager
+            let _ = audit_manager
                 .log_event(AuditEvent::new(
                     AuditEventType::ConfigurationChanged,
                     crate::audit::AuditSeverity::Info,
@@ -908,9 +908,7 @@ impl Default for RecoveryValidation {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        backup::{BackupStorage, BackupType},
-    };
+    use crate::backup::{BackupStorage, BackupType};
     use std::sync::Arc;
     use tokio::sync::Mutex;
 
@@ -1004,12 +1002,12 @@ mod tests {
             checksum: vec![5, 6, 7, 8],
             created_at: SystemTime::now(),
         }];
-        
+
         let backup_data = serde_json::to_vec(&entries).unwrap();
-        
+
         // Store the backup in mock storage first
         storage.store_backup(&metadata, &backup_data).await.unwrap();
-        
+
         let mut recovery_manager = RecoveryManager::new(storage, None, config);
 
         let backup_source = BackupSource {

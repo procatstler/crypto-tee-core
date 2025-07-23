@@ -15,8 +15,8 @@ use crate::{
     types::{AuthResult, PlatformConfig},
 };
 
-use self::local_authentication::{is_biometric_available, LAContextBuilder, LAPolicy};
-use self::system_info::{get_ios_version, get_security_level, is_secure_enclave_available};
+use self::local_authentication::{LAConfig, LAContext, LAPolicy};
+use self::system_info::{detect_tee_vendors, get_ios_version};
 
 pub struct IOSPlatform {
     config: PlatformConfig,
@@ -46,7 +46,9 @@ impl PlatformTEE for IOSPlatform {
         // Detect Secure Enclave availability
         let mut vendors: Vec<Box<dyn VendorTEE>> = vec![];
 
-        if is_secure_enclave_available().unwrap_or(false) {
+        // Check if Secure Enclave vendors are available
+        let tee_vendors = detect_tee_vendors().unwrap_or_default();
+        if tee_vendors.iter().any(|v| v.name == "apple_secure_enclave" && v.available) {
             // In real implementation, load Apple Secure Enclave vendor from separate crate
             // For now, use mock vendor
             vendors.push(Box::new(crypto_tee_vendor::MockVendor::new("apple_secure_enclave")));
@@ -96,22 +98,19 @@ impl PlatformTEE for IOSPlatform {
 
     async fn authenticate(&self, challenge: &[u8]) -> PlatformResult<AuthResult> {
         // Implement LAContext biometric authentication
-        if !is_biometric_available()? {
-            return Err(PlatformError::AuthenticationRequired(
-                "Biometric authentication not available".to_string(),
-            ));
-        }
+        let config = LAConfig {
+            fallback_to_passcode: !self.config.require_strong_biometric,
+            biometry_only: self.config.require_strong_biometric,
+        };
 
-        let policy = if self.config.require_strong_biometric {
+        let _policy = if self.config.require_strong_biometric {
             LAPolicy::BiometryOnly
         } else {
             LAPolicy::BiometryOrPasscode
         };
 
-        let result = LAContextBuilder::new("Authenticate to access secure key")
-            .fallback_to_passcode(!self.config.require_strong_biometric)
-            .authenticate(Some(challenge))
-            .await?;
+        let context = LAContext::new(config);
+        let result = context.evaluate_policy(_policy, Some(challenge)).await?;
 
         Ok(result)
     }
