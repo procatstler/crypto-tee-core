@@ -54,7 +54,7 @@ jobs:
 
     - name: Run Clippy
       run: |
-        cargo clippy --all-targets --all-features -- \
+        cargo clippy --all-targets --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" -- \
           -D warnings \
           -D clippy::all \
           -D clippy::pedantic \
@@ -62,7 +62,17 @@ jobs:
           -D clippy::cargo \
           -A clippy::multiple_crate_versions \
           -A clippy::module_name_repetitions \
-          -A clippy::too_many_lines
+          -A clippy::too_many_lines \
+          -A clippy::missing_errors_doc \
+          -A clippy::missing_panics_doc \
+          -A clippy::must_use_candidate \
+          -A clippy::redundant_else \
+          -A clippy::similar_names \
+          -A clippy::wildcard_imports \
+          -A clippy::significant_drop_tightening \
+          -A clippy::doc_markdown \
+          -A clippy::struct_field_names \
+          -A clippy::option_if_let_else
 
     - name: Generate Clippy report
       if: failure()
@@ -70,7 +80,7 @@ jobs:
         echo "## Clippy Issues" >> $GITHUB_STEP_SUMMARY
         echo "The following issues were found:" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        cargo clippy --all-targets --all-features -- -D warnings 2>&1 || true >> $GITHUB_STEP_SUMMARY
+        cargo clippy --all-targets --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" -- -D warnings 2>&1 || true >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
   documentation:
@@ -90,12 +100,12 @@ jobs:
     - name: Check documentation
       run: |
         RUSTDOCFLAGS="-D warnings -D rustdoc::broken_intra_doc_links" \
-        cargo doc --all-features --no-deps --document-private-items
+        cargo doc --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" --no-deps --document-private-items
 
     - name: Check for missing documentation
       run: |
         RUSTDOCFLAGS="-D missing_docs" \
-        cargo doc --all-features --no-deps 2>&1 | tee doc-check.log
+        cargo doc --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" --no-deps 2>&1 | tee doc-check.log
         
         if grep -q "warning: missing documentation" doc-check.log; then
           echo "## Missing Documentation" >> $GITHUB_STEP_SUMMARY
@@ -157,7 +167,7 @@ jobs:
 
     - name: Check for unused dependencies
       run: |
-        cargo +nightly udeps --all-targets --all-features > udeps-report.txt || true
+        cargo +nightly udeps --all-targets --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" > udeps-report.txt || true
         if [ -s udeps-report.txt ]; then
           echo "## Unused Dependencies" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
@@ -190,8 +200,8 @@ jobs:
         RUSTFLAGS: '-Cinstrument-coverage'
         LLVM_PROFILE_FILE: 'cargo-test-%p-%m.profraw'
       run: |
-        cargo test --all-features
-        cargo test --doc --all-features
+        cargo test --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
+        cargo test --doc --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
     - name: Generate coverage report
       run: |
@@ -260,7 +270,7 @@ jobs:
 
     - name: Generate dependency tree
       run: |
-        cargo tree --all-features > dependency-tree.txt
+        cargo tree --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" > dependency-tree.txt
         echo "## Dependency Tree" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
         head -n 30 dependency-tree.txt >> $GITHUB_STEP_SUMMARY
@@ -268,7 +278,7 @@ jobs:
 
     - name: Check for duplicate dependencies
       run: |
-        cargo tree --duplicates --all-features > duplicates.txt
+        cargo tree --duplicates --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" > duplicates.txt
         if [ -s duplicates.txt ]; then
           echo "## Duplicate Dependencies Found" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY

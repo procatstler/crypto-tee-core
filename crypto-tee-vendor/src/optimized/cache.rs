@@ -55,9 +55,8 @@ impl<K: Hash + Eq + Clone, V: Clone> OptimizedLruCache<K, V> {
         if let Some((value, timestamp)) = cache.get(key) {
             if timestamp.elapsed() < self.ttl {
                 return Some(value.clone());
-            } else {
-                cache.pop(key);
             }
+            cache.pop(key);
         }
         None
     }
@@ -168,9 +167,8 @@ impl VerificationCache {
         if let Some(entry) = self.cache.get(&key) {
             if !entry.is_expired() {
                 return Some(entry.result);
-            } else {
-                self.cache.remove(&key);
             }
+            self.cache.remove(&key);
         }
         None
     }

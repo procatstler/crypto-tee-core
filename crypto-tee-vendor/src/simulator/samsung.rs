@@ -2,14 +2,20 @@
 //!
 //! Simulates Samsung Knox Vault and TrustZone functionality
 
-// Define simulator-specific KnoxParams to avoid dependency issues
+/// Samsung Knox parameters for TEE simulator
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct KnoxParams {
+    /// Whether to use Knox Vault for secure operations
     pub use_knox_vault: bool,
+    /// Whether user authentication is required for key operations
     pub require_user_auth: bool,
+    /// Validity period for user authentication in seconds
     pub auth_validity_seconds: Option<u32>,
+    /// Whether to use TrustZone for key operations
     pub use_trustzone: bool,
+    /// Whether to enable attestation features
     pub enable_attestation: bool,
+    /// Container ID for Knox workspace isolation
     pub container_id: Option<String>,
 }
 

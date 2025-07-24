@@ -2,13 +2,17 @@
 //!
 //! Simulates Qualcomm Secure Execution Environment (QSEE) functionality
 
-// Define simulator-specific QSEEParams to avoid dependency issues
+/// Qualcomm QSEE parameters for TEE simulator
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct QSEEParams {
+    /// Whether to use QSEE for secure operations
     pub use_qsee: bool,
+    /// Secure app ID for QSEE operations
     pub secure_app_id: Option<String>,
+    /// Whether to enable replay attack protection
     pub enable_replay_protection: bool,
-    pub trustzone_app_name: Option<String>, // Add missing field
+    /// TrustZone app name for secure operations
+    pub trustzone_app_name: Option<String>,
 }
 
 use super::base::GenericTEESimulator;
@@ -394,8 +398,8 @@ impl TEESimulator for QualcommTEESimulator {
 
         // Add QSEE-specific stats
         let storage_utilization = {
-            let state = self.qsee_state.read().await;
-            state.storage_utilization
+            let qsee_state = self.qsee_state.read().await;
+            qsee_state.storage_utilization
         };
         stats.active_keys = (storage_utilization * 128.0) as u32; // Rough estimate
 
