@@ -15,13 +15,13 @@ pub mod types;
 #[cfg(test)]
 mod tests;
 
-#[cfg(feature = "android")]
+#[cfg(target_os = "android")]
 pub mod android;
 
-#[cfg(feature = "ios")]
+#[cfg(target_os = "ios")]
 pub mod ios;
 
-#[cfg(feature = "linux")]
+#[cfg(target_os = "linux")]
 pub mod linux;
 
 pub use error::{PlatformError, PlatformResult};

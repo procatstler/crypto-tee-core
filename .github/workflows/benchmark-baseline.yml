@@ -1,0 +1,116 @@
+name: Benchmark Baseline
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - 'benches/**'
+      - 'crypto-tee*/src/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  baseline:
+    name: Generate Benchmark Baseline
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Run benchmarks
+      run: |
+        # Run benchmarks and save results
+        cargo bench --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" -- --save-baseline main
+
+    - name: Generate benchmark report
+      run: |
+        echo "## Benchmark Baseline Generated" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "Baseline 'main' has been saved for future comparisons." >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "To compare against this baseline locally, run:" >> $GITHUB_STEP_SUMMARY
+        echo '```bash' >> $GITHUB_STEP_SUMMARY
+        echo 'cargo bench -- --baseline main' >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+
+  compare:
+    name: Compare Benchmarks
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    
+    steps:
+    - name: Checkout PR branch
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: dtolnay/rust-toolchain@stable
+
+    - name: Cache dependencies
+      uses: Swatinem/rust-cache@v2
+
+    - name: Checkout main branch
+      run: |
+        git fetch origin main
+        git worktree add ../main-branch origin/main
+
+    - name: Run baseline benchmarks
+      run: |
+        cd ../main-branch
+        cargo bench --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" -- --save-baseline main
+
+    - name: Run current benchmarks and compare
+      run: |
+        cargo bench --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" -- --baseline main > benchmark-comparison.txt || true
+
+    - name: Generate comparison report
+      run: |
+        echo "## Benchmark Comparison" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        if [ -f benchmark-comparison.txt ]; then
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat benchmark-comparison.txt | head -50 >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+        else
+          echo "No benchmark comparison available." >> $GITHUB_STEP_SUMMARY
+        fi
+
+    - name: Comment PR with results
+      if: github.event_name == 'pull_request'
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const fs = require('fs');
+          let comment = '## Benchmark Results\n\n';
+          
+          try {
+            const comparison = fs.readFileSync('benchmark-comparison.txt', 'utf8');
+            const lines = comparison.split('\n').slice(0, 50);
+            comment += '```\n' + lines.join('\n') + '\n```\n';
+            
+            // Look for performance regressions
+            const regressions = lines.filter(line => line.includes('slower') || line.includes('regression'));
+            if (regressions.length > 0) {
+              comment += '\n### ⚠️ Performance Regressions Detected\n\n';
+              comment += regressions.map(r => `- ${r.trim()}`).join('\n');
+            }
+          } catch (e) {
+            comment += 'No benchmark comparison available.';
+          }
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: comment
+          });

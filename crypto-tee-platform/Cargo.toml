@@ -24,15 +24,12 @@ tokio = { workspace = true }
 
 [features]
 default = []
-android = ["jni", "ndk"]
-ios = ["core-foundation", "security-framework"]
-linux = []
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "android")'.dependencies]
-jni = { workspace = true, optional = true }
-ndk = { workspace = true, optional = true }
+jni = { workspace = true }
+ndk = { workspace = true }
 
-[target.'cfg(target_os = "ios")'.dependencies]
-core-foundation = { workspace = true, optional = true }
-security-framework = { workspace = true, optional = true }
+[target.'cfg(any(target_os = "ios", target_os = "macos"))'.dependencies]
+core-foundation = { workspace = true }
+security-framework = { workspace = true }

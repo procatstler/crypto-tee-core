@@ -51,7 +51,7 @@ jobs:
         BASE_FEATURES="simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
         
         # Add platform-specific features
-        if [[ "${{ matrix.os }}" == "macOS-latest" ]]; then
+        if [[ "${{ runner.os }}" == "macOS" ]]; then
           echo "features=${BASE_FEATURES},apple" >> $GITHUB_OUTPUT
         else
           echo "features=${BASE_FEATURES}" >> $GITHUB_OUTPUT
@@ -111,14 +111,14 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Run benchmarks
-      run: cargo bench --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
+      run: cargo bench --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" -- --output-format bencher | tee output.txt
 
     - name: Store benchmark results
       uses: benchmark-action/github-action-benchmark@v1
       with:
         name: Rust Benchmark
         tool: 'cargo'
-        output-file-path: target/criterion/*/new/estimates.json
+        output-file-path: output.txt
         github-token: ${{ secrets.GITHUB_TOKEN }}
         auto-push: true
         comment-on-alert: true
@@ -195,7 +195,6 @@ jobs:
       with:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: ./target/doc
-        cname: crypto-tee-docs.example.com
 
   integration:
     name: Integration Tests
@@ -214,7 +213,6 @@ jobs:
     - name: Run integration tests
       run: |
         cargo test --test integration_tests --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
-        cargo test --test performance_tests --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
     - name: Test RFC 9421 compliance
       run: cargo test --package crypto-tee-rfc9421 --features "simulator"

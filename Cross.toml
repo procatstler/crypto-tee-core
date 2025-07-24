@@ -1,0 +1,65 @@
+# Cross compilation configuration
+# https://github.com/cross-rs/cross
+
+[build]
+# Pre-build hook to ensure all dependencies are fetched
+pre-build = []
+
+[target.x86_64-unknown-linux-gnu]
+# Use a newer image with updated dependencies
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-gnu:latest"
+
+[target.x86_64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/x86_64-unknown-linux-musl:latest"
+
+[target.aarch64-unknown-linux-gnu]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-gnu:latest"
+
+[target.aarch64-unknown-linux-musl]
+image = "ghcr.io/cross-rs/aarch64-unknown-linux-musl:latest"
+
+[target.armv7-unknown-linux-gnueabihf]
+image = "ghcr.io/cross-rs/armv7-unknown-linux-gnueabihf:latest"
+
+[target.x86_64-pc-windows-gnu]
+image = "ghcr.io/cross-rs/x86_64-pc-windows-gnu:latest"
+
+# Android targets
+[target.aarch64-linux-android]
+image = "ghcr.io/cross-rs/aarch64-linux-android:latest"
+
+[target.armv7-linux-androideabi]
+image = "ghcr.io/cross-rs/armv7-linux-androideabi:latest"
+
+[target.x86_64-linux-android]
+image = "ghcr.io/cross-rs/x86_64-linux-android:latest"
+
+# iOS targets (these require macOS host)
+[target.aarch64-apple-ios]
+# iOS cross-compilation requires macOS host
+xcode_sdk = "iphoneos"
+
+[target.x86_64-apple-ios]
+# iOS simulator
+xcode_sdk = "iphonesimulator"
+
+# Environment variables for all targets
+[build.env]
+passthrough = [
+    "RUST_BACKTRACE",
+    "CARGO_TERM_COLOR",
+]
+
+# Target-specific environment variables
+[target.aarch64-linux-android.env]
+# Android-specific environment variables
+ANDROID_NDK_HOME = "/android-ndk"
+ANDROID_SDK_ROOT = "/android-sdk"
+
+[target.armv7-linux-androideabi.env]
+ANDROID_NDK_HOME = "/android-ndk"
+ANDROID_SDK_ROOT = "/android-sdk"
+
+[target.x86_64-linux-android.env]
+ANDROID_NDK_HOME = "/android-ndk"
+ANDROID_SDK_ROOT = "/android-sdk"

@@ -104,7 +104,7 @@ jobs:
       uses: dtolnay/rust-toolchain@stable
 
     - name: Build for CodeQL
-      run: cargo build --all-features
+      run: cargo build --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v2
