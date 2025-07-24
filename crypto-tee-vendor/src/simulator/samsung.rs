@@ -2,6 +2,17 @@
 //!
 //! Simulates Samsung Knox Vault and TrustZone functionality
 
+// Define simulator-specific KnoxParams to avoid dependency issues
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct KnoxParams {
+    pub use_knox_vault: bool,
+    pub require_user_auth: bool,
+    pub auth_validity_seconds: Option<u32>,
+    pub use_trustzone: bool,
+    pub enable_attestation: bool,
+    pub container_id: Option<String>,
+}
+
 use super::base::GenericTEESimulator;
 use super::*;
 use crate::error::VendorError;

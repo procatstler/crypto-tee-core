@@ -2,6 +2,15 @@
 //!
 //! Simulates Apple's Secure Enclave functionality
 
+// Define simulator-specific SecureEnclaveParams to avoid dependency issues
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct SecureEnclaveParams {
+    pub use_secure_enclave: bool,
+    pub require_biometric: bool,
+    pub require_passcode: bool,
+    pub access_control: Option<()>, // Placeholder for compatibility
+}
+
 use super::base::GenericTEESimulator;
 use super::*;
 use crate::error::VendorError;

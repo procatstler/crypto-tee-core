@@ -60,8 +60,8 @@ async fn test_samsung_simulator() {
     assert!(capabilities.attestation);
 
     // Test Knox-specific key generation using available types
-    #[cfg(feature = "samsung")]
-    let samsung_params = crate::samsung::KnoxParams {
+    #[cfg(feature = "simulator-samsung")]
+    let samsung_params = super::samsung::KnoxParams {
         use_knox_vault: true,
         require_user_auth: false,
         auth_validity_seconds: None,
@@ -70,17 +70,14 @@ async fn test_samsung_simulator() {
         container_id: None,
     };
 
-    #[cfg(not(feature = "samsung"))]
-    let samsung_params = ();
-
     let key_params = KeyGenParams {
         algorithm: Algorithm::EcdsaP256,
         hardware_backed: true,
         exportable: false,
         usage: KeyUsage::default(),
-        #[cfg(feature = "samsung")]
+        #[cfg(feature = "simulator-samsung")]
         vendor_params: Some(VendorParams::Samsung(samsung_params)),
-        #[cfg(not(feature = "samsung"))]
+        #[cfg(not(feature = "simulator-samsung"))]
         vendor_params: Some(VendorParams::Generic { hardware_backed: true, require_auth: false }),
     };
 

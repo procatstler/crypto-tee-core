@@ -44,9 +44,14 @@ required-features = ["software-fallback"]
 default = []
 software-fallback = []
 simulator = []
-samsung = ["simulator", "jni", "ndk"]
-apple = ["simulator", "core-foundation", "security-framework", "security-framework-sys", "objc"]
-qualcomm = ["simulator", "jni", "ndk"]
+# Platform-specific simulator features
+simulator-samsung = ["simulator"]
+simulator-apple = ["simulator"]
+simulator-qualcomm = ["simulator"]
+# Real platform features (only enabled on appropriate platforms)
+samsung = ["jni", "ndk"]
+apple = ["core-foundation", "security-framework", "security-framework-sys", "objc"]
+qualcomm = ["jni", "ndk"]
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "android")'.dependencies]

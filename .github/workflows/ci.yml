@@ -43,17 +43,31 @@ jobs:
     - name: Check formatting
       run: cargo fmt --all -- --check
 
+    - name: Set platform features
+      id: features
+      shell: bash
+      run: |
+        # Base features that work on all platforms
+        BASE_FEATURES="simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
+        
+        # Add platform-specific features
+        if [[ "${{ matrix.os }}" == "macOS-latest" ]]; then
+          echo "features=${BASE_FEATURES},apple" >> $GITHUB_OUTPUT
+        else
+          echo "features=${BASE_FEATURES}" >> $GITHUB_OUTPUT
+        fi
+
     - name: Run Clippy
-      run: cargo clippy --all-targets --all-features -- -D warnings
+      run: cargo clippy --all-targets --features "${{ steps.features.outputs.features }}" -- -D warnings
 
     - name: Build
-      run: cargo build --verbose --all-features
+      run: cargo build --verbose --features "${{ steps.features.outputs.features }}"
 
     - name: Run tests
-      run: cargo test --verbose --all-features
+      run: cargo test --verbose --features "${{ steps.features.outputs.features }}"
 
     - name: Run doc tests
-      run: cargo test --doc --all-features
+      run: cargo test --doc --features "${{ steps.features.outputs.features }}"
 
   security:
     name: Security Audit
@@ -97,7 +111,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Run benchmarks
-      run: cargo bench --all-features
+      run: cargo bench --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
     - name: Store benchmark results
       uses: benchmark-action/github-action-benchmark@v1
@@ -131,7 +145,7 @@ jobs:
       run: cargo install cargo-tarpaulin
 
     - name: Generate code coverage
-      run: cargo tarpaulin --verbose --all-features --workspace --timeout 120 --out xml
+      run: cargo tarpaulin --verbose --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" --workspace --timeout 120 --out xml
 
     - name: Upload coverage to Codecov
       uses: codecov/codecov-action@v3
@@ -156,7 +170,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Check MSRV
-      run: cargo check --all-features
+      run: cargo check --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
   docs:
     name: Documentation
@@ -173,7 +187,7 @@ jobs:
       uses: Swatinem/rust-cache@v2
 
     - name: Build documentation
-      run: cargo doc --all-features --no-deps
+      run: cargo doc --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm" --no-deps
 
     - name: Deploy docs to GitHub Pages
       if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -199,16 +213,16 @@ jobs:
 
     - name: Run integration tests
       run: |
-        cargo test --test integration_tests --all-features
-        cargo test --test performance_tests --all-features
+        cargo test --test integration_tests --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
+        cargo test --test performance_tests --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
     - name: Test RFC 9421 compliance
-      run: cargo test --package crypto-tee-rfc9421 --all-features
+      run: cargo test --package crypto-tee-rfc9421 --features "simulator"
 
     - name: Test vendor implementations
       run: |
-        cargo test --package crypto-tee-vendor --features simulator --all-features
-        cargo test --package crypto-tee-platform --all-features
+        cargo test --package crypto-tee-vendor --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
+        cargo test --package crypto-tee-platform --features "simulator"
 
   release:
     name: Release Check
@@ -227,8 +241,8 @@ jobs:
 
     - name: Verify release build
       run: |
-        cargo build --release --all-features
-        cargo test --release --all-features
+        cargo build --release --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
+        cargo test --release --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
     - name: Package crates
       run: |

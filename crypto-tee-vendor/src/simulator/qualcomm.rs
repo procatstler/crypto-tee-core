@@ -2,6 +2,15 @@
 //!
 //! Simulates Qualcomm Secure Execution Environment (QSEE) functionality
 
+// Define simulator-specific QSEEParams to avoid dependency issues
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct QSEEParams {
+    pub use_qsee: bool,
+    pub secure_app_id: Option<String>,
+    pub enable_replay_protection: bool,
+    pub trustzone_app_name: Option<String>, // Add missing field
+}
+
 use super::base::GenericTEESimulator;
 use super::*;
 use crate::error::VendorError;

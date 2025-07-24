@@ -196,6 +196,13 @@ impl FileAuditLogger {
             return Ok(());
         }
 
+        // Ensure parent directory exists
+        if let Some(parent) = self.path.parent() {
+            tokio::fs::create_dir_all(parent)
+                .await
+                .map_err(|e| crate::error::CryptoTEEError::IoError(e.to_string()))?;
+        }
+
         let mut file = OpenOptions::new()
             .create(true)
             .append(true)

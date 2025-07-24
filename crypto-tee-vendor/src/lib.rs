@@ -17,13 +17,13 @@ pub mod types;
 #[cfg(feature = "simulator")]
 pub mod simulator;
 
-#[cfg(any(feature = "samsung", feature = "simulator"))]
+#[cfg(all(feature = "samsung", target_os = "android"))]
 pub mod samsung;
 
-#[cfg(any(feature = "apple", feature = "simulator"))]
+#[cfg(all(feature = "apple", any(target_os = "ios", target_os = "macos")))]
 pub mod apple;
 
-#[cfg(any(feature = "qualcomm", feature = "simulator"))]
+#[cfg(all(feature = "qualcomm", target_os = "android"))]
 pub mod qualcomm;
 
 pub use error::{VendorError, VendorResult};
