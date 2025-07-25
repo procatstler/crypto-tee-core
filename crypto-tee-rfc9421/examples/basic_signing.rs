@@ -18,9 +18,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize CryptoTEE
     println!("\n1. Initializing CryptoTEE...");
-    let crypto_tee = CryptoTEEBuilder::new()
-        .build()
-        .await?;
+    let crypto_tee = CryptoTEEBuilder::new().build().await?;
 
     println!("✅ CryptoTEE initialized");
 
