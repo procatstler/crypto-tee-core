@@ -92,7 +92,7 @@ async fn test_samsung_simulator() {
 #[cfg(feature = "simulator-apple")]
 async fn test_apple_simulator() {
     let config = SimulationConfig::default();
-    let simulator = apple::AppleTEESimulator::new(config);
+    let simulator = super::apple::AppleTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
     assert_eq!(capabilities.name, "Apple Secure Enclave Simulator");
@@ -121,7 +121,7 @@ async fn test_apple_simulator() {
 #[cfg(feature = "simulator-qualcomm")]
 async fn test_qualcomm_simulator() {
     let config = SimulationConfig::default();
-    let simulator = qualcomm::QualcommTEESimulator::new(config);
+    let simulator = super::qualcomm::QualcommTEESimulator::new(config);
 
     let capabilities = simulator.probe().await.expect("Simulator test should succeed");
     assert_eq!(capabilities.name, "Qualcomm QSEE Simulator");
