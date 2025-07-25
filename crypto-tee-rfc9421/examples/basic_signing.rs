@@ -1,6 +1,6 @@
-//! Complete RFC 9421 HTTP message signing example
+//! Basic RFC 9421 HTTP message signing example
 //!
-//! This example demonstrates how to sign HTTP messages according to RFC 9421
+//! This example demonstrates simple HTTP message signing according to RFC 9421
 //! using CryptoTEE for secure key management.
 
 use chrono::Utc;
@@ -10,6 +10,7 @@ use crypto_tee_rfc9421::{
     Rfc9421Adapter,
 };
 use std::collections::HashMap;
+use std::sync::Arc;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -19,6 +20,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize CryptoTEE
     println!("\n1. Initializing CryptoTEE...");
     let crypto_tee = CryptoTEEBuilder::new().build().await?;
+    let crypto_tee = Arc::new(crypto_tee);
 
     println!("✅ CryptoTEE initialized");
 
@@ -54,9 +56,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .await?;
 
     println!("✅ Signing key generated");
-    println!("   Key ID: {}", key_handle.id);
-    println!("   Algorithm: {:?}", key_handle.algorithm);
-    println!("   Hardware-backed: {}", key_handle.hardware_backed);
+    println!("   Key alias: {}", key_handle.alias);
+    println!("   Algorithm: {:?}", key_handle.metadata.algorithm);
 
     // Create an HTTP POST request to sign
     println!("\n4. Creating HTTP message...");
@@ -97,8 +98,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_component(SignatureComponent::Header("content-type".to_string()))
             .add_component(SignatureComponent::Header("content-length".to_string()))
             .add_component(SignatureComponent::Header("date".to_string()))
-            // Optional: include request body hash
-            .add_component(SignatureComponent::Header("content-digest".to_string())) // content-digest
             // RFC 9421 metadata
             .created(Utc::now()) // created timestamp
             .expires(Utc::now() + chrono::Duration::hours(1)) // expires in 1 hour
@@ -117,27 +116,34 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Sign the HTTP message
     println!("\n6. Signing HTTP message...");
 
-    let signed_message = adapter.sign_message(&message, &signature_params).await?;
+    let signature_output = adapter.sign_message(&message, signature_params.clone()).await?;
 
     println!("✅ HTTP message signed successfully");
 
-    // Display the signature headers
+    // Display the signature results
     println!("\n7. Signature results...");
 
-    if let Some(signature_input) = signed_message.headers.get("signature-input") {
-        println!("   Signature-Input: {}", signature_input.join(", "));
-    }
-
-    if let Some(signature) = signed_message.headers.get("signature") {
-        println!("   Signature: {}", signature.join(", "));
-    }
+    println!("   Signature-Input: {}", signature_output.signature_input);
+    println!("   Signature: {}", signature_output.signature);
 
     // Verify the signature
     println!("\n8. Verifying signature...");
 
-    let is_valid = adapter.verify_message(&signed_message, &signature_params).await?;
+    let verification_result = adapter
+        .verify_message(&message, &signature_output.signature, &signature_output.params)
+        .await?;
 
-    println!("✅ Signature verification: {}", if is_valid { "VALID" } else { "INVALID" });
+    println!("✅ Signature verification: {}", verification_result.valid);
+    if verification_result.valid {
+        println!("   Key ID: {}", verification_result.key_id);
+        println!("   Algorithm: {:?}", verification_result.algorithm);
+        if let Some(created) = verification_result.created {
+            println!("   Created: {}", created);
+        }
+        if let Some(expires) = verification_result.expires {
+            println!("   Expires: {}", expires);
+        }
+    }
 
     // Show the complete signed HTTP request
     println!("\n9. Complete signed HTTP request:");
@@ -145,18 +151,29 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!(
         "   {} {} HTTP/1.1",
-        signed_message.method.as_ref().unwrap(),
-        signed_message.uri.as_ref().unwrap().replace("https://example.com", "")
+        message.method.as_ref().unwrap(),
+        message.uri.as_ref().unwrap().replace("https://example.com", "")
     );
 
-    for (name, values) in &signed_message.headers {
+    // Add the signature headers to the output
+    let mut output_headers = message.headers.clone();
+    output_headers.insert(
+        "signature-input".to_string(),
+        vec![signature_output.signature_input.clone()],
+    );
+    output_headers.insert(
+        "signature".to_string(),
+        vec![format!("sig1=:{}", signature_output.signature)],
+    );
+
+    for (name, values) in &output_headers {
         for value in values {
             println!("   {}: {}", name, value);
         }
     }
 
     println!();
-    if let Some(body) = &signed_message.body {
+    if let Some(body) = &message.body {
         println!("   {}", String::from_utf8_lossy(body));
     }
 
@@ -166,11 +183,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n10. Performance test...");
 
     let start = std::time::Instant::now();
-    let _signed = adapter.sign_message(&message, &signature_params).await?;
+    let _signed = adapter.sign_message(&message, signature_params.clone()).await?;
     let sign_time = start.elapsed();
 
     let start = std::time::Instant::now();
-    let _is_valid = adapter.verify_message(&signed_message, &signature_params).await?;
+    let _is_valid = adapter
+        .verify_message(&message, &signature_output.signature, &signature_output.params)
+        .await?;
     let verify_time = start.elapsed();
 
     println!("✅ Performance results:");
