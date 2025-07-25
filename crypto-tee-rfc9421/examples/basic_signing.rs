@@ -4,7 +4,7 @@
 //! using CryptoTEE for secure key management.
 
 use chrono::Utc;
-use crypto_tee::prelude::*;
+use crypto_tee::{Algorithm, CryptoTEE, CryptoTEEBuilder, KeyOptions, KeyUsage};
 use crypto_tee_rfc9421::{
     types::{HttpMessage, SignatureAlgorithm, SignatureComponent, SignatureInputBuilder},
     Rfc9421Adapter,
@@ -19,8 +19,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Initialize CryptoTEE
     println!("\n1. Initializing CryptoTEE...");
     let crypto_tee = CryptoTEEBuilder::new()
-        .prefer_hardware(true)
-        .enable_software_fallback(true)
         .build()
         .await?;
 
@@ -28,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Create RFC 9421 adapter
     println!("\n2. Creating RFC 9421 adapter...");
-    let adapter = Rfc9421Adapter::new_with_crypto_tee(crypto_tee.clone()).await?;
+    let adapter = Rfc9421Adapter::with_crypto_tee(crypto_tee.clone());
     println!("✅ RFC 9421 adapter created");
 
     // Generate a signing key for HTTP messages
@@ -40,17 +38,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             key_alias,
             KeyOptions {
                 algorithm: Algorithm::Ed25519, // Fast and secure for HTTP signing
-                usage: KeyUsage::SIGN_VERIFY,
+                usage: KeyUsage {
+                    sign: true,
+                    verify: true,
+                    encrypt: false,
+                    decrypt: false,
+                    wrap: false,
+                    unwrap: false,
+                },
                 hardware_backed: true,
                 exportable: false,   // Keep keys secure
                 require_auth: false, // Don't prompt for auth on every request
                 expires_at: None,
-                metadata: Some(KeyMetadata {
-                    description: Some("HTTP message signing key".to_string()),
-                    tags: vec!["http".to_string(), "rfc9421".to_string()],
-                    created_by: Some("basic_signing_example".to_string()),
-                    purpose: Some("HTTP message signatures".to_string()),
-                }),
+                metadata: None,
             },
         )
         .await?;
@@ -100,11 +100,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .add_component(SignatureComponent::Header("content-length".to_string()))
             .add_component(SignatureComponent::Header("date".to_string()))
             // Optional: include request body hash
-            .add_component(SignatureComponent::ContentDigest) // content-digest
+            .add_component(SignatureComponent::Header("content-digest".to_string())) // content-digest
             // RFC 9421 metadata
             .created(Utc::now()) // created timestamp
             .expires(Utc::now() + chrono::Duration::hours(1)) // expires in 1 hour
-            .nonce(Some("random-nonce-12345".to_string())) // anti-replay nonce
+            .nonce("random-nonce-12345".to_string()) // anti-replay nonce
             .build();
 
     println!("✅ Signature parameters built");
