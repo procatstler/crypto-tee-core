@@ -65,7 +65,7 @@ async fn test_cross_platform_key_operations() {
     let test_algorithms = vec![Algorithm::Ed25519, Algorithm::EcdsaP256];
 
     for algorithm in test_algorithms {
-        let key_alias = format!("cross_platform_{:?}", algorithm);
+        let key_alias = format!("cross_platform_{algorithm:?}");
 
         let key_options = KeyOptions {
             algorithm,
@@ -86,7 +86,7 @@ async fn test_cross_platform_key_operations() {
         assert_eq!(key.metadata.algorithm, algorithm);
 
         // Test operations
-        let test_data = format!("Cross-platform test for {:?}", algorithm);
+        let test_data = format!("Cross-platform test for {algorithm:?}");
         let signature = crypto_tee
             .sign(&key_alias, test_data.as_bytes(), None)
             .await
@@ -97,9 +97,9 @@ async fn test_cross_platform_key_operations() {
             .await
             .expect("Should verify cross-platform signature");
 
-        assert!(is_valid, "Cross-platform signature should be valid for {:?}", algorithm);
+        assert!(is_valid, "Cross-platform signature should be valid for {algorithm:?}");
 
-        println!("✅ Cross-platform compatibility verified for {:?}", algorithm);
+        println!("✅ Cross-platform compatibility verified for {algorithm:?}");
 
         // Cleanup
         crypto_tee.delete_key(&key_alias).await.expect("Should cleanup test key");
@@ -158,19 +158,17 @@ async fn test_hardware_performance_simulation() {
     let avg_verify_time = verify_times.iter().sum::<Duration>() / iterations as u32;
 
     println!("🏃 Hardware Performance Simulation Results:");
-    println!("   Average sign time: {:?}", avg_sign_time);
-    println!("   Average verify time: {:?}", avg_verify_time);
+    println!("   Average sign time: {avg_sign_time:?}");
+    println!("   Average verify time: {avg_verify_time:?}");
 
     // Basic performance assertions
     assert!(
         avg_sign_time < Duration::from_millis(100),
-        "Average signing should be reasonable: {:?}",
-        avg_sign_time
+        "Average signing should be reasonable: {avg_sign_time:?}"
     );
     assert!(
         avg_verify_time < Duration::from_millis(50),
-        "Average verification should be reasonable: {:?}",
-        avg_verify_time
+        "Average verification should be reasonable: {avg_verify_time:?}"
     );
 
     // Cleanup
@@ -187,7 +185,7 @@ async fn test_concurrent_hardware_operations() {
     let mut key_aliases = Vec::new();
 
     for i in 0..key_count {
-        let key_alias = format!("concurrent_key_{}", i);
+        let key_alias = format!("concurrent_key_{i}");
 
         let key_options = KeyOptions {
             algorithm: Algorithm::Ed25519,
@@ -205,7 +203,7 @@ async fn test_concurrent_hardware_operations() {
             .expect("Should generate concurrent key");
 
         // Test signing with this key
-        let test_data = format!("Concurrent test data {}", i);
+        let test_data = format!("Concurrent test data {i}");
         let signature = crypto_tee
             .sign(&key_alias, test_data.as_bytes(), None)
             .await
@@ -225,7 +223,7 @@ async fn test_concurrent_hardware_operations() {
         crypto_tee.delete_key(&key_alias).await.expect("Should cleanup concurrent test key");
     }
 
-    println!("✅ Concurrent hardware operations simulation completed: {} keys", key_count);
+    println!("✅ Concurrent hardware operations simulation completed: {key_count} keys");
 }
 
 /// Test error handling and edge cases
@@ -271,7 +269,7 @@ async fn test_platform_capabilities() {
     assert!(!capabilities.is_empty());
     println!("🔍 Platform Capabilities:");
     for capability in &capabilities {
-        println!("   - {}", capability);
+        println!("   - {capability}");
     }
 
     // Test that we can list keys (should be empty initially)

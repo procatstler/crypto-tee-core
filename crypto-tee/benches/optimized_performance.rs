@@ -22,7 +22,7 @@ fn bench_optimized_verification(c: &mut Criterion) {
     // Setup keys for testing
     let setup = rt.block_on(async {
         // Create optimized mock vendor
-        let optimized_config = PerformanceConfig {
+        let _optimized_config = PerformanceConfig {
             enable_key_cache: true,
             max_cached_keys: 1000,
             key_cache_ttl: Duration::from_secs(300),
@@ -33,7 +33,7 @@ fn bench_optimized_verification(c: &mut Criterion) {
         };
 
         // Create non-optimized mock vendor
-        let non_optimized_config = PerformanceConfig {
+        let _non_optimized_config = PerformanceConfig {
             enable_key_cache: false,
             max_cached_keys: 0,
             key_cache_ttl: Duration::from_secs(0),
@@ -111,7 +111,7 @@ fn bench_memory_patterns(c: &mut Criterion) {
 
     // Setup
     let setup = rt.block_on(async {
-        let optimized_config = PerformanceConfig {
+        let _optimized_config = PerformanceConfig {
             enable_key_cache: true,
             enable_memory_pool: true,
             ..Default::default()
@@ -169,7 +169,7 @@ fn bench_cache_effectiveness(c: &mut Criterion) {
 
         // Generate multiple keys
         let mut keys = Vec::new();
-        for i in 0..10 {
+        for _i in 0..10 {
             let key_handle = vendor
                 .generate_key(&crypto_tee_vendor::types::KeyGenParams {
                     algorithm: Algorithm::Ed25519,
