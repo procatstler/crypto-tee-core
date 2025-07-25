@@ -230,10 +230,21 @@ impl VendorTEE for QualcommQSEE {
         let qsee_caps = caps.as_ref().ok_or(VendorError::NotAvailable)?;
 
         Ok(VendorCapabilities {
+            name: "Qualcomm QSEE".to_string(),
+            version: "4.0".to_string(),
             algorithms: qsee_caps.algorithms.clone(),
             hardware_backed: true,
             attestation: qsee_caps.attestation,
             max_keys: 1000,
+            features: VendorFeatures {
+                hardware_backed: true,
+                secure_key_import: false,
+                secure_key_export: false,
+                attestation: qsee_caps.attestation,
+                user_authentication: true,
+                encryption: true,
+                custom: Default::default(),
+            },
         })
     }
 
