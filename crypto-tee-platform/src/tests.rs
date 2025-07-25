@@ -19,11 +19,11 @@ mod platform_tests {
     #[tokio::test]
     async fn test_platform_vendor_detection() {
         let platform = load_platform();
-        let vendors = platform.detect_vendors().await;
+        let _vendors = platform.detect_vendors().await;
 
         // Fallback platform should have at least one vendor
         #[cfg(not(any(target_os = "android", target_os = "ios", target_os = "linux")))]
-        assert!(!vendors.is_empty());
+        assert!(!_vendors.is_empty());
     }
 
     #[tokio::test]

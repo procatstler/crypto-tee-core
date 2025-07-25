@@ -23,7 +23,6 @@ http = "1.0"
 base64 = "0.21"
 chrono = { version = "0.4", features = ["serde"] }
 url = "2.5"
-sage_crypto_core = { git = "https://github.com/SAGE-X-project/rs-sage-core.git", default-features = false }
 serde_json = { workspace = true }
 
 [dev-dependencies]

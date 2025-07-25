@@ -239,7 +239,7 @@ async fn test_multiple_signature_algorithms() {
     for (crypto_algo, sig_algo) in algorithms {
         let helper = Rfc9421TestHelper::new().await.expect("Failed to create test helper");
 
-        let key_alias = format!("test_key_{:?}", crypto_algo);
+        let key_alias = format!("test_key_{crypto_algo:?}");
         helper.setup_test_key(&key_alias, crypto_algo).await.expect("Failed to setup test key");
 
         let message = Rfc9421TestHelper::create_test_http_message();
@@ -261,9 +261,7 @@ async fn test_multiple_signature_algorithms() {
                 let error_msg = format!("{e}");
                 assert!(
                     error_msg.contains("key") || error_msg.contains("CryptoTEE"),
-                    "Algorithm {:?} should have reasonable error: {}",
-                    sig_algo,
-                    error_msg
+                    "Algorithm {sig_algo:?} should have reasonable error: {error_msg}"
                 );
             }
         }
