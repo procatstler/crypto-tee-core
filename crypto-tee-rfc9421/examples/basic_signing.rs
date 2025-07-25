@@ -138,10 +138,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         println!("   Key ID: {}", verification_result.key_id);
         println!("   Algorithm: {:?}", verification_result.algorithm);
         if let Some(created) = verification_result.created {
-            println!("   Created: {}", created);
+            println!("   Created: {created}");
         }
         if let Some(expires) = verification_result.expires {
-            println!("   Expires: {}", expires);
+            println!("   Expires: {expires}");
         }
     }
 
@@ -189,8 +189,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let verify_time = start.elapsed();
 
     println!("✅ Performance results:");
-    println!("    Sign time: {:?}", sign_time);
-    println!("    Verify time: {:?}", verify_time);
+    println!("    Sign time: {sign_time:?}");
+    println!("    Verify time: {verify_time:?}");
 
     // RFC 9421 compliance notes
     println!("\n🔐 RFC 9421 Security Features:");

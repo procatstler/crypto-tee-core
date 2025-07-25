@@ -206,12 +206,6 @@ jobs:
         grcov . --binary-path ./target/debug/deps/ -s . -t lcov --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o coverage.lcov
         grcov . --binary-path ./target/debug/deps/ -s . -t html --branch --ignore-not-existing --ignore '../*' --ignore "/*" -o coverage/
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: coverage.lcov
-        fail_ci_if_error: false
-
     - name: Generate coverage summary
       run: |
         COVERAGE=$(grcov . --binary-path ./target/debug/deps/ -s . -t text --branch --ignore-not-existing --ignore '../*' --ignore "/*" | grep "Total:" | awk '{print $2}')

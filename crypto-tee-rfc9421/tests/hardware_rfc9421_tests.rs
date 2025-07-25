@@ -20,6 +20,12 @@ pub struct HttpMessageBuilder {
     body: Option<Vec<u8>>,
 }
 
+impl Default for HttpMessageBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl HttpMessageBuilder {
     pub fn new() -> Self {
         Self {
