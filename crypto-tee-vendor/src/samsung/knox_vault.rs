@@ -221,9 +221,7 @@ impl KnoxVault {
                 &[],
             )
         }
-        .map_err(|_| {
-            VendorError::NotSupported("Failed to get Knox Vault version".to_string())
-        })?;
+        .map_err(|_| VendorError::NotSupported("Failed to get Knox Vault version".to_string()))?;
 
         let version_number = match version {
             JValue::Int(v) => v as u32,

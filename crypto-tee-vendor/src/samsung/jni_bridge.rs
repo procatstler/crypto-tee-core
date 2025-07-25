@@ -199,7 +199,12 @@ impl KnoxJniContext {
             })?;
 
         let spec = unsafe {
-            env.call_method_unchecked(&builder, build_method, jni::signature::ReturnType::Object, &[])
+            env.call_method_unchecked(
+                &builder,
+                build_method,
+                jni::signature::ReturnType::Object,
+                &[],
+            )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to build spec: {}", e)))?;
 
@@ -227,10 +232,7 @@ impl KnoxJniContext {
                 key_generator_class,
                 get_instance_method,
                 jni::signature::ReturnType::Object,
-                &[
-                    JValue::Object(&algorithm_jstring),
-                    JValue::Object(&provider_jstring),
-                ],
+                &[JValue::Object(&algorithm_jstring), JValue::Object(&provider_jstring)],
             )
         }
         .map_err(|e| {
@@ -414,9 +416,9 @@ impl KnoxJniContext {
             .map_err(|e| VendorError::SigningError(format!("Failed to update signature: {}", e)))?;
 
             // Sign
-            let sign_method = env
-                .get_method_id(signature_class, "sign", "()[B")
-                .map_err(|e| VendorError::SigningError(format!("Failed to find sign method: {}", e)))?;
+            let sign_method = env.get_method_id(signature_class, "sign", "()[B").map_err(|e| {
+                VendorError::SigningError(format!("Failed to find sign method: {}", e))
+            })?;
 
             let signature_result = unsafe {
                 env.call_method_unchecked(

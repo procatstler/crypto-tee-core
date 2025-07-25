@@ -4,8 +4,8 @@
 //! for Secure Enclave key operations.
 
 use crate::error::{VendorError, VendorResult};
-use objc::runtime::{BOOL, NO};
 use block::ConcreteBlock;
+use objc::runtime::{BOOL, NO};
 
 // use security_framework::access_control::SecAccessControl; // Currently unused
 
@@ -174,9 +174,9 @@ impl BiometricContext {
     /// Evaluate biometric authentication policy
     #[cfg(target_os = "ios")]
     pub fn evaluate_policy(&self, reason: &str) -> VendorResult<bool> {
+        use objc::block::ConcreteBlock;
         use objc::runtime::{Object, BOOL, NO};
         use objc::{class, msg_send, sel, sel_impl};
-        use objc::block::ConcreteBlock;
         use std::sync::mpsc;
         use std::sync::{Arc, Mutex};
         use std::time::Duration;

@@ -2,7 +2,7 @@
 
 use crate::error::{VendorError, VendorResult};
 use jni::objects::{GlobalRef, JClass, JObject, JString, JValue};
-use jni::sys::{jboolean, jbyteArray, jint, jstring, jobject};
+use jni::sys::{jboolean, jbyteArray, jint, jobject, jstring};
 use jni::{JNIEnv, JavaVM};
 use std::sync::{Arc, Mutex, OnceLock};
 use tracing::{debug, error, info};
@@ -28,7 +28,7 @@ impl JniBridge {
         // Get JavaVM from global reference
         let jvm = get_jni_context()
             .ok_or_else(|| VendorError::InitializationError("JNI not initialized".to_string()))?;
-        
+
         Ok(Self {
             jvm,
             keystore_class: Arc::new(Mutex::new(None)),
@@ -42,20 +42,20 @@ impl JniBridge {
         let context_ref = env.new_global_ref(context).map_err(|e| {
             VendorError::InitializationError(format!("Failed to create context ref: {}", e))
         })?;
-        
+
         *self.context.lock().unwrap() = Some(context_ref);
-        
+
         // Load KeyStore class
         let keystore_class = env.find_class("java/security/KeyStore").map_err(|e| {
             VendorError::InitializationError(format!("Failed to find KeyStore class: {}", e))
         })?;
-        
+
         let keystore_ref = env.new_global_ref(keystore_class).map_err(|e| {
             VendorError::InitializationError(format!("Failed to create KeyStore ref: {}", e))
         })?;
-        
+
         *self.keystore_class.lock().unwrap() = Some(keystore_ref);
-        
+
         Ok(())
     }
 
@@ -124,7 +124,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeInit(
     context: JObject,
 ) {
     info!("Initializing QSEE JNI bridge");
-    
+
     // Initialize global JVM reference
     if let Ok(jvm) = env.get_java_vm() {
         let _ = GLOBAL_JVM.set(Arc::new(jvm));
