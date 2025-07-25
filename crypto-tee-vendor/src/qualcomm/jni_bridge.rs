@@ -1,29 +1,62 @@
 //! JNI Bridge for Qualcomm QSEE Android Integration
 
 use crate::error::{VendorError, VendorResult};
-use jni::objects::{JClass, JObject, JString, JValue};
-use jni::sys::{jboolean, jbyteArray, jint, jstring};
-use jni::JNIEnv;
-use std::sync::Mutex;
+use jni::objects::{GlobalRef, JClass, JObject, JString, JValue};
+use jni::sys::{jboolean, jbyteArray, jint, jstring, jobject};
+use jni::{JNIEnv, JavaVM};
+use std::sync::{Arc, Mutex, OnceLock};
 use tracing::{debug, error, info};
 
 use super::ProtectionLevel;
 
 /// JNI Bridge for QSEE operations
 pub struct JniBridge {
-    /// Cached JNI environment (will be set when called from Java)
-    env: Mutex<Option<*mut jni::sys::JNIEnv>>,
+    /// JavaVM reference for getting JNI environment
+    jvm: Arc<JavaVM>,
+    /// Cached class references
+    keystore_class: Arc<Mutex<Option<GlobalRef>>>,
+    context: Arc<Mutex<Option<GlobalRef>>>,
 }
+
+// Make JniBridge Send + Sync
+unsafe impl Send for JniBridge {}
+unsafe impl Sync for JniBridge {}
 
 impl JniBridge {
     /// Create new JNI bridge
     pub fn new() -> VendorResult<Self> {
-        Ok(Self { env: Mutex::new(None) })
+        // Get JavaVM from global reference
+        let jvm = get_jni_context()
+            .ok_or_else(|| VendorError::InitializationError("JNI not initialized".to_string()))?;
+        
+        Ok(Self {
+            jvm,
+            keystore_class: Arc::new(Mutex::new(None)),
+            context: Arc::new(Mutex::new(None)),
+        })
     }
 
-    /// Initialize JNI bridge with environment
-    pub fn init_env(&self, env: *mut jni::sys::JNIEnv) {
-        *self.env.lock().unwrap() = Some(env);
+    /// Initialize JNI bridge with context
+    pub fn initialize(&self, env: &mut JNIEnv, context: JObject) -> VendorResult<()> {
+        // Store Android context
+        let context_ref = env.new_global_ref(context).map_err(|e| {
+            VendorError::InitializationError(format!("Failed to create context ref: {}", e))
+        })?;
+        
+        *self.context.lock().unwrap() = Some(context_ref);
+        
+        // Load KeyStore class
+        let keystore_class = env.find_class("java/security/KeyStore").map_err(|e| {
+            VendorError::InitializationError(format!("Failed to find KeyStore class: {}", e))
+        })?;
+        
+        let keystore_ref = env.new_global_ref(keystore_class).map_err(|e| {
+            VendorError::InitializationError(format!("Failed to create KeyStore ref: {}", e))
+        })?;
+        
+        *self.keystore_class.lock().unwrap() = Some(keystore_ref);
+        
+        Ok(())
     }
 
     /// Generate key through Android Keystore with QSEE backing
@@ -86,16 +119,21 @@ impl JniBridge {
 /// JNI native methods exposed to Java
 #[no_mangle]
 pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeInit(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
+    context: JObject,
 ) {
     info!("Initializing QSEE JNI bridge");
-    // Initialize native side
+    
+    // Initialize global JVM reference
+    if let Ok(jvm) = env.get_java_vm() {
+        let _ = GLOBAL_JVM.set(Arc::new(jvm));
+    }
 }
 
 #[no_mangle]
 pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGenerateKey(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     alias: JString,
     algorithm: JString,
@@ -104,7 +142,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGenerateKe
     require_auth: jboolean,
     auth_validity: jint,
 ) -> jboolean {
-    let alias_str = match env.get_string(alias) {
+    let alias_str = match env.get_string(&alias) {
         Ok(s) => s.into(),
         Err(e) => {
             error!("Failed to get alias string: {:?}", e);
@@ -112,7 +150,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGenerateKe
         }
     };
 
-    let algorithm_str = match env.get_string(algorithm) {
+    let algorithm_str = match env.get_string(&algorithm) {
         Ok(s) => s.into(),
         Err(e) => {
             error!("Failed to get algorithm string: {:?}", e);
@@ -128,12 +166,12 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGenerateKe
 
 #[no_mangle]
 pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     alias: JString,
     data: jbyteArray,
 ) -> jbyteArray {
-    let alias_str = match env.get_string(alias) {
+    let alias_str = match env.get_string(&alias) {
         Ok(s) => s.into(),
         Err(e) => {
             error!("Failed to get alias string: {:?}", e);
@@ -141,7 +179,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
         }
     };
 
-    let data_vec = match env.convert_byte_array(data) {
+    let data_vec = match env.convert_byte_array(data.into()) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert data array: {:?}", e);
@@ -154,7 +192,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
     // Sign using Android Keystore
     // Return signature
     match env.byte_array_from_slice(&[0u8; 64]) {
-        Ok(arr) => arr,
+        Ok(arr) => arr.as_raw(),
         Err(e) => {
             error!("Failed to create signature array: {:?}", e);
             std::ptr::null_mut()
@@ -164,16 +202,32 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
 
 #[no_mangle]
 pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     alias: JString,
     data: jbyteArray,
     signature: jbyteArray,
 ) -> jboolean {
-    let alias_str = match env.get_string(alias) {
+    let alias_str = match env.get_string(&alias) {
         Ok(s) => s.into(),
         Err(e) => {
             error!("Failed to get alias string: {:?}", e);
+            return 0;
+        }
+    };
+
+    let data_vec = match env.convert_byte_array(data.into()) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("Failed to convert data array: {:?}", e);
+            return 0;
+        }
+    };
+
+    let signature_vec = match env.convert_byte_array(signature.into()) {
+        Ok(v) => v,
+        Err(e) => {
+            error!("Failed to convert signature array: {:?}", e);
             return 0;
         }
     };
@@ -186,11 +240,11 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
 
 #[no_mangle]
 pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGetAttestation(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _class: JClass,
     alias: JString,
 ) -> jbyteArray {
-    let alias_str = match env.get_string(alias) {
+    let alias_str = match env.get_string(&alias) {
         Ok(s) => s.into(),
         Err(e) => {
             error!("Failed to get alias string: {:?}", e);
@@ -202,10 +256,25 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGetAttesta
 
     // Get attestation from Android Keystore
     match env.byte_array_from_slice(b"QSEE_ATTESTATION") {
-        Ok(arr) => arr,
+        Ok(arr) => arr.as_raw(),
         Err(e) => {
             error!("Failed to create attestation array: {:?}", e);
             std::ptr::null_mut()
         }
     }
+}
+
+// Global JVM reference for callbacks
+static GLOBAL_JVM: OnceLock<Arc<JavaVM>> = OnceLock::new();
+
+/// Initialize JNI with JavaVM
+pub unsafe fn init_jni(jvm: *mut jni::sys::JavaVM) {
+    if let Ok(jvm) = JavaVM::from_raw(jvm) {
+        let _ = GLOBAL_JVM.set(Arc::new(jvm));
+    }
+}
+
+/// Get JNI context
+pub fn get_jni_context() -> Option<Arc<JavaVM>> {
+    GLOBAL_JVM.get().cloned()
 }

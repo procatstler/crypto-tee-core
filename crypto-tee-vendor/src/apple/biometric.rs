@@ -5,8 +5,7 @@
 
 use crate::error::{VendorError, VendorResult};
 use objc::runtime::{BOOL, NO};
-use objc::rc::StrongPtr;
-use objc::block::{Block, ConcreteBlock};
+use block::ConcreteBlock;
 
 // use security_framework::access_control::SecAccessControl; // Currently unused
 

@@ -52,7 +52,7 @@ simulator-apple = ["simulator"]
 simulator-qualcomm = ["simulator"]
 # Real platform features (only enabled on appropriate platforms)
 samsung = ["jni", "ndk"]
-apple = ["core-foundation", "security-framework", "security-framework-sys", "objc"]
+apple = ["core-foundation", "security-framework", "security-framework-sys", "objc", "block"]
 qualcomm = ["jni", "ndk"]
 # WASM compatibility
 wasm = ["software-fallback"]
@@ -66,13 +66,15 @@ ndk = { workspace = true, optional = true }
 core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
 security-framework-sys = { workspace = true, optional = true }
-objc = { version = "0.2", features = ["block"], optional = true }
+objc = { version = "0.2", optional = true }
+block = { version = "0.1", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
 security-framework-sys = { workspace = true, optional = true }
-objc = { version = "0.2", features = ["block"], optional = true }
+objc = { version = "0.2", optional = true }
+block = { version = "0.1", optional = true }
 
 # WASM support
 [target.'cfg(target_arch = "wasm32")'.dependencies]
