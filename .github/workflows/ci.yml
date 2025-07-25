@@ -215,12 +215,12 @@ jobs:
         cargo test --test integration_tests --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
 
     - name: Test RFC 9421 compliance
-      run: cargo test --package crypto-tee-rfc9421 --features "simulator"
+      run: cargo test --package crypto-tee-rfc9421
 
     - name: Test vendor implementations
       run: |
         cargo test --package crypto-tee-vendor --features "simulator,simulator-samsung,simulator-apple,simulator-qualcomm"
-        cargo test --package crypto-tee-platform --features "simulator"
+        cargo test --package crypto-tee-platform
 
   release:
     name: Release Check
