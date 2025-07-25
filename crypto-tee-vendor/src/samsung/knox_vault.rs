@@ -5,7 +5,7 @@
 
 use crate::error::{VendorError, VendorResult};
 use jni::{
-    objects::{JObject, JString, JValue},
+    objects::{JObject, JValue},
     JNIEnv,
 };
 
@@ -14,7 +14,7 @@ pub struct KnoxVault;
 
 impl KnoxVault {
     /// Check if Knox Vault is available
-    pub fn is_available(env: &JNIEnv) -> VendorResult<bool> {
+    pub fn is_available(env: &mut JNIEnv) -> VendorResult<bool> {
         // Check for Knox Vault availability
         let knox_vault_class = env
             .find_class("com/samsung/android/knox/keystore/KnoxSecurityUtils")
@@ -24,14 +24,15 @@ impl KnoxVault {
             .get_static_method_id(knox_vault_class, "isKnoxVaultSupported", "()Z")
             .map_err(|_| VendorError::NotAvailable)?;
 
-        let result = env
-            .call_static_method_unchecked(
+        let result = unsafe {
+            env.call_static_method_unchecked(
                 knox_vault_class,
                 is_knox_vault_supported_method,
-                &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
+                &[],
             )
-            .map_err(|_| VendorError::NotAvailable)?;
+        }
+        .map_err(|_| VendorError::NotAvailable)?;
 
         match result {
             JValue::Bool(supported) => Ok(supported != 0),
@@ -40,7 +41,7 @@ impl KnoxVault {
     }
 
     /// Enable Knox Vault for a key
-    pub fn enable_for_key(env: &JNIEnv, spec_builder: JObject) -> VendorResult<()> {
+    pub fn enable_for_key(env: &mut JNIEnv, spec_builder: &JObject) -> VendorResult<()> {
         let builder_class = env.get_object_class(spec_builder).map_err(|e| {
             VendorError::KeyGeneration(format!("Failed to get builder class: {}", e))
         })?;
@@ -56,12 +57,14 @@ impl KnoxVault {
                 VendorError::KeyGeneration(format!("Failed to find setKnoxVault: {}", e))
             })?;
 
-        env.call_method_unchecked(
-            spec_builder,
-            set_knox_vault_method,
-            jni::signature::ReturnType::Object,
-            &[JValue::Bool(1)],
-        )
+        unsafe {
+            env.call_method_unchecked(
+                spec_builder,
+                set_knox_vault_method,
+                jni::signature::ReturnType::Object,
+                &[JValue::Bool(1)],
+            )
+        }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to enable Knox Vault: {}", e)))?;
 
         Ok(())
@@ -69,8 +72,8 @@ impl KnoxVault {
 
     /// Set authentication requirements
     pub fn set_authentication(
-        env: &JNIEnv,
-        spec_builder: JObject,
+        env: &mut JNIEnv,
+        spec_builder: &JObject,
         require_auth: bool,
         validity_seconds: Option<u32>,
     ) -> VendorResult<()> {
@@ -96,12 +99,14 @@ impl KnoxVault {
                 ))
             })?;
 
-        env.call_method_unchecked(
-            spec_builder,
-            set_user_auth_method,
-            jni::signature::ReturnType::Object,
-            &[JValue::Bool(1)],
-        )
+        unsafe {
+            env.call_method_unchecked(
+                spec_builder,
+                set_user_auth_method,
+                jni::signature::ReturnType::Object,
+                &[JValue::Bool(1)],
+            )
+        }
         .map_err(|e| {
             VendorError::KeyGeneration(format!("Failed to set user authentication: {}", e))
         })?;
@@ -121,12 +126,14 @@ impl KnoxVault {
                     ))
                 })?;
 
-            env.call_method_unchecked(
-                spec_builder,
-                set_validity_method,
-                jni::signature::ReturnType::Object,
-                &[JValue::Int(seconds as i32)],
-            )
+            unsafe {
+                env.call_method_unchecked(
+                    spec_builder,
+                    set_validity_method,
+                    jni::signature::ReturnType::Object,
+                    &[JValue::Int(seconds as i32)],
+                )
+            }
             .map_err(|e| {
                 VendorError::KeyGeneration(format!("Failed to set validity duration: {}", e))
             })?;
@@ -136,7 +143,7 @@ impl KnoxVault {
     }
 
     /// Set biometric authentication
-    pub fn set_biometric_auth(env: &JNIEnv, spec_builder: JObject) -> VendorResult<()> {
+    pub fn set_biometric_auth(env: &mut JNIEnv, spec_builder: &JObject) -> VendorResult<()> {
         let builder_class = env.get_object_class(spec_builder).map_err(|e| {
             VendorError::KeyGeneration(format!("Failed to get builder class: {}", e))
         })?;
@@ -155,19 +162,21 @@ impl KnoxVault {
                 ))
             })?;
 
-        env.call_method_unchecked(
-            spec_builder,
-            set_biometric_method,
-            jni::signature::ReturnType::Object,
-            &[JValue::Bool(1)],
-        )
+        unsafe {
+            env.call_method_unchecked(
+                spec_builder,
+                set_biometric_method,
+                jni::signature::ReturnType::Object,
+                &[JValue::Bool(1)],
+            )
+        }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to set biometric auth: {}", e)))?;
 
         Ok(())
     }
 
     /// Get Knox Vault status
-    pub fn get_status(env: &JNIEnv) -> VendorResult<KnoxVaultStatus> {
+    pub fn get_status(env: &mut JNIEnv) -> VendorResult<KnoxVaultStatus> {
         let knox_vault_class =
             env.find_class("com/samsung/android/knox/keystore/KnoxSecurityUtils").map_err(|e| {
                 VendorError::HardwareError(format!("Failed to find KnoxSecurityUtils: {}", e))
@@ -179,16 +188,17 @@ impl KnoxVault {
                 |e| VendorError::HardwareError(format!("Failed to find isKnoxVaultEnabled: {}", e)),
             )?;
 
-        let enabled = env
-            .call_static_method_unchecked(
+        let enabled = unsafe {
+            env.call_static_method_unchecked(
                 knox_vault_class,
                 is_enabled_method,
-                &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
+                &[],
             )
-            .map_err(|e| {
-                VendorError::HardwareError(format!("Failed to check Knox Vault enabled: {}", e))
-            })?;
+        }
+        .map_err(|e| {
+            VendorError::HardwareError(format!("Failed to check Knox Vault enabled: {}", e))
+        })?;
 
         let is_enabled = match enabled {
             JValue::Bool(b) => b != 0,
@@ -203,16 +213,17 @@ impl KnoxVault {
                 VendorError::NotSupported("Knox Vault version check not available".to_string())
             })?;
 
-        let version = env
-            .call_static_method_unchecked(
+        let version = unsafe {
+            env.call_static_method_unchecked(
                 knox_vault_class,
                 get_version_method,
-                &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
+                &[],
             )
-            .map_err(|_| {
-                VendorError::NotSupported("Failed to get Knox Vault version".to_string())
-            })?;
+        }
+        .map_err(|_| {
+            VendorError::NotSupported("Failed to get Knox Vault version".to_string())
+        })?;
 
         let version_number = match version {
             JValue::Int(v) => v as u32,
