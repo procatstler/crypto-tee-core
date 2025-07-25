@@ -41,6 +41,11 @@ tracing-subscriber = "0.3"
 name = "performance_tests"
 harness = false
 
+# WASM support
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+tokio = { workspace = true, features = ["sync", "time"], default-features = false }
+
 [features]
 default = ["software-fallback"]
 software-fallback = ["crypto-tee-vendor/software-fallback"]

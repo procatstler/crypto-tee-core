@@ -54,6 +54,8 @@ simulator-qualcomm = ["simulator"]
 samsung = ["jni", "ndk"]
 apple = ["core-foundation", "security-framework", "security-framework-sys", "objc"]
 qualcomm = ["jni", "ndk"]
+# WASM compatibility
+wasm = ["software-fallback"]
 
 # Platform-specific dependencies
 [target.'cfg(target_os = "android")'.dependencies]
@@ -71,3 +73,8 @@ core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
 security-framework-sys = { workspace = true, optional = true }
 objc = { version = "0.2", optional = true }
+
+# WASM support
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+tokio = { workspace = true, features = ["sync", "time"], default-features = false }
