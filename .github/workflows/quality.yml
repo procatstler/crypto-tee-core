@@ -129,15 +129,23 @@ jobs:
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
 
-    - name: Install cargo-complexity
-      run: cargo install cargo-complexity
+    - name: Install scc
+      run: |
+        wget -q https://github.com/boyter/scc/releases/download/v3.1.0/scc_3.1.0_Linux_x86_64.tar.gz
+        tar -xzf scc_3.1.0_Linux_x86_64.tar.gz
+        sudo mv scc /usr/local/bin/
 
     - name: Run complexity analysis
       run: |
-        cargo complexity --all --threshold 10 > complexity-report.txt || true
+        scc --by-file --sort complexity . | grep -E "\.(rs|toml)$" > complexity-report.txt || true
         echo "## Code Complexity Report" >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
-        head -n 20 complexity-report.txt >> $GITHUB_STEP_SUMMARY
+        head -n 50 complexity-report.txt >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "### Summary" >> $GITHUB_STEP_SUMMARY
+        echo '```' >> $GITHUB_STEP_SUMMARY
+        scc . >> $GITHUB_STEP_SUMMARY
         echo '```' >> $GITHUB_STEP_SUMMARY
 
     - name: Upload complexity report
