@@ -13,6 +13,7 @@ pub mod test_scenarios;
 pub struct TestConfig {
     pub use_hardware_backed: bool,
     pub algorithm: Algorithm,
+    #[allow(dead_code)]
     pub key_count: usize,
     pub concurrent_operations: usize,
 }
@@ -66,6 +67,7 @@ impl TestHelper {
     }
 
     /// Generate multiple test keys with numbered aliases
+    #[allow(dead_code)]
     pub async fn generate_test_keys(
         &self,
         prefix: &str,
@@ -125,6 +127,7 @@ impl TestHelper {
     }
 
     /// Clean up test keys
+    #[allow(dead_code)]
     pub async fn cleanup_keys(&self, aliases: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         for alias in aliases {
             if let Err(e) = self.crypto_tee.delete_key(alias).await {
@@ -196,16 +199,19 @@ impl TestAssertions {
 }
 
 /// Benchmark utilities
+#[allow(dead_code)]
 pub struct BenchmarkHelper {
     pub test_helper: TestHelper,
 }
 
 impl BenchmarkHelper {
+    #[allow(dead_code)]
     pub async fn new() -> Result<Self, Box<dyn std::error::Error>> {
         Ok(Self { test_helper: TestHelper::new().await? })
     }
 
     /// Measure key generation time
+    #[allow(dead_code)]
     pub async fn benchmark_key_generation(
         &self,
         iterations: usize,
@@ -222,6 +228,7 @@ impl BenchmarkHelper {
     }
 
     /// Measure signing throughput
+    #[allow(dead_code)]
     pub async fn benchmark_signing(
         &self,
         key_alias: &str,

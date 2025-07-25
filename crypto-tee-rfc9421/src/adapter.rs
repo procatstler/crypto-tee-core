@@ -271,7 +271,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_signature_base_construction() {
-        let message = HttpMessage {
+        let _message = HttpMessage {
             method: Some("POST".to_string()),
             uri: Some("https://example.com/api/test".to_string()),
             status: None,
@@ -283,7 +283,7 @@ mod tests {
             body: None,
         };
 
-        let params =
+        let _params =
             SignatureInputBuilder::new("test-key".to_string(), SignatureAlgorithm::Ed25519)
                 .add_component(SignatureComponent::Method)
                 .add_component(SignatureComponent::Path)

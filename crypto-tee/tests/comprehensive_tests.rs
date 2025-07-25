@@ -22,7 +22,7 @@ async fn test_all_algorithms_comprehensive() {
         // Run comprehensive test for this algorithm
         TestScenarios::test_all_algorithms_lifecycle(&helper)
             .await
-            .expect(&format!("Algorithm lifecycle test failed for {:?}", algorithm));
+            .unwrap_or_else(|_| panic!("Algorithm lifecycle test failed for {algorithm:?}"));
     }
 }
 
@@ -83,7 +83,7 @@ async fn test_different_algorithms_interoperability() {
     let helper = TestHelper::new().await.expect("Failed to create test helper");
 
     // Test that different algorithm keys can coexist
-    let algorithms = vec![Algorithm::Ed25519, Algorithm::EcdsaP256];
+    let algorithms = [Algorithm::Ed25519, Algorithm::EcdsaP256];
     let mut keys = Vec::new();
 
     // Generate all keys using the same helper instance
@@ -120,7 +120,7 @@ async fn test_different_algorithms_interoperability() {
             .await
             .expect("Failed to verify algorithm-specific signature");
 
-        assert!(valid, "Signature verification failed for algorithm {:?}", algorithm);
+        assert!(valid, "Signature verification failed for algorithm {algorithm:?}");
     }
 
     // Clean up

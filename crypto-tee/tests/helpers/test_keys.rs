@@ -71,6 +71,7 @@ impl TestKeyFactory {
     }
 
     /// Generate alias for algorithm-specific testing
+    #[allow(dead_code)]
     pub fn algorithm_alias(&self, algorithm: Algorithm) -> String {
         let algo_name = match algorithm {
             Algorithm::Ed25519 => "ed25519",
@@ -86,6 +87,7 @@ impl TestKeyFactory {
     }
 
     /// Generate batch of unique aliases
+    #[allow(dead_code)]
     pub fn batch_aliases(&self, prefix: &str, count: usize) -> Vec<String> {
         (0..count).map(|_| self.unique_alias(prefix)).collect()
     }
@@ -107,6 +109,7 @@ impl TestKeyLifecycle {
     }
 
     /// Unregister a key
+    #[allow(dead_code)]
     pub fn unregister_key(&mut self, alias: &str) {
         self.active_keys.remove(alias);
     }
@@ -126,6 +129,7 @@ impl TestKeyLifecycle {
     }
 
     /// Clear all registered keys
+    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.active_keys.clear();
     }

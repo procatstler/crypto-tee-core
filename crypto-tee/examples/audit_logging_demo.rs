@@ -37,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let key_handle = crypto_tee.generate_key("demo_key", key_options).await?;
 
-    println!("✓ Key generated: {key_handle.alias}\n");
+    println!("✓ Key generated: {}\n", key_handle.alias);
 
     // Sign some data (this will be audited)
     println!("Signing data...");
@@ -61,7 +61,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     println!("✓ Key info retrieved:");
     println!("  - Algorithm: {:?}", key_info.algorithm);
-    println!("  - Hardware backed: {key_info.hardware_backed}");
+    println!("  - Hardware backed: {}", key_info.hardware_backed);
     println!("  - Created at: {:?}\n", key_info.created_at);
 
     // Delete the key (this will be audited)

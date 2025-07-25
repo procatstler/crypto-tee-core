@@ -19,7 +19,7 @@ impl TestScenarios {
         ];
 
         for algorithm in algorithms {
-            let alias = format!("lifecycle_test_{:?}", algorithm);
+            let alias = format!("lifecycle_test_{algorithm:?}");
 
             // Generate key
             let options = KeyOptions {
@@ -48,7 +48,7 @@ impl TestScenarios {
             TestAssertions::assert_signature_format(&signature, algorithm);
 
             let valid = helper.crypto_tee.verify(&alias, test_data, &signature, None).await?;
-            assert!(valid, "Signature verification failed for {:?}", algorithm);
+            assert!(valid, "Signature verification failed for {algorithm:?}");
 
             // Clean up
             helper.crypto_tee.delete_key(&alias).await?;
@@ -178,7 +178,7 @@ impl TestScenarios {
 
         // Test usage count increment
         helper.crypto_tee.sign(alias, b"test", None).await?;
-        let info = helper.crypto_tee.get_key_info(alias).await?;
+        let _info = helper.crypto_tee.get_key_info(alias).await?;
         // Note: Usage count checking depends on implementation details
 
         helper.crypto_tee.delete_key(alias).await?;
@@ -201,7 +201,7 @@ impl TestScenarios {
             TestAssertions::assert_signature_format(&signature, helper.config.algorithm);
 
             let valid = helper.crypto_tee.verify(alias, &large_data, &signature, None).await?;
-            assert!(valid, "Large data verification failed for size {}", size);
+            assert!(valid, "Large data verification failed for size {size}");
         }
 
         helper.crypto_tee.delete_key(alias).await?;
@@ -226,7 +226,7 @@ impl TestScenarios {
         // Verify all test keys are present
         for alias in &test_aliases {
             let found = keys.iter().any(|k| k.alias == *alias);
-            assert!(found, "Key {} not found in listing", alias);
+            assert!(found, "Key {alias} not found in listing");
         }
 
         // Clean up

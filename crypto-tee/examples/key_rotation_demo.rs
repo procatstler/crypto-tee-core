@@ -38,7 +38,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let initial_key = crypto_tee.generate_key(key_alias, key_options.clone()).await?;
     println!("   ✅ Key generated successfully");
     println!("   📋 Algorithm: {:?}", initial_key.metadata.algorithm);
-    println!("   🔒 Hardware backed: {initial_key.metadata.hardware_backed}");
+    println!("   🔒 Hardware backed: {}", initial_key.metadata.hardware_backed);
     println!("   📅 Created: {:?}", initial_key.metadata.created_at);
 
     // Step 2: Configure rotation policies
@@ -59,7 +59,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   ✅ Time-based rotation policy set");
     let max_age_secs = time_based_policy.max_key_age.as_secs();
     println!("   ⏰ Max key age: {max_age_secs} seconds");
-    println!("   📚 Max versions: {time_based_policy.max_versions}");
+    println!("   📚 Max versions: {}", time_based_policy.max_versions);
     println!("   🔄 Strategy: {:?}", time_based_policy.strategy);
 
     // Step 3: Demonstrate manual rotation
@@ -84,11 +84,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Step 4: Get updated key information
     println!("\n4. Checking rotated key information");
     let rotated_key_info = crypto_tee.get_key_info(key_alias).await?;
-    println!("   📋 Key alias: {rotated_key_info.alias}");
+    println!("   📋 Key alias: {}", rotated_key_info.alias);
     println!("   🔧 Algorithm: {:?}", rotated_key_info.algorithm);
     println!("   📅 Created: {:?}", rotated_key_info.created_at);
-    println!("   🔒 Hardware backed: {rotated_key_info.hardware_backed}");
-    println!("   🔐 Requires auth: {rotated_key_info.requires_auth}");
+    println!("   🔒 Hardware backed: {}", rotated_key_info.hardware_backed);
+    println!("   🔐 Requires auth: {}", rotated_key_info.requires_auth);
 
     // Step 5: Demonstrate different rotation strategies
     println!("\n5. Testing different rotation strategies");
@@ -108,7 +108,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let usage_key_alias = "usage-rotation-key";
     crypto_tee.generate_key(usage_key_alias, key_options.clone()).await?;
     crypto_tee.set_rotation_policy(usage_key_alias, usage_based_policy.clone()).await?;
-    println!("   ✅ Usage-based policy set (max usage: {usage_based_policy.max_usage_count})");
+    println!("   ✅ Usage-based policy set (max usage: {})", usage_based_policy.max_usage_count);
 
     // Hybrid rotation
     println!("\n   🔄 Hybrid rotation policy:");
@@ -153,10 +153,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("   📝 Total keys: {total_keys}");
 
     for key in &all_keys {
-        println!("   🔑 {key.alias}");
+        println!("   🔑 {}", key.alias);
         println!("      - Algorithm: {:?}", key.algorithm);
         println!("      - Created: {:?}", key.created_at);
-        println!("      - Hardware backed: {key.hardware_backed}");
+        println!("      - Hardware backed: {}", key.hardware_backed);
     }
 
     // Step 8: Demonstrate compliance-based rotation
@@ -191,9 +191,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("\n9. System health check");
     let health_report = crypto_tee.health_check().await?;
     println!("   🏥 Overall status: {:?}", health_report.overall_status);
-    println!("   📊 TEE available: {health_report.tee_health.available}");
+    println!("   📊 TEE available: {}", health_report.tee_health.available);
     println!(
-        "   🔑 Key count: {health_report.tee_health.key_count}/{health_report.tee_health.max_keys}"
+        "   🔑 Key count: {}/{}",
+        health_report.tee_health.key_count, health_report.tee_health.max_keys
     );
 
     // Step 10: Cleanup demo keys

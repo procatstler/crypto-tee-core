@@ -157,14 +157,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Add the signature headers to the output
     let mut output_headers = message.headers.clone();
-    output_headers.insert(
-        "signature-input".to_string(),
-        vec![signature_output.signature_input.clone()],
-    );
-    output_headers.insert(
-        "signature".to_string(),
-        vec![format!("sig1=:{signature_output.signature}")],
-    );
+    output_headers
+        .insert("signature-input".to_string(), vec![signature_output.signature_input.clone()]);
+    output_headers
+        .insert("signature".to_string(), vec![format!("sig1=:{}", signature_output.signature)]);
 
     for (name, values) in &output_headers {
         for value in values {
