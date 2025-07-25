@@ -51,6 +51,7 @@ async fn test_generic_simulator_basic_operations() {
 }
 
 #[tokio::test]
+#[cfg(feature = "simulator-samsung")]
 async fn test_samsung_simulator() {
     let config = SimulationConfig::default();
     let simulator = samsung::SamsungTEESimulator::new(config);
@@ -88,6 +89,7 @@ async fn test_samsung_simulator() {
 }
 
 #[tokio::test]
+#[cfg(feature = "simulator-apple")]
 async fn test_apple_simulator() {
     let config = SimulationConfig::default();
     let simulator = apple::AppleTEESimulator::new(config);
@@ -116,6 +118,7 @@ async fn test_apple_simulator() {
 }
 
 #[tokio::test]
+#[cfg(feature = "simulator-qualcomm")]
 async fn test_qualcomm_simulator() {
     let config = SimulationConfig::default();
     let simulator = qualcomm::QualcommTEESimulator::new(config);
@@ -144,16 +147,25 @@ async fn test_simulator_factory() {
     let config = SimulationConfig::default();
 
     // Test creating different simulators
-    let samsung_sim = SimulatorFactory::create_samsung_simulator(config.clone());
-    assert_eq!(samsung_sim.simulator_type(), SimulatorType::Samsung);
+    #[cfg(feature = "simulator-samsung")]
+    {
+        let samsung_sim = SimulatorFactory::create_samsung_simulator(config.clone());
+        assert_eq!(samsung_sim.simulator_type(), SimulatorType::Samsung);
+    }
 
-    let apple_sim = SimulatorFactory::create_apple_simulator(config.clone());
-    assert_eq!(apple_sim.simulator_type(), SimulatorType::Apple);
+    #[cfg(feature = "simulator-apple")]
+    {
+        let apple_sim = SimulatorFactory::create_apple_simulator(config.clone());
+        assert_eq!(apple_sim.simulator_type(), SimulatorType::Apple);
+    }
 
-    let qualcomm_sim = SimulatorFactory::create_qualcomm_simulator(config.clone());
-    assert_eq!(qualcomm_sim.simulator_type(), SimulatorType::Qualcomm);
+    #[cfg(feature = "simulator-qualcomm")]
+    {
+        let qualcomm_sim = SimulatorFactory::create_qualcomm_simulator(config.clone());
+        assert_eq!(qualcomm_sim.simulator_type(), SimulatorType::Qualcomm);
+    }
 
-    let generic_sim = SimulatorFactory::create_generic_simulator(config);
+    let generic_sim = SimulatorFactory::create_generic_simulator(config.clone());
     assert_eq!(generic_sim.simulator_type(), SimulatorType::Generic);
 }
 
