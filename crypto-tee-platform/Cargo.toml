@@ -6,6 +6,8 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Platform-specific adapters for CryptoTEE"
+keywords = ["crypto", "tee", "platform", "android", "ios"]
+categories = ["cryptography", "os"]
 
 [dependencies]
 crypto-tee-vendor = { path = "../crypto-tee-vendor", features = ["software-fallback"] }

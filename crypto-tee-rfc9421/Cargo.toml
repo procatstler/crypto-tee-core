@@ -6,6 +6,8 @@ authors.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "RFC 9421 HTTP Message Signatures implementation for CryptoTEE"
+keywords = ["crypto", "rfc9421", "http", "signatures", "tee"]
+categories = ["cryptography", "web-programming::http-client"]
 
 [dependencies]
 crypto-tee = { path = "../crypto-tee" }

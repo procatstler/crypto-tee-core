@@ -7,6 +7,8 @@ license.workspace = true
 repository.workspace = true
 documentation.workspace = true
 description = "Core CryptoTEE API - Hardware-backed key management and cryptographic operations"
+keywords = ["crypto", "tee", "hardware", "security", "key-management"]
+categories = ["cryptography", "hardware-support"]
 
 [dependencies]
 crypto-tee-vendor = { path = "../crypto-tee-vendor" }
