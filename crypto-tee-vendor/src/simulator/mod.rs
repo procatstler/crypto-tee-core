@@ -283,12 +283,17 @@ impl SimulatorFactory {
         let config = SimulationConfig::default();
 
         #[cfg(all(target_os = "android", feature = "simulator-samsung"))]
-        return Self::create_samsung_simulator(config);
+        {
+            return Self::create_samsung_simulator(config);
+        }
 
         #[cfg(all(any(target_os = "ios", target_os = "macos"), feature = "simulator-apple"))]
-        return Self::create_apple_simulator(config);
+        {
+            return Self::create_apple_simulator(config);
+        }
 
         // Default to generic for other platforms
+        #[allow(unreachable_code)]
         Self::create_generic_simulator(config)
     }
 }
