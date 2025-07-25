@@ -4,7 +4,9 @@
 //! for Secure Enclave key operations.
 
 use crate::error::{VendorError, VendorResult};
-use core_foundation::string::CFString;
+use objc::runtime::{BOOL, NO};
+use objc::rc::StrongPtr;
+use objc::block::{Block, ConcreteBlock};
 
 // use security_framework::access_control::SecAccessControl; // Currently unused
 
@@ -173,8 +175,9 @@ impl BiometricContext {
     /// Evaluate biometric authentication policy
     #[cfg(target_os = "ios")]
     pub fn evaluate_policy(&self, reason: &str) -> VendorResult<bool> {
-        use objc::runtime::Object;
+        use objc::runtime::{Object, BOOL, NO};
         use objc::{class, msg_send, sel, sel_impl};
+        use objc::block::ConcreteBlock;
         use std::sync::mpsc;
         use std::sync::{Arc, Mutex};
         use std::time::Duration;
@@ -191,28 +194,27 @@ impl BiometricContext {
 
             let policy = 2; // LAPolicyDeviceOwnerAuthenticationWithBiometrics
 
-            let reason_cfstring = CFString::new(reason);
+            let reason_cstring = std::ffi::CString::new(reason).unwrap();
             let reason_nsstring: *mut Object = msg_send![
                 class!(NSString),
-                stringWithUTF8String:reason_cfstring.as_ptr()
+                stringWithUTF8String:reason_cstring.as_ptr()
             ];
 
             let (tx, rx) = mpsc::channel();
             let tx = Arc::new(Mutex::new(tx));
 
             // Create block for completion handler
-            let block = objc::rc::StrongPtr::new({
-                let tx = tx.clone();
-                move |success: bool, _error: *mut Object| {
-                    let _ = tx.lock().unwrap().send(success);
-                }
+            let tx_clone = tx.clone();
+            let block = ConcreteBlock::new(move |success: BOOL, _error: *mut Object| {
+                let _ = tx_clone.lock().unwrap().send(success != NO);
             });
+            let block_ref: &ConcreteBlock<(BOOL, *mut Object), ()> = &block;
 
             let _: () = msg_send![
                 context,
                 evaluatePolicy:policy
                 localizedReason:reason_nsstring
-                reply:&*block
+                reply:block_ref
             ];
 
             // Wait for authentication result (with timeout)

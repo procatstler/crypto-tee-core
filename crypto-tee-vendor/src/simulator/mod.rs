@@ -279,7 +279,6 @@ impl SimulatorFactory {
     }
 
     /// Auto-detect and create appropriate simulator for current platform
-    #[allow(unreachable_code)]
     pub fn create_platform_simulator() -> Box<dyn TEESimulator> {
         let config = SimulationConfig::default();
 
@@ -290,6 +289,10 @@ impl SimulatorFactory {
         return Self::create_apple_simulator(config);
 
         // Default to generic for other platforms
+        #[cfg(not(any(
+            all(target_os = "android", feature = "simulator-samsung"),
+            all(any(target_os = "ios", target_os = "macos"), feature = "simulator-apple")
+        )))]
         Self::create_generic_simulator(config)
     }
 }

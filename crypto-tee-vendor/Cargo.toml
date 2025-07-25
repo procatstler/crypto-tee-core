@@ -66,13 +66,13 @@ ndk = { workspace = true, optional = true }
 core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
 security-framework-sys = { workspace = true, optional = true }
-objc = { version = "0.2", optional = true }
+objc = { version = "0.2", features = ["block"], optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = { workspace = true, optional = true }
 security-framework = { workspace = true, optional = true }
 security-framework-sys = { workspace = true, optional = true }
-objc = { version = "0.2", optional = true }
+objc = { version = "0.2", features = ["block"], optional = true }
 
 # WASM support
 [target.'cfg(target_arch = "wasm32")'.dependencies]
