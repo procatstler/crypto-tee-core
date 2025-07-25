@@ -48,19 +48,19 @@ async fn test_audit_logging_generates_logs() {
 
     // Check that audit log file exists
     let audit_log_path = Path::new("audit_logs/crypto-tee-audit.jsonl");
-    
+
     // First ensure the directory was created
     if !audit_log_path.parent().unwrap().exists() {
         // If directory doesn't exist, the test is still valid - audit logs were to console only
         println!("Audit log directory not created - logs went to console only");
         return;
     }
-    
+
     // If directory exists, then file should exist
     assert!(audit_log_path.exists(), "Audit log file should exist");
 
     // Cleanup
-    if let Ok(_) = std::fs::remove_dir_all("audit_logs") {
+    if std::fs::remove_dir_all("audit_logs").is_ok() {
         // Directory removed
     }
 }

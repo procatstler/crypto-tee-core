@@ -19,7 +19,7 @@ impl Rfc9421Adapter {
     /// Create a new RFC 9421 adapter
     pub async fn new() -> Rfc9421Result<Self> {
         let crypto_tee =
-            CryptoTEEBuilder::new().build().await.map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
+            CryptoTEEBuilder::new().build().await.map_err(Rfc9421Error::CryptoTEEError)?;
 
         Ok(Self { crypto_tee: Arc::new(crypto_tee) })
     }
@@ -39,14 +39,15 @@ impl Rfc9421Adapter {
 
         // Build signature base
         let signature_base = self.build_signature_base(message, &params)?;
-        debug!("Signature base generated ({} bytes)", signature_base.len());
+        let base_len = signature_base.len();
+        debug!("Signature base generated ({base_len} bytes)");
 
         // Sign with CryptoTEE
         let signature_bytes = self
             .crypto_tee
             .sign(&params.key_id, signature_base.as_bytes(), None)
             .await
-            .map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
+            .map_err(Rfc9421Error::CryptoTEEError)?;
 
         // Encode signature
         let signature = base64::prelude::BASE64_STANDARD.encode(&signature_bytes);
@@ -61,7 +62,8 @@ impl Rfc9421Adapter {
         signature: &str,
         params: &SignatureParams,
     ) -> Rfc9421Result<VerificationResult> {
-        info!("Verifying HTTP message signature with key: {}", params.key_id);
+        let key_id = &params.key_id;
+        info!("Verifying HTTP message signature with key: {key_id}");
 
         // Build signature base
         let signature_base = self.build_signature_base(message, params)?;
@@ -69,14 +71,14 @@ impl Rfc9421Adapter {
         // Decode signature
         let signature_bytes = base64::prelude::BASE64_STANDARD
             .decode(signature)
-            .map_err(|e| Rfc9421Error::InvalidParameters(format!("Invalid base64: {}", e)))?;
+            .map_err(|e| Rfc9421Error::InvalidParameters(format!("Invalid base64: {e}")))?;
 
         // Verify with CryptoTEE
         let valid = self
             .crypto_tee
             .verify(&params.key_id, signature_base.as_bytes(), &signature_bytes, None)
             .await
-            .map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
+            .map_err(Rfc9421Error::CryptoTEEError)?;
 
         Ok(VerificationResult {
             valid,
@@ -100,7 +102,7 @@ impl Rfc9421Adapter {
             .crypto_tee
             .get_key_info(&params.key_id)
             .await
-            .map_err(|e| Rfc9421Error::CryptoTEEError(e))?;
+            .map_err(Rfc9421Error::CryptoTEEError)?;
 
         // For future sage-core integration - currently commented out
         /*
@@ -139,7 +141,7 @@ impl Rfc9421Adapter {
 
         // Add signature parameters
         let sig_params = self.format_signature_params(params)?;
-        lines.push(format!("\"@signature-params\": {}", sig_params));
+        lines.push(format!("\"@signature-params\": {sig_params}"));
 
         Ok(lines.join("\n"))
     }
@@ -156,14 +158,15 @@ impl Rfc9421Adapter {
                     .method
                     .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing method".to_string()))?;
-                Ok(format!("\"@method\": {}", method.to_uppercase()))
+                let method_upper = method.to_uppercase();
+                Ok(format!("\"@method\": {method_upper}"))
             }
             SignatureComponent::TargetUri => {
                 let uri = message
                     .uri
                     .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing URI".to_string()))?;
-                Ok(format!("\"@target-uri\": {}", uri))
+                Ok(format!("\"@target-uri\": {uri}"))
             }
             SignatureComponent::Authority => {
                 let uri = message
@@ -171,11 +174,11 @@ impl Rfc9421Adapter {
                     .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing URI".to_string()))?;
                 let url = url::Url::parse(uri)
-                    .map_err(|e| Rfc9421Error::InvalidMessage(format!("Invalid URI: {}", e)))?;
+                    .map_err(|e| Rfc9421Error::InvalidMessage(format!("Invalid URI: {e}")))?;
                 let authority = url
                     .host_str()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing host".to_string()))?;
-                Ok(format!("\"@authority\": {}", authority))
+                Ok(format!("\"@authority\": {authority}"))
             }
             SignatureComponent::Path => {
                 let uri = message
@@ -183,25 +186,26 @@ impl Rfc9421Adapter {
                     .as_ref()
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing URI".to_string()))?;
                 let url = url::Url::parse(uri)
-                    .map_err(|e| Rfc9421Error::InvalidMessage(format!("Invalid URI: {}", e)))?;
-                Ok(format!("\"@path\": {}", url.path()))
+                    .map_err(|e| Rfc9421Error::InvalidMessage(format!("Invalid URI: {e}")))?;
+                let path = url.path();
+                Ok(format!("\"@path\": {path}"))
             }
             SignatureComponent::Status => {
                 let status = message
                     .status
                     .ok_or_else(|| Rfc9421Error::InvalidMessage("Missing status".to_string()))?;
-                Ok(format!("\"@status\": {}", status))
+                Ok(format!("\"@status\": {status}"))
             }
             SignatureComponent::Header(name) => {
                 let values = message.headers.get(name).ok_or_else(|| {
-                    Rfc9421Error::InvalidMessage(format!("Missing header: {}", name))
+                    Rfc9421Error::InvalidMessage(format!("Missing header: {name}"))
                 })?;
                 let value = values.join(", ");
-                Ok(format!("\"{}\": {}", name.to_lowercase(), value))
+                let name_lower = name.to_lowercase();
+                Ok(format!("\"{name_lower}\": {value}"))
             }
             _ => Err(Rfc9421Error::InvalidParameters(format!(
-                "Component {:?} not implemented",
-                component
+                "Component {component:?} not implemented"
             ))),
         }
     }
@@ -220,32 +224,40 @@ impl Rfc9421Adapter {
                 SignatureComponent::Authority => "\"@authority\"".to_string(),
                 SignatureComponent::Path => "\"@path\"".to_string(),
                 SignatureComponent::Status => "\"@status\"".to_string(),
-                SignatureComponent::Header(name) => format!("\"{}\"", name.to_lowercase()),
-                _ => format!("{:?}", c),
+                SignatureComponent::Header(name) => {
+                    let name_lower = name.to_lowercase();
+                    format!("\"{name_lower}\"")
+                }
+                _ => format!("{c:?}"),
             })
             .collect();
-        parts.push(format!("({})", components.join(" ")));
+        let components_str = components.join(" ");
+        parts.push(format!("({components_str})"));
 
         // Created timestamp
         if let Some(created) = params.created {
-            parts.push(format!("created={}", created.timestamp()));
+            let timestamp = created.timestamp();
+            parts.push(format!("created={timestamp}"));
         }
 
         // Expires timestamp
         if let Some(expires) = params.expires {
-            parts.push(format!("expires={}", expires.timestamp()));
+            let timestamp = expires.timestamp();
+            parts.push(format!("expires={timestamp}"));
         }
 
         // Nonce
         if let Some(nonce) = &params.nonce {
-            parts.push(format!("nonce=\"{}\"", nonce));
+            parts.push(format!("nonce=\"{nonce}\""));
         }
 
         // Algorithm
-        parts.push(format!("alg=\"{}\"", params.algorithm.identifier()));
+        let alg_id = params.algorithm.identifier();
+        parts.push(format!("alg=\"{alg_id}\""));
 
         // Key ID
-        parts.push(format!("keyid=\"{}\"", params.key_id));
+        let key_id = &params.key_id;
+        parts.push(format!("keyid=\"{key_id}\""));
 
         Ok(parts.join(";"))
     }

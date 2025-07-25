@@ -3,7 +3,7 @@
 //! This benchmark tests the performance improvements from caching and memory pooling.
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use crypto_tee::{types::*, CryptoTEE, CryptoTEEBuilder};
+use crypto_tee::types::*;
 use crypto_tee_vendor::{
     cache::PerformanceConfig,
     traits::VendorTEE,
@@ -48,9 +48,9 @@ fn bench_optimized_verification(c: &mut Criterion) {
         let non_optimized_vendor = MockVendor::new("non-optimized");
 
         // Generate keys and signatures for testing
-        let alias = "perf_test_key";
+        let _alias = "perf_test_key";
         let algorithm = Algorithm::Ed25519;
-        let options = KeyOptions {
+        let _options = KeyOptions {
             algorithm,
             hardware_backed: false,
             exportable: true,

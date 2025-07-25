@@ -45,14 +45,8 @@ software-fallback = ["crypto-tee-vendor/software-fallback"]
 vendor-samsung = ["crypto-tee-vendor/samsung"]
 vendor-apple = ["crypto-tee-vendor/apple"]
 vendor-qualcomm = ["crypto-tee-vendor/qualcomm"]
-platform-android = ["crypto-tee-platform/android"]
-platform-ios = ["crypto-tee-platform/ios"]
-platform-linux = ["crypto-tee-platform/linux"]
 full = [
     "vendor-samsung",
     "vendor-apple", 
-    "vendor-qualcomm",
-    "platform-android",
-    "platform-ios",
-    "platform-linux"
+    "vendor-qualcomm"
 ]

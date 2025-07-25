@@ -1,7 +1,7 @@
 //! Performance benchmarks for CryptoTEE
 
 use criterion::{criterion_group, criterion_main, BenchmarkId, Criterion};
-use crypto_tee::{types::*, CryptoTEE, CryptoTEEBuilder, KeyOptions};
+use crypto_tee::{CryptoTEE, CryptoTEEBuilder, KeyOptions};
 use crypto_tee_vendor::types::{Algorithm, KeyUsage};
 use tokio::runtime::Runtime;
 
@@ -15,7 +15,7 @@ fn bench_key_generation(c: &mut Criterion) {
 
     for algorithm in algorithms {
         group.bench_with_input(
-            BenchmarkId::new("generate_key", format!("{:?}", algorithm)),
+            BenchmarkId::new("generate_key", format!("{algorithm:?}")),
             &algorithm,
             |b, &algorithm| {
                 b.to_async(&rt).iter(|| async {
@@ -23,7 +23,8 @@ fn bench_key_generation(c: &mut Criterion) {
                         .build()
                         .await
                         .expect("Benchmark operation should succeed");
-                    let alias = format!("bench_key_{:?}_{}", algorithm, rand::random::<u32>());
+                    let rand_num = rand::random::<u32>();
+                    let alias = format!("bench_key_{algorithm:?}_{rand_num}");
 
                     let options = KeyOptions {
                         algorithm,
@@ -66,7 +67,7 @@ fn bench_signing(c: &mut Criterion) {
         let algorithms = vec![Algorithm::Ed25519, Algorithm::EcdsaP256, Algorithm::EcdsaP384];
 
         for algorithm in algorithms {
-            let alias = format!("sign_bench_key_{:?}", algorithm);
+            let alias = format!("sign_bench_key_{algorithm:?}");
             let options = KeyOptions {
                 algorithm,
                 hardware_backed: false,
@@ -91,7 +92,7 @@ fn bench_signing(c: &mut Criterion) {
 
     for (alias, algorithm) in &keys {
         group.bench_with_input(
-            BenchmarkId::new("sign", format!("{:?}", algorithm)),
+            BenchmarkId::new("sign", format!("{algorithm:?}")),
             &(alias.clone(), *algorithm),
             |b, (alias, _algorithm)| {
                 b.to_async(&rt).iter(|| async {
@@ -130,7 +131,7 @@ fn bench_verification(c: &mut Criterion) {
         let algorithms = vec![Algorithm::Ed25519, Algorithm::EcdsaP256];
 
         for algorithm in algorithms {
-            let alias = format!("verify_bench_key_{:?}", algorithm);
+            let alias = format!("verify_bench_key_{algorithm:?}");
             let options = KeyOptions {
                 algorithm,
                 hardware_backed: false,
@@ -161,7 +162,7 @@ fn bench_verification(c: &mut Criterion) {
 
     for (alias, algorithm, message, signature) in &test_data {
         group.bench_with_input(
-            BenchmarkId::new("verify", format!("{:?}", algorithm)),
+            BenchmarkId::new("verify", format!("{algorithm:?}")),
             &(alias.clone(), message.clone(), signature.clone()),
             |b, (alias, message, signature)| {
                 b.to_async(&rt).iter(|| async {

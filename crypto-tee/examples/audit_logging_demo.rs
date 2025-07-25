@@ -37,20 +37,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let key_handle = crypto_tee.generate_key("demo_key", key_options).await?;
 
-    println!("✓ Key generated: {}\n", key_handle.alias);
+    println!("✓ Key generated: {key_handle.alias}\n");
 
     // Sign some data (this will be audited)
     println!("Signing data...");
     let data = b"Hello, CryptoTEE with Audit Logging!";
     let signature = crypto_tee.sign("demo_key", data, None).await?;
 
-    println!("✓ Data signed, signature length: {} bytes\n", signature.len());
+    println!(
+        "✓ Data signed, signature length: {signature_length} bytes\n",
+        signature_length = signature.len()
+    );
 
     // Verify the signature (this will be audited)
     println!("Verifying signature...");
     let valid = crypto_tee.verify("demo_key", data, &signature, None).await?;
 
-    println!("✓ Signature verification result: {}\n", valid);
+    println!("✓ Signature verification result: {valid}\n");
 
     // Get key info (this will be audited)
     println!("Getting key information...");

@@ -71,22 +71,31 @@ pub enum VendorParams {
     /// Samsung Knox specific parameters
     #[cfg(all(feature = "samsung", target_os = "android"))]
     Samsung(super::samsung::KnoxParams),
-    
-    #[cfg(all(feature = "simulator-samsung", not(all(feature = "samsung", target_os = "android"))))]
+
+    #[cfg(all(
+        feature = "simulator-samsung",
+        not(all(feature = "samsung", target_os = "android"))
+    ))]
     Samsung(super::simulator::samsung::KnoxParams),
 
     /// Apple Secure Enclave specific parameters
     #[cfg(all(feature = "apple", any(target_os = "ios", target_os = "macos")))]
     Apple(super::apple::SecureEnclaveParams),
-    
-    #[cfg(all(feature = "simulator-apple", not(all(feature = "apple", any(target_os = "ios", target_os = "macos")))))]
+
+    #[cfg(all(
+        feature = "simulator-apple",
+        not(all(feature = "apple", any(target_os = "ios", target_os = "macos")))
+    ))]
     Apple(super::simulator::apple::SecureEnclaveParams),
 
     /// Qualcomm QSEE specific parameters
     #[cfg(all(feature = "qualcomm", target_os = "android"))]
     Qualcomm(super::qualcomm::QSEEParams),
-    
-    #[cfg(all(feature = "simulator-qualcomm", not(all(feature = "qualcomm", target_os = "android"))))]
+
+    #[cfg(all(
+        feature = "simulator-qualcomm",
+        not(all(feature = "qualcomm", target_os = "android"))
+    ))]
     Qualcomm(super::simulator::qualcomm::QSEEParams),
 
     /// Generic parameters

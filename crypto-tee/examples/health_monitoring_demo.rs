@@ -6,7 +6,6 @@
 use crypto_tee::{CryptoTEE, CryptoTEEBuilder, HealthConfig, HealthStatus};
 use std::time::Duration;
 use tracing::{info, warn, Level};
-use tracing_subscriber;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -61,13 +60,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Key Usage: {}/{} keys", tee_health.key_count, tee_health.max_keys);
 
     if let Some(memory_usage) = tee_health.memory_usage_percent {
-        println!("Memory Usage: {:.1}%", memory_usage);
+        println!("Memory Usage: {memory_usage:.1}%");
     }
 
     // Display supported algorithms
     println!("\nSupported Algorithms:");
     for algorithm in &tee_health.vendor_info.algorithms {
-        println!("  - {}", algorithm);
+        println!("  - {algorithm}");
     }
 
     // Display resource utilization
