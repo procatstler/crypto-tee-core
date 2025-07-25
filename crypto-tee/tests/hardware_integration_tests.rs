@@ -275,7 +275,8 @@ async fn test_platform_capabilities() {
     // Test that we can list keys (should be empty initially)
     let keys = crypto_tee.list_keys().await.expect("Should list keys");
 
-    println!("   Current keys: {}", keys.len());
+    let key_count = keys.len();
+    println!("   Current keys: {key_count}");
 
     println!("✅ Platform capabilities test completed");
 }

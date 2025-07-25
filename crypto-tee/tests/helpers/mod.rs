@@ -73,7 +73,7 @@ impl TestHelper {
         let mut handles = Vec::new();
 
         for i in 0..self.config.key_count {
-            let alias = format!("{}-{}", prefix, i);
+            let alias = format!("{prefix}-{i}");
             let handle = self.generate_test_key(&alias).await?;
             handles.push(handle);
         }
@@ -128,7 +128,7 @@ impl TestHelper {
     pub async fn cleanup_keys(&self, aliases: &[String]) -> Result<(), Box<dyn std::error::Error>> {
         for alias in aliases {
             if let Err(e) = self.crypto_tee.delete_key(alias).await {
-                eprintln!("Warning: Failed to delete key {}: {}", alias, e);
+                eprintln!("Warning: Failed to delete key {alias}: {e}");
             }
         }
         Ok(())
@@ -187,12 +187,10 @@ impl TestAssertions {
 
     /// Assert that error is of expected type
     pub fn assert_error_type(error: &crypto_tee::CryptoTEEError, expected_contains: &str) {
-        let error_str = format!("{}", error);
+        let error_str = format!("{error}");
         assert!(
             error_str.contains(expected_contains),
-            "Error '{}' should contain '{}'",
-            error_str,
-            expected_contains
+            "Error '{error_str}' should contain '{expected_contains}'"
         );
     }
 }
@@ -215,7 +213,7 @@ impl BenchmarkHelper {
         let start = std::time::Instant::now();
 
         for i in 0..iterations {
-            let alias = format!("bench-key-{}", i);
+            let alias = format!("bench-key-{i}");
             self.test_helper.generate_test_key(&alias).await?;
             self.test_helper.cleanup_keys(&[alias]).await?;
         }

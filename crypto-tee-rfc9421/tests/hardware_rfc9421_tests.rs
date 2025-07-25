@@ -360,9 +360,9 @@ async fn test_rfc9421_concurrent_signing() {
         let adapter_clone = adapter.clone();
         let message = HttpMessageBuilder::new()
             .method("POST")
-            .uri(&format!("https://api.example.com/concurrent/{}", i))
-            .header("x-request-id", &format!("concurrent-req-{}", i))
-            .body(format!("{{\"data\": \"concurrent test {}\"}}", i).as_bytes())
+            .uri(&format!("https://api.example.com/concurrent/{i}"))
+            .header("x-request-id", &format!("concurrent-req-{i}"))
+            .body(format!("{{\"data\": \"concurrent test {i}\"}}").as_bytes())
             .build();
 
         let signature_params =
@@ -373,7 +373,7 @@ async fn test_rfc9421_concurrent_signing() {
                 .add_component(SignatureComponent::Header("x-request-id".to_string()))
                 .add_component(SignatureComponent::ContentDigest)
                 .created(Utc::now())
-                .nonce(Some(format!("concurrent-nonce-{}", i)))
+                .nonce(Some(format!("concurrent-nonce-{i}")))
                 .build();
 
         let future = async move {
@@ -456,20 +456,20 @@ async fn test_rfc9421_message_variations() {
 
         let signature_params = signature_builder
             .created(Utc::now())
-            .nonce(Some(format!("variation-test-{}", i)))
+            .nonce(Some(format!("variation-test-{i}")))
             .build();
 
         let signed_message = adapter
             .sign_message(&message, &signature_params)
             .await
-            .expect(&format!("Should sign {} request", method));
+            .expect(&format!("Should sign {method} request"));
 
         let is_valid = adapter
             .verify_message(&signed_message, &signature_params)
             .await
-            .expect(&format!("Should verify {} signature", method));
+            .expect(&format!("Should verify {method} signature"));
 
-        assert!(is_valid, "{} signature should be valid", method);
+        assert!(is_valid, "{method} signature should be valid");
 
         println!("✅ RFC 9421 {} request signed and verified", method);
     }

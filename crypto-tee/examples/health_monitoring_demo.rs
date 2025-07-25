@@ -22,9 +22,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let health_report = crypto_tee.health_check().await?;
 
     println!("\n=== Health Check Report ===");
-    println!("Report ID: {}", health_report.report_id);
+    println!("Report ID: {health_report.report_id}");
     println!("Overall Status: {:?}", health_report.overall_status);
-    println!("Check Duration: {}ms", health_report.check_duration_ms);
+    println!("Check Duration: {health_report.check_duration_ms}ms");
     println!("Timestamp: {:?}", health_report.timestamp);
 
     // Display component health
@@ -44,20 +44,19 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             component.status,
             component.response_time_ms.unwrap_or(0)
         );
-        println!("   Message: {}", component.message);
+        println!("   Message: {component.message}");
     }
 
     // Display TEE health details
     println!("\n=== TEE Health Details ===");
     let tee_health = &health_report.tee_health;
-    println!("Available: {}", tee_health.available);
-    println!("Hardware Backed: {}", tee_health.hardware_backed);
-    println!("Vendor: {} v{}", tee_health.vendor_info.name, tee_health.vendor_info.version);
+    println!("Available: {tee_health.available}");
+    println!("Hardware Backed: {tee_health.hardware_backed}");
+    println!("Vendor: {tee_health.vendor_info.name} v{tee_health.vendor_info.version}");
     println!(
-        "Platform: {} v{}",
-        tee_health.platform_info.platform_type, tee_health.platform_info.platform_version
+        "Platform: {tee_health.platform_info.platform_type} v{tee_health.platform_info.platform_version}"
     );
-    println!("Key Usage: {}/{} keys", tee_health.key_count, tee_health.max_keys);
+    println!("Key Usage: {tee_health.key_count}/{tee_health.max_keys} keys");
 
     if let Some(memory_usage) = tee_health.memory_usage_percent {
         println!("Memory Usage: {memory_usage:.1}%");
@@ -92,7 +91,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         resources.disk_total_bytes / (1024 * 1024)
     );
 
-    println!("Network Active: {}", resources.network_active);
+    println!("Network Active: {resources.network_active}");
 
     // Display performance metrics
     println!("\n=== Performance Metrics ===");
@@ -100,14 +99,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Average Latency: {:.1}ms", perf.avg_latency_ms);
     println!("Operations/Second: {:.1}", perf.ops_per_second);
     println!("Error Rate: {:.2}%", perf.error_rate_percent);
-    println!("Queue Depth: {}", perf.queue_depth);
-    println!("Throughput: {} MB/s", perf.throughput_bps / (1024 * 1024));
+    println!("Queue Depth: {perf.queue_depth}");
+    let throughput_mb = perf.throughput_bps / (1024 * 1024);
+    println!("Throughput: {throughput_mb} MB/s");
 
     // Display recommendations
     if !health_report.recommendations.is_empty() {
         println!("\n=== Recommendations ===");
         for (i, recommendation) in health_report.recommendations.iter().enumerate() {
-            println!("{}. {}", i + 1, recommendation);
+            let index = i + 1;
+            println!("{index}. {recommendation}");
         }
     }
 

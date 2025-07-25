@@ -88,7 +88,7 @@ async fn test_different_algorithms_interoperability() {
 
     // Generate all keys using the same helper instance
     for (i, algorithm) in algorithms.iter().enumerate() {
-        let alias = format!("interop_key_{}", i);
+        let alias = format!("interop_key_{i}");
 
         let options = crypto_tee::types::KeyOptions {
             algorithm: *algorithm,

@@ -217,14 +217,13 @@ async fn test_signature_base_construction() {
     // The result might fail due to missing key, but it should not panic
     // and should provide meaningful error messages
     if let Err(e) = result {
-        let error_msg = format!("{}", e);
+        let error_msg = format!("{e}");
         // Should contain meaningful error information
         assert!(
             error_msg.contains("key")
                 || error_msg.contains("not found")
                 || error_msg.contains("CryptoTEE"),
-            "Error message should be informative: {}",
-            error_msg
+            "Error message should be informative: {error_msg}"
         );
     }
 }
@@ -259,7 +258,7 @@ async fn test_multiple_signature_algorithms() {
             }
             Err(e) => {
                 // Expected - just ensure error is reasonable
-                let error_msg = format!("{}", e);
+                let error_msg = format!("{e}");
                 assert!(
                     error_msg.contains("key") || error_msg.contains("CryptoTEE"),
                     "Algorithm {:?} should have reasonable error: {}",

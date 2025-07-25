@@ -67,7 +67,7 @@ impl TestKeyFactory {
     /// Generate unique key alias
     pub fn unique_alias(&self, prefix: &str) -> String {
         let count = self.counter.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
-        format!("{}_{:04}", prefix, count)
+        format!("{prefix}_{count:04}")
     }
 
     /// Generate alias for algorithm-specific testing

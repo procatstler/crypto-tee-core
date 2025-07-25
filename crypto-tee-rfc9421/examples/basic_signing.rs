@@ -163,12 +163,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     );
     output_headers.insert(
         "signature".to_string(),
-        vec![format!("sig1=:{}", signature_output.signature)],
+        vec![format!("sig1=:{signature_output.signature}")],
     );
 
     for (name, values) in &output_headers {
         for value in values {
-            println!("   {}: {}", name, value);
+            println!("   {name}: {value}");
         }
     }
 

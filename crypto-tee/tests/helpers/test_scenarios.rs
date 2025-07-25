@@ -249,7 +249,7 @@ impl TestScenarios {
 
         // Generate many keys
         for i in 0..stress_key_count {
-            let alias = format!("stress_test_key_{}", i);
+            let alias = format!("stress_test_key_{i}");
             helper.generate_test_key(&alias).await?;
             test_keys.push(alias);
         }
@@ -257,11 +257,11 @@ impl TestScenarios {
         // Perform many operations
         for alias in &test_keys {
             for j in 0..operations_per_key {
-                let test_data = format!("stress test data {}", j);
+                let test_data = format!("stress test data {j}");
                 let signature = helper.crypto_tee.sign(alias, test_data.as_bytes(), None).await?;
                 let valid =
                     helper.crypto_tee.verify(alias, test_data.as_bytes(), &signature, None).await?;
-                assert!(valid, "Stress test verification failed for key {} operation {}", alias, j);
+                assert!(valid, "Stress test verification failed for key {alias} operation {j}");
             }
         }
 
