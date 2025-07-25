@@ -34,10 +34,10 @@ jobs:
           # macOS builds
           - os: macOS-latest
             target: x86_64-apple-darwin
-            features: "vendor-apple,simulator-apple,software-fallback"
+            features: "apple,simulator-apple,software-fallback"
           - os: macOS-latest
             target: aarch64-apple-darwin
-            features: "vendor-apple,simulator-apple,software-fallback"
+            features: "apple,simulator-apple,software-fallback"
             
           # Windows builds
           - os: windows-latest
@@ -50,18 +50,18 @@ jobs:
           # Android builds (cross-compilation)
           - os: ubuntu-latest
             target: aarch64-linux-android
-            features: "vendor-samsung,vendor-qualcomm,simulator-samsung,simulator-qualcomm,software-fallback"
+            features: "samsung,qualcomm,simulator-samsung,simulator-qualcomm,software-fallback"
           - os: ubuntu-latest
             target: armv7-linux-androideabi
-            features: "vendor-samsung,vendor-qualcomm,simulator-samsung,simulator-qualcomm,software-fallback"
+            features: "samsung,qualcomm,simulator-samsung,simulator-qualcomm,software-fallback"
             
           # iOS builds (cross-compilation)
           - os: macOS-latest
             target: aarch64-apple-ios
-            features: "vendor-apple,simulator-apple,software-fallback"
+            features: "apple,simulator-apple,software-fallback"
           - os: macOS-latest
             target: x86_64-apple-ios
-            features: "vendor-apple,simulator-apple,software-fallback"
+            features: "apple,simulator-apple,software-fallback"
 
     steps:
     - name: Checkout repository
@@ -195,11 +195,11 @@ jobs:
           - "simulator-apple"
           - "simulator-qualcomm"
           - "simulator-samsung,simulator-apple,simulator-qualcomm,software-fallback"
-          - "vendor-samsung"
-          - "vendor-apple" 
-          - "vendor-qualcomm"
-          - "vendor-samsung,vendor-qualcomm"
-          - "vendor-apple,vendor-samsung,vendor-qualcomm"
+          - "samsung"
+          - "apple" 
+          - "qualcomm"
+          - "samsung,qualcomm"
+          - "apple,samsung,qualcomm"
           - "all-features"
     
     steps:

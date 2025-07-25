@@ -3,11 +3,14 @@
 //! This module provides realistic simulations of various TEE hardware implementations,
 //! enabling comprehensive testing and development without requiring actual hardware.
 
+#[cfg(feature = "simulator-apple")]
 pub mod apple;
 pub mod attestation;
 pub mod base;
 pub mod errors;
+#[cfg(feature = "simulator-qualcomm")]
 pub mod qualcomm;
+#[cfg(feature = "simulator-samsung")]
 pub mod samsung;
 pub mod secure_storage;
 
@@ -253,16 +256,19 @@ pub struct SimulatorFactory;
 
 impl SimulatorFactory {
     /// Create a Samsung TEE simulator
+    #[cfg(feature = "simulator-samsung")]
     pub fn create_samsung_simulator(config: SimulationConfig) -> Box<dyn TEESimulator> {
         Box::new(samsung::SamsungTEESimulator::new(config))
     }
 
     /// Create an Apple TEE simulator
+    #[cfg(feature = "simulator-apple")]
     pub fn create_apple_simulator(config: SimulationConfig) -> Box<dyn TEESimulator> {
         Box::new(apple::AppleTEESimulator::new(config))
     }
 
     /// Create a Qualcomm TEE simulator
+    #[cfg(feature = "simulator-qualcomm")]
     pub fn create_qualcomm_simulator(config: SimulationConfig) -> Box<dyn TEESimulator> {
         Box::new(qualcomm::QualcommTEESimulator::new(config))
     }
@@ -276,10 +282,10 @@ impl SimulatorFactory {
     pub fn create_platform_simulator() -> Box<dyn TEESimulator> {
         let config = SimulationConfig::default();
 
-        #[cfg(target_os = "android")]
+        #[cfg(all(target_os = "android", feature = "simulator-samsung"))]
         return Self::create_samsung_simulator(config);
 
-        #[cfg(target_os = "ios")]
+        #[cfg(all(any(target_os = "ios", target_os = "macos"), feature = "simulator-apple"))]
         return Self::create_apple_simulator(config);
 
         // Default to generic for other platforms
