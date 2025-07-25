@@ -75,6 +75,21 @@ pub enum VendorError {
     #[error("Key listing failed: {0}")]
     KeyListing(String),
 
+    #[error("Invalid state: {0}")]
+    InvalidState(String),
+
+    #[error("Invalid response: {0}")]
+    InvalidResponse(String),
+
+    #[error("Invalid parameter: {0}")]
+    InvalidParameter(String),
+
+    #[error("Encryption error: {0}")]
+    EncryptionError(String),
+
+    #[error("Decryption error: {0}")]
+    DecryptionError(String),
+
     #[error(transparent)]
     Other(#[from] anyhow::Error),
 }

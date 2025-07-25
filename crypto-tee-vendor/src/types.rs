@@ -1,6 +1,7 @@
 //! Vendor-specific types and data structures
 
 use serde::{Deserialize, Serialize};
+use std::fmt;
 use zeroize::Zeroize;
 
 /// Supported cryptographic algorithms
@@ -20,6 +21,22 @@ pub enum Algorithm {
     /// Symmetric algorithms
     Aes128,
     Aes256,
+}
+
+impl fmt::Display for Algorithm {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Algorithm::Rsa2048 => write!(f, "RSA-2048"),
+            Algorithm::Rsa3072 => write!(f, "RSA-3072"),
+            Algorithm::Rsa4096 => write!(f, "RSA-4096"),
+            Algorithm::EcdsaP256 => write!(f, "ECDSA-P256"),
+            Algorithm::EcdsaP384 => write!(f, "ECDSA-P384"),
+            Algorithm::EcdsaP521 => write!(f, "ECDSA-P521"),
+            Algorithm::Ed25519 => write!(f, "Ed25519"),
+            Algorithm::Aes128 => write!(f, "AES-128"),
+            Algorithm::Aes256 => write!(f, "AES-256"),
+        }
+    }
 }
 
 /// Key generation parameters

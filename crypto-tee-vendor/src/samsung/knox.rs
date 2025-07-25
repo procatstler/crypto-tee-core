@@ -47,15 +47,12 @@ impl SamsungKnoxTEE {
             Algorithm::Ed25519 => Ok("Ed25519"),
             Algorithm::EcdsaP256 => Ok("EC"),
             Algorithm::EcdsaP384 => Ok("EC"),
+            Algorithm::EcdsaP521 => Ok("EC"),
             Algorithm::Rsa2048 => Ok("RSA"),
             Algorithm::Rsa3072 => Ok("RSA"),
             Algorithm::Rsa4096 => Ok("RSA"),
             Algorithm::Aes128 => Ok("AES"),
             Algorithm::Aes256 => Ok("AES"),
-            _ => Err(VendorError::NotSupported(format!(
-                "Algorithm {:?} not supported by Knox",
-                algorithm
-            ))),
         }
     }
 
@@ -65,6 +62,7 @@ impl SamsungKnoxTEE {
             Algorithm::Ed25519 => 256,
             Algorithm::EcdsaP256 => 256,
             Algorithm::EcdsaP384 => 384,
+            Algorithm::EcdsaP521 => 521,
             Algorithm::Rsa2048 => 2048,
             Algorithm::Rsa3072 => 3072,
             Algorithm::Rsa4096 => 4096,

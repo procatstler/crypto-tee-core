@@ -5,18 +5,18 @@
 
 use crate::error::{VendorError, VendorResult};
 use jni::{
-    objects::{JClass, JObject, JString, JValue},
-    sys::{jboolean, jbyteArray, jint, jobject},
+    objects::{GlobalRef, JObject, JString, JValue},
+    sys::{jbyteArray, jobject},
     JNIEnv, JavaVM,
 };
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, OnceLock};
 use subtle::ConstantTimeEq;
 
 /// JNI context for Knox operations
 pub struct KnoxJniContext {
     pub jvm: Arc<JavaVM>,
-    knox_crypto_class: Arc<Mutex<Option<JClass<'static>>>>,
-    context: Arc<Mutex<Option<JObject<'static>>>>,
+    knox_crypto_class: Arc<Mutex<Option<GlobalRef>>>,
+    context: Arc<Mutex<Option<GlobalRef>>>,
 }
 
 impl KnoxJniContext {
@@ -53,8 +53,8 @@ impl KnoxJniContext {
             VendorError::InitializationError(format!("Failed to create context ref: {}", e))
         })?;
 
-        *self.knox_crypto_class.lock().unwrap() = Some(knox_crypto_class.as_obj().into());
-        *self.context.lock().unwrap() = Some(context.as_obj());
+        *self.knox_crypto_class.lock().unwrap() = Some(knox_crypto_class);
+        *self.context.lock().unwrap() = Some(context);
 
         Ok(())
     }
@@ -542,20 +542,16 @@ impl KnoxJniContext {
 }
 
 // Global JVM reference for callbacks
-static mut GLOBAL_JVM: Option<Arc<JavaVM>> = None;
+static GLOBAL_JVM: OnceLock<Arc<JavaVM>> = OnceLock::new();
 
 /// Initialize JNI with JavaVM
 pub unsafe fn init_jni(jvm: *mut jni::sys::JavaVM) {
     if let Ok(jvm) = JavaVM::from_raw(jvm) {
-        GLOBAL_JVM = Some(Arc::new(jvm));
+        let _ = GLOBAL_JVM.set(Arc::new(jvm));
     }
 }
 
 /// Get JNI context
 pub fn get_jni_context() -> Option<Arc<JavaVM>> {
-    // SAFETY: This is safe because:
-    // 1. GLOBAL_JVM is a static variable properly initialized via JNI_OnLoad
-    // 2. Access is read-only (clone operation)
-    // 3. Arc provides thread-safe reference counting
-    unsafe { GLOBAL_JVM.clone() }
+    GLOBAL_JVM.get().cloned()
 }

@@ -26,6 +26,22 @@ pub mod apple;
 #[cfg(all(feature = "qualcomm", target_os = "android"))]
 pub mod qualcomm;
 
+// Mock implementations for non-target platforms when features are enabled
+#[cfg(all(feature = "samsung", not(target_os = "android")))]
+pub mod samsung {
+    pub use crate::mock::MockVendor as SamsungKnoxVendor;
+}
+
+#[cfg(all(feature = "apple", not(any(target_os = "ios", target_os = "macos"))))]
+pub mod apple {
+    pub use crate::mock::MockVendor as AppleSecureEnclaveVendor;
+}
+
+#[cfg(all(feature = "qualcomm", not(target_os = "android")))]
+pub mod qualcomm {
+    pub use crate::mock::MockVendor as QualcommQSEE;
+}
+
 pub use error::{VendorError, VendorResult};
 pub use traits::VendorTEE;
 pub use types::*;
