@@ -4,8 +4,6 @@
 //! for Secure Enclave key operations.
 
 use crate::error::{VendorError, VendorResult};
-use block::ConcreteBlock;
-use objc::runtime::{BOOL, NO};
 
 // use security_framework::access_control::SecAccessControl; // Currently unused
 
@@ -159,17 +157,6 @@ impl BiometricContext {
         }
     }
 
-    /// Create localized reason string for biometric prompt
-    pub fn create_reason_string(operation: &str) -> CFString {
-        let reason = match operation {
-            "sign" => "Authenticate to sign data with your key",
-            "decrypt" => "Authenticate to decrypt data",
-            "access" => "Authenticate to access your secure key",
-            _ => "Authenticate to perform secure operation",
-        };
-
-        CFString::new(reason)
-    }
 
     /// Evaluate biometric authentication policy
     #[cfg(target_os = "ios")]
