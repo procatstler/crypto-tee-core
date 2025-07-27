@@ -127,6 +127,21 @@ impl VendorTEE for MockVendor {
                 .map_err(|e| VendorError::CryptoError(e.to_string()))?;
                 (doc.as_ref().to_vec(), Some(key_pair.public_key().as_ref().to_vec()))
             }
+            Algorithm::EcdsaP384 => {
+                let rng = ring::rand::SystemRandom::new();
+                let doc = signature::EcdsaKeyPair::generate_pkcs8(
+                    &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
+                    &rng,
+                )
+                .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+                let key_pair = signature::EcdsaKeyPair::from_pkcs8(
+                    &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
+                    doc.as_ref(),
+                    &rng,
+                )
+                .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+                (doc.as_ref().to_vec(), Some(key_pair.public_key().as_ref().to_vec()))
+            }
             _ => {
                 return Err(VendorError::NotSupported(format!(
                     "Algorithm {:?} not yet implemented in mock",
@@ -189,6 +204,20 @@ impl VendorTEE for MockVendor {
                     .as_ref()
                     .to_vec()
             }
+            Algorithm::EcdsaP384 => {
+                let rng = ring::rand::SystemRandom::new();
+                let key_pair = signature::EcdsaKeyPair::from_pkcs8(
+                    &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
+                    &mock_key.private_key,
+                    &rng,
+                )
+                .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+                key_pair
+                    .sign(&rng, data)
+                    .map_err(|e| VendorError::CryptoError(e.to_string()))?
+                    .as_ref()
+                    .to_vec()
+            }
             _ => {
                 return Err(VendorError::NotSupported(format!(
                     "Algorithm {:?} not yet implemented for signing",
@@ -226,6 +255,13 @@ impl VendorTEE for MockVendor {
             Algorithm::EcdsaP256 => {
                 let peer_public_key = signature::UnparsedPublicKey::new(
                     &signature::ECDSA_P256_SHA256_ASN1,
+                    public_key,
+                );
+                Self::constant_time_verify(&peer_public_key, data, &signature.data)
+            }
+            Algorithm::EcdsaP384 => {
+                let peer_public_key = signature::UnparsedPublicKey::new(
+                    &signature::ECDSA_P384_SHA384_ASN1,
                     public_key,
                 );
                 Self::constant_time_verify(&peer_public_key, data, &signature.data)

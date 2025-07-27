@@ -190,6 +190,30 @@ impl VendorTEE for OptimizedMockVendor {
 
                 (doc.as_ref().to_vec(), Some(public_key_bytes))
             }
+            Algorithm::EcdsaP384 => {
+                let rng = ring::rand::SystemRandom::new();
+                let doc = signature::EcdsaKeyPair::generate_pkcs8(
+                    &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
+                    &rng,
+                )
+                .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+                let key_pair = signature::EcdsaKeyPair::from_pkcs8(
+                    &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
+                    doc.as_ref(),
+                    &rng,
+                )
+                .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+
+                // Cache the public key for faster future access
+                let public_key_bytes = key_pair.public_key().as_ref().to_vec();
+                let unparsed_key = signature::UnparsedPublicKey::new(
+                    &signature::ECDSA_P384_SHA384_ASN1,
+                    public_key_bytes.clone(),
+                );
+                self.public_key_cache.cache_ecdsa_key(public_key_bytes.clone(), unparsed_key);
+
+                (doc.as_ref().to_vec(), Some(public_key_bytes))
+            }
             _ => {
                 return Err(VendorError::NotSupported(format!(
                     "Algorithm {:?} not yet implemented in optimized mock",
@@ -271,6 +295,28 @@ impl VendorTEE for OptimizedMockVendor {
                 self.memory_pool.return_buffer(sig_buffer);
                 result
             }
+            Algorithm::EcdsaP384 => {
+                let rng = ring::rand::SystemRandom::new();
+                let key_pair = signature::EcdsaKeyPair::from_pkcs8(
+                    &signature::ECDSA_P384_SHA384_ASN1_SIGNING,
+                    &mock_key.private_key,
+                    &rng,
+                )
+                .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+
+                // Get buffer from pool for signature (ECDSA P384 signatures are ~104-105 bytes)
+                let mut sig_buffer = self.memory_pool.get_buffer(120);
+                let signature_bytes = key_pair
+                    .sign(&rng, data)
+                    .map_err(|e| VendorError::CryptoError(e.to_string()))?;
+                sig_buffer.clear();
+                sig_buffer.extend_from_slice(signature_bytes.as_ref());
+                let result = sig_buffer.clone();
+
+                // Return buffer to pool
+                self.memory_pool.return_buffer(sig_buffer);
+                result
+            }
             _ => {
                 return Err(VendorError::NotSupported(format!(
                     "Algorithm {:?} not yet implemented for signing",
@@ -326,6 +372,26 @@ impl VendorTEE for OptimizedMockVendor {
                     } else {
                         let new_key = signature::UnparsedPublicKey::new(
                             &signature::ECDSA_P256_SHA256_ASN1,
+                            public_key.clone(),
+                        );
+                        self.public_key_cache.cache_ecdsa_key(public_key.clone(), new_key.clone());
+                        new_key
+                    };
+
+                Self::cached_constant_time_verify(
+                    &peer_public_key,
+                    data,
+                    &signature.data,
+                    &self.verification_cache,
+                )
+            }
+            Algorithm::EcdsaP384 => {
+                let peer_public_key =
+                    if let Some(cached_key) = self.public_key_cache.get_ecdsa_key(public_key) {
+                        cached_key
+                    } else {
+                        let new_key = signature::UnparsedPublicKey::new(
+                            &signature::ECDSA_P384_SHA384_ASN1,
                             public_key.clone(),
                         );
                         self.public_key_cache.cache_ecdsa_key(public_key.clone(), new_key.clone());
