@@ -6,6 +6,7 @@
 
 #![allow(clippy::uninlined_format_args)]
 #![allow(clippy::await_holding_lock)]
+#![allow(unexpected_cfgs)]
 
 pub mod cache;
 pub mod error;

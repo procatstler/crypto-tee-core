@@ -193,7 +193,7 @@ impl BiometricContext {
             let block = ConcreteBlock::new(move |success: BOOL, _error: *mut Object| {
                 let _ = tx_clone.lock().unwrap().send(success != NO);
             });
-            let block_ref: &ConcreteBlock<(BOOL, *mut Object), ()> = &block;
+            let block_ref = &block;
 
             let _: () = msg_send![
                 context,
