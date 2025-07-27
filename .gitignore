@@ -48,12 +48,20 @@ performance_analysis
 tarpaulin-report.html
 cobertura.xml
 coverage/
+coverage-html/
 .coverage
+*.lcov
+coverage.lcov
+*.profraw
+*.profdata
+llvm-cov-*
+grcov-*
 
 # Benchmarks
 /benches/results/
 /bench-results/
 *.bench
+criterion/
 
 # Logs
 *.log
@@ -64,3 +72,21 @@ logs/
 *.temp
 *.bak
 *.orig
+
+# Generated documentation/reports
+coverage-*.md
+test-results-*.md
+performance-*.txt
+complexity-*.txt
+duplicates.txt
+dependency-tree.txt
+doc-check.log
+udeps-report.txt
+
+# CI artifacts
+/artifacts/
+/.github/artifacts/
+
+# Workspace temporary files
+.cargo/config.toml.bak
+rustfmt.toml.bak

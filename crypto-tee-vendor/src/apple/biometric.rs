@@ -160,7 +160,7 @@ impl BiometricContext {
     /// Evaluate biometric authentication policy
     #[cfg(target_os = "ios")]
     pub fn evaluate_policy(&self, reason: &str) -> VendorResult<bool> {
-        use objc::block::ConcreteBlock;
+        use block::ConcreteBlock;
         use objc::runtime::{Object, BOOL, NO};
         use objc::{class, msg_send, sel, sel_impl};
         use std::sync::mpsc;
