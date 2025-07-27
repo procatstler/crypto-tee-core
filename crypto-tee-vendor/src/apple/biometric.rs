@@ -157,7 +157,6 @@ impl BiometricContext {
         }
     }
 
-
     /// Evaluate biometric authentication policy
     #[cfg(target_os = "ios")]
     pub fn evaluate_policy(&self, reason: &str) -> VendorResult<bool> {
