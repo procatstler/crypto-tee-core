@@ -416,7 +416,7 @@ impl KnoxJniContext {
                     &sig_obj,
                     update_method,
                     jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                    &[JValue::Object(&data_array.into()).as_jni()],
+                    &[JValue::Object(&JObject::from(data_array)).as_jni()],
                 )
             }
             .map_err(|e| VendorError::SigningError(format!("Failed to update signature: {}", e)))?;
@@ -438,8 +438,9 @@ impl KnoxJniContext {
 
             // Convert result to Vec<u8>
             if let Ok(sig_array) = signature_result.l() {
+                let sig_jbytearray = sig_array.into_inner() as jni::sys::jbyteArray;
                 let sig_vec = env
-                    .convert_byte_array(sig_array.cast::<jni::sys::jbyteArray>())
+                    .convert_byte_array(&jni::objects::JByteArray::from_raw(sig_jbytearray))
                     .map_err(|e| {
                         VendorError::SigningError(format!("Failed to convert signature: {}", e))
                     })?;
@@ -578,8 +579,9 @@ impl KnoxJniContext {
                 })?;
 
                 if let Ok(cert_bytes_obj) = encoded_cert.l() {
+                    let cert_jbytearray = cert_bytes_obj.into_inner() as jni::sys::jbyteArray;
                     let cert_vec = env
-                        .convert_byte_array(cert_bytes_obj.cast::<jni::sys::jbyteArray>())
+                        .convert_byte_array(&jni::objects::JByteArray::from_raw(cert_jbytearray))
                         .map_err(|e| {
                             VendorError::AttestationFailed(format!(
                                 "Failed to convert certificate bytes: {}",

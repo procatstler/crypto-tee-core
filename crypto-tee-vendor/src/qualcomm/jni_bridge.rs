@@ -184,7 +184,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
         }
     };
 
-    let data_vec = match env.convert_byte_array(data) {
+    let data_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(data)) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert data array: {:?}", e);
@@ -197,7 +197,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
     // Sign using Android Keystore
     // Return signature
     match env.byte_array_from_slice(&[0u8; 64]) {
-        Ok(arr) => arr.as_raw(),
+        Ok(arr) => arr.into_raw(),
         Err(e) => {
             error!("Failed to create signature array: {:?}", e);
             std::ptr::null_mut()
@@ -221,7 +221,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let data_vec = match env.convert_byte_array(data) {
+    let data_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(data)) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert data array: {:?}", e);
@@ -229,7 +229,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let signature_vec = match env.convert_byte_array(signature) {
+    let signature_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(signature)) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert signature array: {:?}", e);
@@ -261,7 +261,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGetAttesta
 
     // Get attestation from Android Keystore
     match env.byte_array_from_slice(b"QSEE_ATTESTATION") {
-        Ok(arr) => arr.as_raw(),
+        Ok(arr) => arr.into_raw(),
         Err(e) => {
             error!("Failed to create attestation array: {:?}", e);
             std::ptr::null_mut()

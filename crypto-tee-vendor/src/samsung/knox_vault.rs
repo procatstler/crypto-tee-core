@@ -21,12 +21,12 @@ impl KnoxVault {
             .map_err(|_| VendorError::NotAvailable)?;
 
         let is_knox_vault_supported_method = env
-            .get_static_method_id(knox_vault_class, "isKnoxVaultSupported", "()Z")
+            .get_static_method_id(&knox_vault_class, "isKnoxVaultSupported", "()Z")
             .map_err(|_| VendorError::NotAvailable)?;
 
         let result = unsafe {
             env.call_static_method_unchecked(
-                knox_vault_class,
+                &knox_vault_class,
                 is_knox_vault_supported_method,
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
                 &[],
@@ -46,7 +46,7 @@ impl KnoxVault {
         // Set Knox Vault flag
         let set_knox_vault_method = env
             .get_method_id(
-                builder_class,
+                &builder_class,
                 "setKnoxVault",
                 "(Z)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
             )
@@ -85,7 +85,7 @@ impl KnoxVault {
         // Set user authentication required
         let set_user_auth_method = env
             .get_method_id(
-                builder_class,
+                &builder_class,
                 "setUserAuthenticationRequired",
                 "(Z)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
             )
@@ -112,7 +112,7 @@ impl KnoxVault {
         if let Some(seconds) = validity_seconds {
             let set_validity_method = env
                 .get_method_id(
-                    builder_class,
+                    &builder_class,
                     "setUserAuthenticationValidityDurationSeconds",
                     "(I)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
                 )
@@ -148,7 +148,7 @@ impl KnoxVault {
         // Set biometric authentication
         let set_biometric_method = env
             .get_method_id(
-                builder_class,
+                &builder_class,
                 "setUserAuthenticationValidWhileOnBody",
                 "(Z)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
             )
@@ -181,13 +181,13 @@ impl KnoxVault {
 
         // Check if enabled
         let is_enabled_method =
-            env.get_static_method_id(knox_vault_class, "isKnoxVaultEnabled", "()Z").map_err(
+            env.get_static_method_id(&knox_vault_class, "isKnoxVaultEnabled", "()Z").map_err(
                 |e| VendorError::HardwareError(format!("Failed to find isKnoxVaultEnabled: {}", e)),
             )?;
 
         let enabled = unsafe {
             env.call_static_method_unchecked(
-                knox_vault_class,
+                &knox_vault_class,
                 is_enabled_method,
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
                 &[],
@@ -201,7 +201,7 @@ impl KnoxVault {
 
         // Get version
         let get_version_method = env
-            .get_static_method_id(knox_vault_class, "getKnoxVaultVersion", "()I")
+            .get_static_method_id(&knox_vault_class, "getKnoxVaultVersion", "()I")
             .map_err(|_| {
                 // Method might not exist on older versions
                 VendorError::NotSupported("Knox Vault version check not available".to_string())
@@ -209,7 +209,7 @@ impl KnoxVault {
 
         let version = unsafe {
             env.call_static_method_unchecked(
-                knox_vault_class,
+                &knox_vault_class,
                 get_version_method,
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
                 &[],

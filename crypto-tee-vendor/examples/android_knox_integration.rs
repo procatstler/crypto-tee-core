@@ -117,7 +117,10 @@ pub extern "C" fn Java_com_example_cryptotee_KnoxTEE_signData(
     match sign_data_internal(&env, key_id, data) {
         Ok(signature) => {
             // Convert signature to Java byte array
-            env.byte_array_from_slice(&signature).unwrap_or(JObject::null()).into()
+            match env.byte_array_from_slice(&signature) {
+                Ok(arr) => JObject::from(arr),
+                Err(_) => JObject::null(),
+            }
         }
         Err(_) => JObject::null(),
     }
@@ -137,7 +140,7 @@ async fn sign_data_internal(
     let key_id = key_id_jstring.to_string_lossy().into_owned();
 
     // Convert Java byte array to Rust Vec<u8>
-    let data = env.convert_byte_array(data_obj.into_inner())?;
+    let data = env.convert_byte_array(&jni::objects::JByteArray::from_raw(data_obj.into_inner() as jni::sys::jbyteArray))?;
 
     // Create key handle
     let key_handle = VendorKeyHandle {

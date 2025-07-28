@@ -22,7 +22,7 @@ impl TrustZone {
 
         let get_property_method = env
             .get_static_method_id(
-                system_class,
+                &system_class,
                 "getProperty",
                 "(Ljava/lang/String;)Ljava/lang/String;",
             )
@@ -36,7 +36,7 @@ impl TrustZone {
 
         let result = unsafe {
             env.call_static_method_unchecked(
-                system_class,
+                &system_class,
                 get_property_method,
                 jni::signature::ReturnType::Object,
                 &[JValue::Object(&property_name).as_jni()],
@@ -69,14 +69,14 @@ impl TrustZone {
             .map_err(|_| VendorError::NotSupported("TIMA not available".to_string()))?;
 
         let get_version_method = env
-            .get_static_method_id(knox_tz_class, "getTzVersion", "()Ljava/lang/String;")
+            .get_static_method_id(&knox_tz_class, "getTzVersion", "()Ljava/lang/String;")
             .map_err(|_| {
                 VendorError::NotSupported("TZ version method not available".to_string())
             })?;
 
         let version = unsafe {
             env.call_static_method_unchecked(
-                knox_tz_class,
+                &knox_tz_class,
                 get_version_method,
                 jni::signature::ReturnType::Object,
                 &[],
@@ -107,7 +107,7 @@ impl TrustZone {
         // Set TrustZone backend
         let set_tz_method = env
             .get_method_id(
-                builder_class,
+                &builder_class,
                 "setTrustedUserPresenceRequired",
                 "(Z)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
             )
@@ -138,12 +138,12 @@ impl TrustZone {
 
         // Check if TIMA is enabled
         let is_enabled_method = env
-            .get_static_method_id(tima_class, "isTimaEnabled", "()Z")
+            .get_static_method_id(&tima_class, "isTimaEnabled", "()Z")
             .map_err(|_| VendorError::NotAvailable)?;
 
         let enabled = unsafe {
             env.call_static_method_unchecked(
-                tima_class,
+                &tima_class,
                 is_enabled_method,
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
                 &[],
@@ -171,7 +171,7 @@ impl TrustZone {
         })?;
 
         let tags_field = env
-            .get_static_field(system_class, "TAGS", "Ljava/lang/String;")
+            .get_static_field(&system_class, "TAGS", "Ljava/lang/String;")
             .map_err(|e| VendorError::HardwareError(format!("Failed to get TAGS field: {}", e)))?;
 
         if let Ok(obj) = tags_field.l() {
