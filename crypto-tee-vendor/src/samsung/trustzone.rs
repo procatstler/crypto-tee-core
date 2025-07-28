@@ -14,7 +14,7 @@ pub struct TrustZone;
 
 impl TrustZone {
     /// Check if TrustZone is available
-    pub fn is_available(env: &JNIEnv) -> VendorResult<bool> {
+    pub fn is_available(env: &mut JNIEnv) -> VendorResult<bool> {
         // Check for TrustZone through system properties
         let system_class = env.find_class("java/lang/System").map_err(|e| {
             VendorError::HardwareError(format!("Failed to find System class: {}", e))
@@ -34,18 +34,19 @@ impl TrustZone {
             VendorError::HardwareError(format!("Failed to create property string: {}", e))
         })?;
 
-        let result = env
-            .call_static_method_unchecked(
+        let result = unsafe {
+            env.call_static_method_unchecked(
                 system_class,
                 get_property_method,
-                &[JValue::Object(property_name.into())],
+                &[JValue::Object(&property_name).as_jni()],
                 jni::signature::ReturnType::Object,
             )
+        }
             .map_err(|e| {
                 VendorError::HardwareError(format!("Failed to get system property: {}", e))
             })?;
 
-        if let JValue::Object(obj) = result {
+        if let Ok(obj) = result.l() {
             if !obj.is_null() {
                 let keystore_type = env.get_string(obj.into()).map_err(|e| {
                     VendorError::HardwareError(format!("Failed to get string: {}", e))
@@ -63,7 +64,7 @@ impl TrustZone {
     }
 
     /// Get TrustZone version
-    pub fn get_version(env: &JNIEnv) -> VendorResult<String> {
+    pub fn get_version(env: &mut JNIEnv) -> VendorResult<String> {
         // Try to get TrustZone version through Knox API
         let knox_tz_class = env
             .find_class("com/samsung/android/knox/tima/TimaKeystore")
@@ -75,16 +76,17 @@ impl TrustZone {
                 VendorError::NotSupported("TZ version method not available".to_string())
             })?;
 
-        let version = env
-            .call_static_method_unchecked(
+        let version = unsafe {
+            env.call_static_method_unchecked(
                 knox_tz_class,
                 get_version_method,
                 &[],
                 jni::signature::ReturnType::Object,
             )
+        }
             .map_err(|_| VendorError::NotSupported("Failed to get TZ version".to_string()))?;
 
-        if let JValue::Object(obj) = version {
+        if let Ok(obj) = version.l() {
             if !obj.is_null() {
                 let version_string = env.get_string(obj.into()).map_err(|e| {
                     VendorError::HardwareError(format!("Failed to get version string: {}", e))
@@ -99,7 +101,7 @@ impl TrustZone {
     }
 
     /// Enable TrustZone for cryptographic operations
-    pub fn enable_for_crypto(env: &JNIEnv, spec_builder: JObject) -> VendorResult<()> {
+    pub fn enable_for_crypto(env: &mut JNIEnv, spec_builder: &JObject) -> VendorResult<()> {
         let builder_class = env.get_object_class(spec_builder).map_err(|e| {
             VendorError::KeyGeneration(format!("Failed to get builder class: {}", e))
         })?;
@@ -116,19 +118,21 @@ impl TrustZone {
                 VendorError::NotSupported("TrustZone configuration not available".to_string())
             })?;
 
-        env.call_method_unchecked(
-            spec_builder,
-            set_tz_method,
-            jni::signature::ReturnType::Object,
-            &[JValue::Bool(1)],
-        )
+        unsafe {
+            env.call_method_unchecked(
+                spec_builder,
+                set_tz_method,
+                &[JValue::Bool(1).as_jni()],
+                jni::signature::ReturnType::Object,
+            )
+        }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to enable TrustZone: {}", e)))?;
 
         Ok(())
     }
 
     /// Get secure world status
-    pub fn get_secure_world_status(env: &JNIEnv) -> VendorResult<SecureWorldStatus> {
+    pub fn get_secure_world_status(env: &mut JNIEnv) -> VendorResult<SecureWorldStatus> {
         // Check TIMA (TrustZone-based Integrity Measurement Architecture)
         let tima_class = env
             .find_class("com/samsung/android/knox/tima/TimaService")
@@ -139,19 +143,17 @@ impl TrustZone {
             .get_static_method_id(tima_class, "isTimaEnabled", "()Z")
             .map_err(|_| VendorError::NotAvailable)?;
 
-        let enabled = env
-            .call_static_method_unchecked(
+        let enabled = unsafe {
+            env.call_static_method_unchecked(
                 tima_class,
                 is_enabled_method,
                 &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
             )
+        }
             .map_err(|_| VendorError::NotAvailable)?;
 
-        let is_enabled = match enabled {
-            JValue::Bool(b) => b != 0,
-            _ => false,
-        };
+        let is_enabled = enabled.z().unwrap_or(false);
 
         // Get secure boot status
         let secure_boot = Self::check_secure_boot(env)?;
@@ -165,7 +167,7 @@ impl TrustZone {
     }
 
     /// Check secure boot status
-    fn check_secure_boot(env: &JNIEnv) -> VendorResult<bool> {
+    fn check_secure_boot(env: &mut JNIEnv) -> VendorResult<bool> {
         let system_class = env.find_class("android/os/Build").map_err(|e| {
             VendorError::HardwareError(format!("Failed to find Build class: {}", e))
         })?;
@@ -174,7 +176,7 @@ impl TrustZone {
             .get_static_field(system_class, "TAGS", "Ljava/lang/String;")
             .map_err(|e| VendorError::HardwareError(format!("Failed to get TAGS field: {}", e)))?;
 
-        if let JValue::Object(obj) = tags_field {
+        if let Ok(obj) = tags_field.l() {
             if !obj.is_null() {
                 let tags_string = env.get_string(obj.into()).map_err(|e| {
                     VendorError::HardwareError(format!("Failed to get tags string: {}", e))

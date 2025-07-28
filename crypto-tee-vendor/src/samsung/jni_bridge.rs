@@ -77,16 +77,13 @@ impl KnoxJniContext {
             env.call_static_method_unchecked(
                 knox_version_class,
                 version_method,
-                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
                 &[],
+                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
             )
         }
         .map_err(|_| VendorError::NotAvailable)?;
 
-        match api_level {
-            JValue::Int(level) => Ok(level >= 30), // Knox 3.0 or higher
-            _ => Ok(false),
-        }
+        Ok(api_level.i().unwrap_or(0) >= 30) // Knox 3.0 or higher
     }
 
     /// Generate key using Knox
@@ -119,7 +116,7 @@ impl KnoxJniContext {
             env.new_object_unchecked(
                 builder_class,
                 builder_constructor,
-                &[JValue::Object(&alias_jstring), JValue::Int(purposes)],
+                &[JValue::Object(&alias_jstring).as_jni(), JValue::Int(purposes).as_jni()],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to create builder: {}", e)))?;
@@ -139,8 +136,8 @@ impl KnoxJniContext {
             env.call_method_unchecked(
                 &builder,
                 set_algorithm_method,
+                &[JValue::Object(&algorithm_jstring).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Object(&algorithm_jstring)],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to set algorithm: {}", e)))?;
@@ -158,8 +155,8 @@ impl KnoxJniContext {
             env.call_method_unchecked(
                 &builder,
                 set_key_size_method,
+                &[JValue::Int(key_size).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Int(key_size)],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to set key size: {}", e)))?;
@@ -180,8 +177,8 @@ impl KnoxJniContext {
                 env.call_method_unchecked(
                     &builder,
                     set_knox_vault_method,
+                    &[JValue::Bool(1).as_jni()],
                     jni::signature::ReturnType::Object,
-                    &[JValue::Bool(1)],
                 )
             }
             .map_err(|e| VendorError::KeyGeneration(format!("Failed to set Knox Vault: {}", e)))?;
@@ -202,8 +199,8 @@ impl KnoxJniContext {
             env.call_method_unchecked(
                 &builder,
                 build_method,
-                jni::signature::ReturnType::Object,
                 &[],
+                jni::signature::ReturnType::Object,
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to build spec: {}", e)))?;
@@ -231,8 +228,8 @@ impl KnoxJniContext {
             env.call_static_method_unchecked(
                 key_generator_class,
                 get_instance_method,
+                &[JValue::Object(&algorithm_jstring).as_jni(), JValue::Object(&provider_jstring).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Object(&algorithm_jstring), JValue::Object(&provider_jstring)],
             )
         }
         .map_err(|e| {
@@ -250,14 +247,14 @@ impl KnoxJniContext {
                 VendorError::KeyGeneration(format!("Failed to find init method: {}", e))
             })?;
 
-        if let JValue::Object(spec_obj) = spec {
+        if let Ok(spec_obj) = spec.l() {
             let key_gen_obj = key_generator.l().unwrap();
             unsafe {
                 env.call_method_unchecked(
                     &key_gen_obj,
                     init_method,
+                    &[JValue::Object(&spec_obj).as_jni()],
                     jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                    &[JValue::Object(&spec_obj)],
                 )
             }
             .map_err(|e| {
@@ -274,8 +271,8 @@ impl KnoxJniContext {
                 env.call_method_unchecked(
                     &key_gen_obj,
                     generate_key_method,
-                    jni::signature::ReturnType::Object,
                     &[],
+                    jni::signature::ReturnType::Object,
                 )
             }
             .map_err(|e| VendorError::KeyGeneration(format!("Failed to generate key: {}", e)))?;
@@ -307,8 +304,8 @@ impl KnoxJniContext {
             env.call_static_method_unchecked(
                 keystore_class,
                 get_instance_method,
+                &[JValue::Object(&provider_jstring).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Object(&provider_jstring)],
             )
         }
         .map_err(|e| {
@@ -321,12 +318,13 @@ impl KnoxJniContext {
             .map_err(|e| VendorError::SigningError(format!("Failed to find load method: {}", e)))?;
 
         let keystore_obj = keystore.l().unwrap();
+        let null_obj = JObject::null();
         unsafe {
             env.call_method_unchecked(
                 &keystore_obj,
                 load_method,
+                &[JValue::Object(&null_obj).as_jni()],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                &[JValue::Object(JObject::null())],
             )
         }
         .map_err(|e| VendorError::SigningError(format!("Failed to load keystore: {}", e)))?;
@@ -340,12 +338,13 @@ impl KnoxJniContext {
             VendorError::SigningError(format!("Failed to create alias string: {}", e))
         })?;
 
+        let null_obj = JObject::null();
         let key = unsafe {
             env.call_method_unchecked(
                 &keystore_obj,
                 get_key_method,
+                &[JValue::Object(&alias_jstring).as_jni(), JValue::Object(&null_obj).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Object(&alias_jstring), JValue::Object(JObject::null())],
             )
         }
         .map_err(|e| VendorError::SigningError(format!("Failed to get key: {}", e)))?;
@@ -371,8 +370,8 @@ impl KnoxJniContext {
             env.call_static_method_unchecked(
                 signature_class,
                 get_signature_method,
+                &[JValue::Object(&algorithm_jstring).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Object(&algorithm_jstring)],
             )
         }
         .map_err(|e| {
@@ -384,14 +383,14 @@ impl KnoxJniContext {
             .get_method_id(signature_class, "initSign", "(Ljava/security/PrivateKey;)V")
             .map_err(|e| VendorError::SigningError(format!("Failed to find initSign: {}", e)))?;
 
-        if let JValue::Object(key_obj) = key {
+        if let Ok(key_obj) = key.l() {
             let sig_obj = signature.l().unwrap();
             unsafe {
                 env.call_method_unchecked(
                     &sig_obj,
                     init_sign_method,
+                    &[JValue::Object(&key_obj).as_jni()],
                     jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                    &[JValue::Object(&key_obj)],
                 )
             }
             .map_err(|e| VendorError::SigningError(format!("Failed to init signing: {}", e)))?;
@@ -409,8 +408,8 @@ impl KnoxJniContext {
                 env.call_method_unchecked(
                     &sig_obj,
                     update_method,
+                    &[JValue::Object(&data_array).as_jni()],
                     jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                    &[JValue::Object(&data_array)],
                 )
             }
             .map_err(|e| VendorError::SigningError(format!("Failed to update signature: {}", e)))?;
@@ -424,14 +423,14 @@ impl KnoxJniContext {
                 env.call_method_unchecked(
                     &sig_obj,
                     sign_method,
-                    jni::signature::ReturnType::Array,
                     &[],
+                    jni::signature::ReturnType::Array,
                 )
             }
             .map_err(|e| VendorError::SigningError(format!("Failed to sign: {}", e)))?;
 
             // Convert result to Vec<u8>
-            if let JValue::Object(sig_array) = signature_result {
+            if let Ok(sig_array) = signature_result.l() {
                 let sig_vec = env.convert_byte_array(sig_array.cast()).map_err(|e| {
                     VendorError::SigningError(format!("Failed to convert signature: {}", e))
                 })?;
@@ -469,8 +468,8 @@ impl KnoxJniContext {
             env.call_static_method_unchecked(
                 keystore_class,
                 get_instance_method,
+                &[JValue::Object(&provider_jstring).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Object(&provider_jstring)],
             )
         }
         .map_err(|e| {
@@ -485,12 +484,13 @@ impl KnoxJniContext {
             })?;
 
         let keystore_obj = keystore.l().unwrap();
+        let null_obj = JObject::null();
         unsafe {
             env.call_method_unchecked(
                 &keystore_obj,
                 load_method,
+                &[JValue::Object(&null_obj).as_jni()],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                &[JValue::Object(JObject::null())],
             )
         }
         .map_err(|e| VendorError::AttestationFailed(format!("Failed to load keystore: {}", e)))?;
@@ -514,8 +514,8 @@ impl KnoxJniContext {
             env.call_method_unchecked(
                 &keystore_obj,
                 get_certificate_chain_method,
+                &[JValue::Object(&alias_jstring).as_jni()],
                 jni::signature::ReturnType::Array,
-                &[JValue::Object(&alias_jstring)],
             )
         }
         .map_err(|e| {
@@ -525,7 +525,7 @@ impl KnoxJniContext {
         // Convert certificate chain to bytes
         let mut cert_bytes = Vec::new();
 
-        if let JValue::Object(chain_obj) = cert_chain {
+        if let Ok(chain_obj) = cert_chain.l() {
             let chain_array = chain_obj.cast::<jobject>();
             let chain_len = env.get_array_length(chain_array.into()).map_err(|e| {
                 VendorError::AttestationFailed(format!("Failed to get array length: {}", e))
@@ -553,8 +553,8 @@ impl KnoxJniContext {
                     env.call_method_unchecked(
                         &cert,
                         get_encoded_method,
-                        jni::signature::ReturnType::Array,
                         &[],
+                        jni::signature::ReturnType::Array,
                     )
                 }
                 .map_err(|e| {
@@ -564,7 +564,7 @@ impl KnoxJniContext {
                     ))
                 })?;
 
-                if let JValue::Object(cert_bytes_obj) = encoded_cert {
+                if let Ok(cert_bytes_obj) = encoded_cert.l() {
                     let cert_vec = env.convert_byte_array(cert_bytes_obj.cast()).map_err(|e| {
                         VendorError::AttestationFailed(format!(
                             "Failed to convert certificate bytes: {}",

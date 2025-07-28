@@ -28,16 +28,13 @@ impl KnoxVault {
             env.call_static_method_unchecked(
                 knox_vault_class,
                 is_knox_vault_supported_method,
-                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
                 &[],
+                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
             )
         }
         .map_err(|_| VendorError::NotAvailable)?;
 
-        match result {
-            JValue::Bool(supported) => Ok(supported != 0),
-            _ => Ok(false),
-        }
+        Ok(result.z().unwrap_or(false))
     }
 
     /// Enable Knox Vault for a key
@@ -61,8 +58,8 @@ impl KnoxVault {
             env.call_method_unchecked(
                 spec_builder,
                 set_knox_vault_method,
+                &[JValue::Bool(1).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Bool(1)],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to enable Knox Vault: {}", e)))?;
@@ -103,8 +100,8 @@ impl KnoxVault {
             env.call_method_unchecked(
                 spec_builder,
                 set_user_auth_method,
+                &[JValue::Bool(1).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Bool(1)],
             )
         }
         .map_err(|e| {
@@ -130,8 +127,8 @@ impl KnoxVault {
                 env.call_method_unchecked(
                     spec_builder,
                     set_validity_method,
+                    &[JValue::Int(seconds as i32).as_jni()],
                     jni::signature::ReturnType::Object,
-                    &[JValue::Int(seconds as i32)],
                 )
             }
             .map_err(|e| {
@@ -166,8 +163,8 @@ impl KnoxVault {
             env.call_method_unchecked(
                 spec_builder,
                 set_biometric_method,
+                &[JValue::Bool(1).as_jni()],
                 jni::signature::ReturnType::Object,
-                &[JValue::Bool(1)],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to set biometric auth: {}", e)))?;
@@ -192,18 +189,15 @@ impl KnoxVault {
             env.call_static_method_unchecked(
                 knox_vault_class,
                 is_enabled_method,
-                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
                 &[],
+                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
             )
         }
         .map_err(|e| {
             VendorError::HardwareError(format!("Failed to check Knox Vault enabled: {}", e))
         })?;
 
-        let is_enabled = match enabled {
-            JValue::Bool(b) => b != 0,
-            _ => false,
-        };
+        let is_enabled = enabled.z().unwrap_or(false);
 
         // Get version
         let get_version_method = env
@@ -217,16 +211,13 @@ impl KnoxVault {
             env.call_static_method_unchecked(
                 knox_vault_class,
                 get_version_method,
-                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
                 &[],
+                jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
             )
         }
         .map_err(|_| VendorError::NotSupported("Failed to get Knox Vault version".to_string()))?;
 
-        let version_number = match version {
-            JValue::Int(v) => v as u32,
-            _ => 0,
-        };
+        let version_number = version.i().unwrap_or(0) as u32;
 
         Ok(KnoxVaultStatus {
             enabled: is_enabled,

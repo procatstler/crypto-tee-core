@@ -241,9 +241,9 @@ impl VendorTEE for QualcommQSEE {
                 secure_key_import: false,
                 secure_key_export: false,
                 attestation: qsee_caps.attestation,
-                user_authentication: true,
-                encryption: true,
-                custom: Default::default(),
+                strongbox: qsee_caps.strongbox,
+                biometric_bound: true,
+                secure_deletion: true,
             },
         })
     }

@@ -81,24 +81,24 @@ impl SamsungKnoxTEE {
 pub fn is_knox_available() -> VendorResult<bool> {
     let jvm = get_jni_context().ok_or_else(|| VendorError::NotAvailable)?;
 
-    let env = jvm
+    let mut env = jvm
         .attach_current_thread()
         .map_err(|e| VendorError::InitializationError(format!("Failed to attach thread: {}", e)))?;
 
     let context = KnoxJniContext::new(jvm);
-    context.is_knox_available(&env)
+    context.is_knox_available(&mut env)
 }
 
 #[async_trait]
 impl VendorTEE for SamsungKnoxTEE {
     async fn probe(&self) -> VendorResult<VendorCapabilities> {
         let jvm = self.jni_context.jvm.clone();
-        let env = jvm.attach_current_thread().map_err(|e| {
+        let mut env = jvm.attach_current_thread().map_err(|e| {
             VendorError::InitializationError(format!("Failed to attach thread: {}", e))
         })?;
 
         // Check Knox availability
-        if !self.jni_context.is_knox_available(&env)? {
+        if !self.jni_context.is_knox_available(&mut env)? {
             return Err(VendorError::NotAvailable);
         }
 
@@ -130,7 +130,7 @@ impl VendorTEE for SamsungKnoxTEE {
 
     async fn generate_key(&self, params: &KeyGenParams) -> VendorResult<VendorKeyHandle> {
         let jvm = self.jni_context.jvm.clone();
-        let env = jvm
+        let mut env = jvm
             .attach_current_thread()
             .map_err(|e| VendorError::KeyGeneration(format!("Failed to attach thread: {}", e)))?;
 
@@ -150,7 +150,7 @@ impl VendorTEE for SamsungKnoxTEE {
 
         // Generate key using JNI
         self.jni_context.generate_key(
-            &env,
+            &mut env,
             &alias,
             knox_algorithm,
             key_size,
@@ -189,7 +189,7 @@ impl VendorTEE for SamsungKnoxTEE {
 
     async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
         let jvm = self.jni_context.jvm.clone();
-        let env = jvm
+        let mut env = jvm
             .attach_current_thread()
             .map_err(|e| VendorError::SigningError(format!("Failed to attach thread: {}", e)))?;
 
@@ -200,7 +200,7 @@ impl VendorTEE for SamsungKnoxTEE {
             .ok_or_else(|| VendorError::KeyNotFound(format!("Key not found: {}", key.id)))?;
 
         // Sign data using JNI
-        let signature_bytes = self.jni_context.sign_data(&env, &key.id, data)?;
+        let signature_bytes = self.jni_context.sign_data(&mut env, &key.id, data)?;
 
         Ok(Signature { algorithm: key.algorithm, data: signature_bytes })
     }
@@ -236,12 +236,12 @@ impl VendorTEE for SamsungKnoxTEE {
 
     async fn get_key_attestation(&self, key: &VendorKeyHandle) -> VendorResult<Attestation> {
         let jvm = self.jni_context.jvm.clone();
-        let env = jvm.attach_current_thread().map_err(|e| {
+        let mut env = jvm.attach_current_thread().map_err(|e| {
             VendorError::AttestationFailed(format!("Failed to attach thread: {}", e))
         })?;
 
         // Get attestation certificate chain
-        let cert_chain = self.jni_context.get_attestation(&env, &key.id)?;
+        let cert_chain = self.jni_context.get_attestation(&mut env, &key.id)?;
 
         Ok(Attestation {
             format: AttestationFormat::AndroidKey,
