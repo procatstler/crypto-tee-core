@@ -70,12 +70,12 @@ impl KnoxJniContext {
             .map_err(|_| VendorError::NotAvailable)?;
 
         let version_method = env
-            .get_static_method_id(knox_version_class, "getAPILevel", "()I")
+            .get_static_method_id(&knox_version_class, "getAPILevel", "()I")
             .map_err(|_| VendorError::NotAvailable)?;
 
         let api_level = unsafe {
             env.call_static_method_unchecked(
-                knox_version_class,
+                &knox_version_class,
                 version_method,
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
                 &[],
@@ -107,14 +107,14 @@ impl KnoxJniContext {
             })?;
 
         let builder_constructor =
-            env.get_method_id(builder_class, "<init>", "(Ljava/lang/String;I)V").map_err(|e| {
+            env.get_method_id(&builder_class, "<init>", "(Ljava/lang/String;I)V").map_err(|e| {
                 VendorError::KeyGeneration(format!("Failed to find constructor: {}", e))
             })?;
 
         let purposes = 12; // Sign | Verify
         let builder = unsafe {
             env.new_object_unchecked(
-                builder_class,
+                &builder_class,
                 builder_constructor,
                 &[JValue::Object(&alias_jstring).as_jni(), JValue::Int(purposes).as_jni()],
             )
@@ -123,7 +123,7 @@ impl KnoxJniContext {
 
         // Set key algorithm
         let set_algorithm_method = env.get_method_id(
-            builder_class,
+            &builder_class,
             "setKeyAlgorithm",
             "(Ljava/lang/String;)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;"
         ).map_err(|e| VendorError::KeyGeneration(format!("Failed to find setKeyAlgorithm: {}", e)))?;
@@ -145,7 +145,7 @@ impl KnoxJniContext {
         // Set key size
         let set_key_size_method = env
             .get_method_id(
-                builder_class,
+                &builder_class,
                 "setKeySize",
                 "(I)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
             )
@@ -165,7 +165,7 @@ impl KnoxJniContext {
         if use_knox_vault {
             let set_knox_vault_method = env
                 .get_method_id(
-                    builder_class,
+                    &builder_class,
                     "setUseKnoxVault",
                     "(Z)Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec$Builder;",
                 )
@@ -187,7 +187,7 @@ impl KnoxJniContext {
         // Build spec
         let build_method = env
             .get_method_id(
-                builder_class,
+                &builder_class,
                 "build",
                 "()Lcom/samsung/android/knox/keystore/KnoxKeyGenParameterSpec;",
             )
@@ -212,7 +212,7 @@ impl KnoxJniContext {
 
         let get_instance_method = env
             .get_static_method_id(
-                key_generator_class,
+                &key_generator_class,
                 "getInstance",
                 "(Ljava/lang/String;Ljava/lang/String;)Ljavax/crypto/KeyGenerator;",
             )
@@ -226,7 +226,7 @@ impl KnoxJniContext {
 
         let key_generator = unsafe {
             env.call_static_method_unchecked(
-                key_generator_class,
+                &key_generator_class,
                 get_instance_method,
                 jni::signature::ReturnType::Object,
                 &[
@@ -242,7 +242,7 @@ impl KnoxJniContext {
         // Initialize and generate key
         let init_method = env
             .get_method_id(
-                key_generator_class,
+                &key_generator_class,
                 "init",
                 "(Ljava/security/spec/AlgorithmParameterSpec;)V",
             )
@@ -265,7 +265,7 @@ impl KnoxJniContext {
             })?;
 
             let generate_key_method = env
-                .get_method_id(key_generator_class, "generateKey", "()Ljavax/crypto/SecretKey;")
+                .get_method_id(&key_generator_class, "generateKey", "()Ljavax/crypto/SecretKey;")
                 .map_err(|e| {
                     VendorError::KeyGeneration(format!("Failed to find generateKey: {}", e))
                 })?;
@@ -293,7 +293,7 @@ impl KnoxJniContext {
 
         let get_instance_method = env
             .get_static_method_id(
-                keystore_class,
+                &keystore_class,
                 "getInstance",
                 "(Ljava/lang/String;)Ljava/security/KeyStore;",
             )
@@ -305,7 +305,7 @@ impl KnoxJniContext {
 
         let keystore = unsafe {
             env.call_static_method_unchecked(
-                keystore_class,
+                &keystore_class,
                 get_instance_method,
                 jni::signature::ReturnType::Object,
                 &[JValue::Object(&provider_jstring).as_jni()],
@@ -317,7 +317,11 @@ impl KnoxJniContext {
 
         // Load keystore
         let load_method = env
-            .get_method_id(keystore_class, "load", "(Ljava/security/KeyStore$LoadStoreParameter;)V")
+            .get_method_id(
+                &keystore_class,
+                "load",
+                "(Ljava/security/KeyStore$LoadStoreParameter;)V",
+            )
             .map_err(|e| VendorError::SigningError(format!("Failed to find load method: {}", e)))?;
 
         let keystore_obj = keystore.l().unwrap();
@@ -334,7 +338,7 @@ impl KnoxJniContext {
 
         // Get key
         let get_key_method = env
-            .get_method_id(keystore_class, "getKey", "(Ljava/lang/String;[C)Ljava/security/Key;")
+            .get_method_id(&keystore_class, "getKey", "(Ljava/lang/String;[C)Ljava/security/Key;")
             .map_err(|e| VendorError::SigningError(format!("Failed to find getKey: {}", e)))?;
 
         let alias_jstring = env.new_string(alias).map_err(|e| {
@@ -359,7 +363,7 @@ impl KnoxJniContext {
 
         let get_signature_method = env
             .get_static_method_id(
-                signature_class,
+                &signature_class,
                 "getInstance",
                 "(Ljava/lang/String;)Ljava/security/Signature;",
             )
@@ -371,7 +375,7 @@ impl KnoxJniContext {
 
         let signature = unsafe {
             env.call_static_method_unchecked(
-                signature_class,
+                &signature_class,
                 get_signature_method,
                 jni::signature::ReturnType::Object,
                 &[JValue::Object(&algorithm_jstring).as_jni()],
@@ -383,7 +387,7 @@ impl KnoxJniContext {
 
         // Initialize for signing
         let init_sign_method = env
-            .get_method_id(signature_class, "initSign", "(Ljava/security/PrivateKey;)V")
+            .get_method_id(&signature_class, "initSign", "(Ljava/security/PrivateKey;)V")
             .map_err(|e| VendorError::SigningError(format!("Failed to find initSign: {}", e)))?;
 
         if let Ok(key_obj) = key.l() {
@@ -400,7 +404,7 @@ impl KnoxJniContext {
 
             // Update with data
             let update_method = env
-                .get_method_id(signature_class, "update", "([B)V")
+                .get_method_id(&signature_class, "update", "([B)V")
                 .map_err(|e| VendorError::SigningError(format!("Failed to find update: {}", e)))?;
 
             let data_array = env.byte_array_from_slice(data).map_err(|e| {
@@ -412,13 +416,13 @@ impl KnoxJniContext {
                     &sig_obj,
                     update_method,
                     jni::signature::ReturnType::Primitive(jni::signature::Primitive::Void),
-                    &[JValue::Object(&data_array).as_jni()],
+                    &[JValue::Object(&data_array.into()).as_jni()],
                 )
             }
             .map_err(|e| VendorError::SigningError(format!("Failed to update signature: {}", e)))?;
 
             // Sign
-            let sign_method = env.get_method_id(signature_class, "sign", "()[B").map_err(|e| {
+            let sign_method = env.get_method_id(&signature_class, "sign", "()[B").map_err(|e| {
                 VendorError::SigningError(format!("Failed to find sign method: {}", e))
             })?;
 
@@ -457,7 +461,7 @@ impl KnoxJniContext {
 
         let get_instance_method = env
             .get_static_method_id(
-                keystore_class,
+                &keystore_class,
                 "getInstance",
                 "(Ljava/lang/String;)Ljava/security/KeyStore;",
             )
@@ -471,7 +475,7 @@ impl KnoxJniContext {
 
         let keystore = unsafe {
             env.call_static_method_unchecked(
-                keystore_class,
+                &keystore_class,
                 get_instance_method,
                 jni::signature::ReturnType::Object,
                 &[JValue::Object(&provider_jstring).as_jni()],
@@ -483,7 +487,11 @@ impl KnoxJniContext {
 
         // Load keystore
         let load_method = env
-            .get_method_id(keystore_class, "load", "(Ljava/security/KeyStore$LoadStoreParameter;)V")
+            .get_method_id(
+                &keystore_class,
+                "load",
+                "(Ljava/security/KeyStore$LoadStoreParameter;)V",
+            )
             .map_err(|e| {
                 VendorError::AttestationFailed(format!("Failed to find load method: {}", e))
             })?;
@@ -503,7 +511,7 @@ impl KnoxJniContext {
         // Get certificate chain
         let get_certificate_chain_method = env
             .get_method_id(
-                keystore_class,
+                &keystore_class,
                 "getCertificateChain",
                 "(Ljava/lang/String;)[Ljava/security/cert/Certificate;",
             )
@@ -550,7 +558,7 @@ impl KnoxJniContext {
                 })?;
 
                 let get_encoded_method =
-                    env.get_method_id(cert_class, "getEncoded", "()[B").map_err(|e| {
+                    env.get_method_id(&cert_class, "getEncoded", "()[B").map_err(|e| {
                         VendorError::AttestationFailed(format!("Failed to find getEncoded: {}", e))
                     })?;
 

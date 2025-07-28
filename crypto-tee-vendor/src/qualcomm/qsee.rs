@@ -222,7 +222,8 @@ impl QualcommQSEE {
 impl VendorTEE for QualcommQSEE {
     async fn probe(&self) -> VendorResult<VendorCapabilities> {
         // Initialize if not already done
-        if self.capabilities.lock().unwrap().is_none() {
+        let needs_init = self.capabilities.lock().unwrap().is_none();
+        if needs_init {
             self.initialize().await?;
         }
 

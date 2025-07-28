@@ -5,7 +5,7 @@ use jni::objects::{GlobalRef, JClass, JObject, JString};
 use jni::sys::{jboolean, jbyteArray, jint};
 use jni::{JNIEnv, JavaVM};
 use std::sync::{Arc, Mutex, OnceLock};
-use tracing::{debug, info};
+use tracing::{debug, error, info};
 
 use super::ProtectionLevel;
 
@@ -184,7 +184,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
         }
     };
 
-    let data_vec = match env.convert_byte_array(data.into()) {
+    let data_vec = match env.convert_byte_array(data) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert data array: {:?}", e);
@@ -221,7 +221,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let data_vec = match env.convert_byte_array(data.into()) {
+    let data_vec = match env.convert_byte_array(data) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert data array: {:?}", e);
@@ -229,7 +229,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let signature_vec = match env.convert_byte_array(signature.into()) {
+    let signature_vec = match env.convert_byte_array(signature) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert signature array: {:?}", e);
