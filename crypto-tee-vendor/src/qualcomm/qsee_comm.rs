@@ -3,7 +3,7 @@
 use crate::error::{VendorError, VendorResult};
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
 /// QSEE Communicator for low-level TEE communication
 pub struct QSEECommunicator {

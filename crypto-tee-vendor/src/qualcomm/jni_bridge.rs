@@ -1,11 +1,11 @@
 //! JNI Bridge for Qualcomm QSEE Android Integration
 
 use crate::error::{VendorError, VendorResult};
-use jni::objects::{GlobalRef, JClass, JObject, JString, JValue};
+use jni::objects::{GlobalRef, JClass, JObject, JString};
 use jni::sys::{jboolean, jbyteArray, jint};
 use jni::{JNIEnv, JavaVM};
 use std::sync::{Arc, Mutex, OnceLock};
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 use super::ProtectionLevel;
 
@@ -62,12 +62,12 @@ impl JniBridge {
     /// Generate key through Android Keystore with QSEE backing
     pub async fn generate_key(
         &self,
-        alias: &str,
-        algorithm: &str,
-        key_size: i32,
-        protection_level: ProtectionLevel,
-        require_auth: bool,
-        auth_validity_duration: Option<u32>,
+        _alias: &str,
+        _algorithm: &str,
+        _key_size: i32,
+        _protection_level: ProtectionLevel,
+        _require_auth: bool,
+        _auth_validity_duration: Option<u32>,
     ) -> VendorResult<()> {
         debug!("Generating key through JNI: [REDACTED]");
 
@@ -80,7 +80,7 @@ impl JniBridge {
     }
 
     /// Delete key from Android Keystore
-    pub async fn delete_key(&self, alias: &str) -> VendorResult<()> {
+    pub async fn delete_key(&self, _alias: &str) -> VendorResult<()> {
         debug!("Deleting key through JNI: [REDACTED]");
 
         // In a real implementation, this would call Android Keystore
@@ -89,7 +89,7 @@ impl JniBridge {
     }
 
     /// Sign data using key in QSEE
-    pub async fn sign(&self, alias: &str, data: &[u8]) -> VendorResult<Vec<u8>> {
+    pub async fn sign(&self, _alias: &str, _data: &[u8]) -> VendorResult<Vec<u8>> {
         debug!("Signing data through JNI with key: [REDACTED]");
 
         // In a real implementation, this would use Android Keystore
@@ -99,7 +99,7 @@ impl JniBridge {
     }
 
     /// Verify signature using key in QSEE
-    pub async fn verify(&self, alias: &str, data: &[u8], signature: &[u8]) -> VendorResult<bool> {
+    pub async fn verify(&self, _alias: &str, _data: &[u8], _signature: &[u8]) -> VendorResult<bool> {
         debug!("Verifying signature through JNI with key: [REDACTED]");
 
         // In a real implementation, this would use Android Keystore
@@ -107,7 +107,7 @@ impl JniBridge {
     }
 
     /// Get key attestation certificate chain
-    pub async fn get_key_attestation(&self, alias: &str) -> VendorResult<Vec<u8>> {
+    pub async fn get_key_attestation(&self, _alias: &str) -> VendorResult<Vec<u8>> {
         debug!("Getting key attestation through JNI for: [REDACTED]");
 
         // In a real implementation, this would get attestation from Android Keystore
@@ -119,9 +119,9 @@ impl JniBridge {
 /// JNI native methods exposed to Java
 #[no_mangle]
 pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeInit(
-    mut env: JNIEnv,
+    env: JNIEnv,
     _class: JClass,
-    context: JObject,
+    _context: JObject,
 ) {
     info!("Initializing QSEE JNI bridge");
 
@@ -142,18 +142,18 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGenerateKe
     require_auth: jboolean,
     auth_validity: jint,
 ) -> jboolean {
-    let alias_str = match env.get_string(&alias) {
-        Ok(s) => s.into(),
+    let _alias_str = match env.get_string(&alias) {
+        Ok(s) => s.to_str().unwrap_or("").to_string(),
         Err(e) => {
-            error!("Failed to get alias string: {:?}", e);
+            tracing::error!("Failed to get alias string: {:?}", e);
             return 0;
         }
     };
 
-    let algorithm_str = match env.get_string(&algorithm) {
-        Ok(s) => s.into(),
+    let _algorithm_str = match env.get_string(&algorithm) {
+        Ok(s) => s.to_str().unwrap_or("").to_string(),
         Err(e) => {
-            error!("Failed to get algorithm string: {:?}", e);
+            tracing::error!("Failed to get algorithm string: {:?}", e);
             return 0;
         }
     };
@@ -171,10 +171,10 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
     alias: JString,
     data: jbyteArray,
 ) -> jbyteArray {
-    let alias_str = match env.get_string(&alias) {
-        Ok(s) => s.into(),
+    let _alias_str = match env.get_string(&alias) {
+        Ok(s) => s.to_str().unwrap_or("").to_string(),
         Err(e) => {
-            error!("Failed to get alias string: {:?}", e);
+            tracing::error!("Failed to get alias string: {:?}", e);
             return std::ptr::null_mut();
         }
     };
@@ -208,10 +208,10 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
     data: jbyteArray,
     signature: jbyteArray,
 ) -> jboolean {
-    let alias_str = match env.get_string(&alias) {
-        Ok(s) => s.into(),
+    let _alias_str = match env.get_string(&alias) {
+        Ok(s) => s.to_str().unwrap_or("").to_string(),
         Err(e) => {
-            error!("Failed to get alias string: {:?}", e);
+            tracing::error!("Failed to get alias string: {:?}", e);
             return 0;
         }
     };
@@ -244,10 +244,10 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGetAttesta
     _class: JClass,
     alias: JString,
 ) -> jbyteArray {
-    let alias_str = match env.get_string(&alias) {
-        Ok(s) => s.into(),
+    let _alias_str = match env.get_string(&alias) {
+        Ok(s) => s.to_str().unwrap_or("").to_string(),
         Err(e) => {
-            error!("Failed to get alias string: {:?}", e);
+            tracing::error!("Failed to get alias string: {:?}", e);
             return std::ptr::null_mut();
         }
     };

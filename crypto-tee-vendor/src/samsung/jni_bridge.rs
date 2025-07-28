@@ -6,7 +6,7 @@
 use crate::error::{VendorError, VendorResult};
 use jni::{
     objects::{GlobalRef, JObject, JValue},
-    sys::{jbyteArray, jobject},
+    sys::jobject,
     JNIEnv, JavaVM,
 };
 use std::sync::{Arc, Mutex, OnceLock};

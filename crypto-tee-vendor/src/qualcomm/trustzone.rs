@@ -3,7 +3,7 @@
 use crate::error::{VendorError, VendorResult};
 use std::collections::HashMap;
 use std::sync::Mutex;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 
 /// TrustZone hardware information
 #[derive(Debug, Clone)]
@@ -123,7 +123,7 @@ impl TrustZoneApp {
         &self,
         app_name: &str,
         command: u32,
-        data: &[u8],
+        _data: &[u8],
     ) -> VendorResult<Vec<u8>> {
         debug!("Sending command {} to app: [REDACTED]", command);
 
@@ -133,7 +133,7 @@ impl TrustZoneApp {
             VendorError::NotSupported(format!("TrustZone app not loaded: {}", app_name))
         })?;
 
-        let app_id = handle.app_id;
+        let _app_id = handle.app_id;
         drop(apps);
 
         // Send command (mock implementation)

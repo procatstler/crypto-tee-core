@@ -4,7 +4,7 @@ use crate::error::{VendorError, VendorResult};
 use ring::aead::{Aad, BoundKey, Nonce, NonceSequence, SealingKey, UnboundKey, AES_256_GCM};
 use ring::rand::{SecureRandom, SystemRandom};
 use std::sync::Mutex;
-use tracing::{debug, error, info};
+use tracing::{debug, info};
 
 /// Secure channel for QSEE communication
 pub struct SecureChannel {

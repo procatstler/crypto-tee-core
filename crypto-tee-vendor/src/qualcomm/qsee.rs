@@ -7,7 +7,7 @@ use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
 use subtle::ConstantTimeEq;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, info};
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 use super::jni_bridge::JniBridge;

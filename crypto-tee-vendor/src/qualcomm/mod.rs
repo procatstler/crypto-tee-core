@@ -3,7 +3,7 @@
 //! This module provides integration with Qualcomm's QSEE for secure cryptographic
 //! operations on Qualcomm Snapdragon processors.
 
-use crate::error::{VendorError, VendorResult};
+use crate::error::VendorResult;
 use crate::traits::VendorTEE;
 use crate::types::*;
 // use async_trait::async_trait;
@@ -133,7 +133,7 @@ impl QSEECapabilities {
 
         #[cfg(not(target_os = "android"))]
         {
-            Err(VendorError::NotSupported(
+            Err(crate::error::VendorError::NotSupported(
                 "QSEE is only available on Android with Qualcomm chipsets".to_string(),
             ))
         }
