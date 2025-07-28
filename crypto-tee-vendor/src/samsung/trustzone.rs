@@ -38,17 +38,15 @@ impl TrustZone {
             env.call_static_method_unchecked(
                 system_class,
                 get_property_method,
-                &[JValue::Object(&property_name).as_jni()],
                 jni::signature::ReturnType::Object,
+                &[JValue::Object(&property_name).as_jni()],
             )
         }
-            .map_err(|e| {
-                VendorError::HardwareError(format!("Failed to get system property: {}", e))
-            })?;
+        .map_err(|e| VendorError::HardwareError(format!("Failed to get system property: {}", e)))?;
 
         if let Ok(obj) = result.l() {
             if !obj.is_null() {
-                let keystore_type = env.get_string(obj.into()).map_err(|e| {
+                let keystore_type = env.get_string((&obj).into()).map_err(|e| {
                     VendorError::HardwareError(format!("Failed to get string: {}", e))
                 })?;
                 let keystore_str = keystore_type.to_string_lossy();
@@ -80,15 +78,15 @@ impl TrustZone {
             env.call_static_method_unchecked(
                 knox_tz_class,
                 get_version_method,
-                &[],
                 jni::signature::ReturnType::Object,
+                &[],
             )
         }
-            .map_err(|_| VendorError::NotSupported("Failed to get TZ version".to_string()))?;
+        .map_err(|_| VendorError::NotSupported("Failed to get TZ version".to_string()))?;
 
         if let Ok(obj) = version.l() {
             if !obj.is_null() {
-                let version_string = env.get_string(obj.into()).map_err(|e| {
+                let version_string = env.get_string((&obj).into()).map_err(|e| {
                     VendorError::HardwareError(format!("Failed to get version string: {}", e))
                 })?;
                 Ok(version_string.to_string_lossy().into_owned())
@@ -122,8 +120,8 @@ impl TrustZone {
             env.call_method_unchecked(
                 spec_builder,
                 set_tz_method,
-                &[JValue::Bool(1).as_jni()],
                 jni::signature::ReturnType::Object,
+                &[JValue::Bool(1).as_jni()],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to enable TrustZone: {}", e)))?;
@@ -147,11 +145,11 @@ impl TrustZone {
             env.call_static_method_unchecked(
                 tima_class,
                 is_enabled_method,
-                &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
+                &[],
             )
         }
-            .map_err(|_| VendorError::NotAvailable)?;
+        .map_err(|_| VendorError::NotAvailable)?;
 
         let is_enabled = enabled.z().unwrap_or(false);
 
@@ -178,7 +176,7 @@ impl TrustZone {
 
         if let Ok(obj) = tags_field.l() {
             if !obj.is_null() {
-                let tags_string = env.get_string(obj.into()).map_err(|e| {
+                let tags_string = env.get_string((&obj).into()).map_err(|e| {
                     VendorError::HardwareError(format!("Failed to get tags string: {}", e))
                 })?;
                 let tags = tags_string.to_string_lossy();

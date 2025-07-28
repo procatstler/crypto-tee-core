@@ -2,7 +2,7 @@
 
 use crate::error::{VendorError, VendorResult};
 use jni::objects::{GlobalRef, JClass, JObject, JString, JValue};
-use jni::sys::{jboolean, jbyteArray, jint, jobject, jstring};
+use jni::sys::{jboolean, jbyteArray, jint};
 use jni::{JNIEnv, JavaVM};
 use std::sync::{Arc, Mutex, OnceLock};
 use tracing::{debug, error, info};

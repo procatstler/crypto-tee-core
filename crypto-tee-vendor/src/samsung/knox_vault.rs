@@ -28,8 +28,8 @@ impl KnoxVault {
             env.call_static_method_unchecked(
                 knox_vault_class,
                 is_knox_vault_supported_method,
-                &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
+                &[],
             )
         }
         .map_err(|_| VendorError::NotAvailable)?;
@@ -58,8 +58,8 @@ impl KnoxVault {
             env.call_method_unchecked(
                 spec_builder,
                 set_knox_vault_method,
-                &[JValue::Bool(1).as_jni()],
                 jni::signature::ReturnType::Object,
+                &[JValue::Bool(1).as_jni()],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to enable Knox Vault: {}", e)))?;
@@ -100,8 +100,8 @@ impl KnoxVault {
             env.call_method_unchecked(
                 spec_builder,
                 set_user_auth_method,
-                &[JValue::Bool(1).as_jni()],
                 jni::signature::ReturnType::Object,
+                &[JValue::Bool(1).as_jni()],
             )
         }
         .map_err(|e| {
@@ -127,8 +127,8 @@ impl KnoxVault {
                 env.call_method_unchecked(
                     spec_builder,
                     set_validity_method,
-                    &[JValue::Int(seconds as i32).as_jni()],
                     jni::signature::ReturnType::Object,
+                    &[JValue::Int(seconds as i32).as_jni()],
                 )
             }
             .map_err(|e| {
@@ -163,8 +163,8 @@ impl KnoxVault {
             env.call_method_unchecked(
                 spec_builder,
                 set_biometric_method,
-                &[JValue::Bool(1).as_jni()],
                 jni::signature::ReturnType::Object,
+                &[JValue::Bool(1).as_jni()],
             )
         }
         .map_err(|e| VendorError::KeyGeneration(format!("Failed to set biometric auth: {}", e)))?;
@@ -189,8 +189,8 @@ impl KnoxVault {
             env.call_static_method_unchecked(
                 knox_vault_class,
                 is_enabled_method,
-                &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Boolean),
+                &[],
             )
         }
         .map_err(|e| {
@@ -211,8 +211,8 @@ impl KnoxVault {
             env.call_static_method_unchecked(
                 knox_vault_class,
                 get_version_method,
-                &[],
                 jni::signature::ReturnType::Primitive(jni::signature::Primitive::Int),
+                &[],
             )
         }
         .map_err(|_| VendorError::NotSupported("Failed to get Knox Vault version".to_string()))?;

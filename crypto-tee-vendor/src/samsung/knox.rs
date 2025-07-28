@@ -85,7 +85,7 @@ pub fn is_knox_available() -> VendorResult<bool> {
         .attach_current_thread()
         .map_err(|e| VendorError::InitializationError(format!("Failed to attach thread: {}", e)))?;
 
-    let context = KnoxJniContext::new(jvm);
+    let context = KnoxJniContext::new(jvm.clone());
     context.is_knox_available(&mut env)
 }
 
