@@ -99,7 +99,12 @@ impl JniBridge {
     }
 
     /// Verify signature using key in QSEE
-    pub async fn verify(&self, _alias: &str, _data: &[u8], _signature: &[u8]) -> VendorResult<bool> {
+    pub async fn verify(
+        &self,
+        _alias: &str,
+        _data: &[u8],
+        _signature: &[u8],
+    ) -> VendorResult<bool> {
         debug!("Verifying signature through JNI with key: [REDACTED]");
 
         // In a real implementation, this would use Android Keystore
