@@ -140,9 +140,9 @@ async fn sign_data_internal(
     let key_id = key_id_jstring.to_string_lossy().into_owned();
 
     // Convert Java byte array to Rust Vec<u8>
-    let data = env.convert_byte_array(&jni::objects::JByteArray::from_raw(
-        data_obj.into_inner() as jni::sys::jbyteArray,
-    ))?;
+    let data = env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(
+        data_obj.as_raw() as jni::sys::jbyteArray,
+    ) })?;
 
     // Create key handle
     let key_handle = VendorKeyHandle {

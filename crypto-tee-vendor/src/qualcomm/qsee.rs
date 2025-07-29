@@ -149,17 +149,19 @@ impl QualcommQSEE {
         debug!("Generating key with algorithm: {:?}", params.algorithm);
 
         // Validate algorithm support
-        let caps = self.capabilities.lock().map_err(|e| {
-            VendorError::InternalError(format!("Failed to acquire capabilities lock: {}", e))
-        })?;
-        if let Some(caps) = caps.as_ref() {
-            if !caps.algorithms.contains(&params.algorithm) {
-                return Err(VendorError::NotSupported(format!(
-                    "Algorithm {:?} not supported",
-                    params.algorithm
-                )));
+        {
+            let caps = self.capabilities.lock().map_err(|e| {
+                VendorError::InternalError(format!("Failed to acquire capabilities lock: {}", e))
+            })?;
+            if let Some(caps) = caps.as_ref() {
+                if !caps.algorithms.contains(&params.algorithm) {
+                    return Err(VendorError::NotSupported(format!(
+                        "Algorithm {:?} not supported",
+                        params.algorithm
+                    )));
+                }
             }
-        }
+        } // Drop lock here before await
 
         // Generate unique alias
         let alias = format!("qsee_key_{}", uuid::Uuid::new_v4());
@@ -274,12 +276,15 @@ impl VendorTEE for QualcommQSEE {
     async fn sign(&self, key: &VendorKeyHandle, data: &[u8]) -> VendorResult<Signature> {
         debug!("Signing data with key: [REDACTED]");
 
-        // Get key data
-        let keys = self.keys.lock().unwrap();
-        let key_data = keys.get(&key.id).ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
+        // Get key data and check auth requirements
+        let auth_required = {
+            let keys = self.keys.lock().unwrap();
+            let key_data = keys.get(&key.id).ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
+            key_data.auth_required
+        }; // Drop lock here before await
 
         // Check if authentication is required
-        if key_data.auth_required {
+        if auth_required {
             debug!("Authentication required for signing");
             // Authentication will be handled by Android Keystore
         }

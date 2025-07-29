@@ -142,10 +142,10 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeGenerateKe
     _class: JClass,
     alias: JString,
     algorithm: JString,
-    key_size: jint,
-    hardware_backed: jboolean,
-    require_auth: jboolean,
-    auth_validity: jint,
+    _key_size: jint,
+    _hardware_backed: jboolean,
+    _require_auth: jboolean,
+    _auth_validity: jint,
 ) -> jboolean {
     let _alias_str = match env.get_string(&alias) {
         Ok(s) => s.to_str().unwrap_or("").to_string(),
@@ -184,7 +184,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
         }
     };
 
-    let data_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(data)) {
+    let data_vec = match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(data) }) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert data array: {:?}", e);
@@ -192,7 +192,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
         }
     };
 
-    debug!("Native sign: [REDACTED], data_len={}", data_vec.len());
+    debug!("Native sign: [REDACTED], data_len={}", _data_vec.len());
 
     // Sign using Android Keystore
     // Return signature
@@ -221,7 +221,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let data_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(data)) {
+    let _data_vec = match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(data) }) {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert data array: {:?}", e);
@@ -229,7 +229,7 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let signature_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(signature))
+    let _signature_vec = match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(signature) })
     {
         Ok(v) => v,
         Err(e) => {
