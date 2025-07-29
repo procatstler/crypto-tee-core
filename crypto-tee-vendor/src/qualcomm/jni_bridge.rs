@@ -229,7 +229,8 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let signature_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(signature)) {
+    let signature_vec = match env.convert_byte_array(&jni::objects::JByteArray::from_raw(signature))
+    {
         Ok(v) => v,
         Err(e) => {
             error!("Failed to convert signature array: {:?}", e);
