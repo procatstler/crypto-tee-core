@@ -441,7 +441,9 @@ impl KnoxJniContext {
                 // sig_array is already a JObject, cast it to jbyteArray
                 let sig_jbytearray = sig_array.as_raw() as jni::sys::jbyteArray;
                 let sig_vec = env
-                    .convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(sig_jbytearray) })
+                    .convert_byte_array(unsafe {
+                        &jni::objects::JByteArray::from_raw(sig_jbytearray)
+                    })
                     .map_err(|e| {
                         VendorError::SigningError(format!("Failed to convert signature: {}", e))
                     })?;
@@ -542,14 +544,21 @@ impl KnoxJniContext {
 
         if let Ok(chain_obj) = cert_chain.l() {
             let chain_array = chain_obj.as_raw();
-            let chain_len = env.get_array_length(unsafe { jni::objects::JObjectArray::from_raw(chain_array) }).map_err(|e| {
-                VendorError::AttestationFailed(format!("Failed to get array length: {}", e))
-            })?;
+            let chain_len = env
+                .get_array_length(unsafe { jni::objects::JObjectArray::from_raw(chain_array) })
+                .map_err(|e| {
+                    VendorError::AttestationFailed(format!("Failed to get array length: {}", e))
+                })?;
 
             for i in 0..chain_len {
-                let cert = env.get_object_array_element(unsafe { jni::objects::JObjectArray::from_raw(chain_array) }, i).map_err(|e| {
-                    VendorError::AttestationFailed(format!("Failed to get certificate: {}", e))
-                })?;
+                let cert = env
+                    .get_object_array_element(
+                        unsafe { jni::objects::JObjectArray::from_raw(chain_array) },
+                        i,
+                    )
+                    .map_err(|e| {
+                        VendorError::AttestationFailed(format!("Failed to get certificate: {}", e))
+                    })?;
 
                 // Get encoded certificate
                 let cert_class = env.find_class("java/security/cert/Certificate").map_err(|e| {
@@ -582,7 +591,9 @@ impl KnoxJniContext {
                 if let Ok(cert_bytes_obj) = encoded_cert.l() {
                     let cert_jbytearray = cert_bytes_obj.as_raw() as jni::sys::jbyteArray;
                     let cert_vec = env
-                        .convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(cert_jbytearray) })
+                        .convert_byte_array(unsafe {
+                            &jni::objects::JByteArray::from_raw(cert_jbytearray)
+                        })
                         .map_err(|e| {
                             VendorError::AttestationFailed(format!(
                                 "Failed to convert certificate bytes: {}",

@@ -184,13 +184,14 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeSign(
         }
     };
 
-    let data_vec = match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(data) }) {
-        Ok(v) => v,
-        Err(e) => {
-            error!("Failed to convert data array: {:?}", e);
-            return std::ptr::null_mut();
-        }
-    };
+    let _data_vec =
+        match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(data) }) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Failed to convert data array: {:?}", e);
+                return std::ptr::null_mut();
+            }
+        };
 
     debug!("Native sign: [REDACTED], data_len={}", _data_vec.len());
 
@@ -221,22 +222,23 @@ pub extern "C" fn Java_com_cryptotee_vendor_qualcomm_QSEEBridge_nativeVerify(
         }
     };
 
-    let _data_vec = match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(data) }) {
-        Ok(v) => v,
-        Err(e) => {
-            error!("Failed to convert data array: {:?}", e);
-            return 0;
-        }
-    };
+    let _data_vec =
+        match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(data) }) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Failed to convert data array: {:?}", e);
+                return 0;
+            }
+        };
 
-    let _signature_vec = match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(signature) })
-    {
-        Ok(v) => v,
-        Err(e) => {
-            error!("Failed to convert signature array: {:?}", e);
-            return 0;
-        }
-    };
+    let _signature_vec =
+        match env.convert_byte_array(unsafe { &jni::objects::JByteArray::from_raw(signature) }) {
+            Ok(v) => v,
+            Err(e) => {
+                error!("Failed to convert signature array: {:?}", e);
+                return 0;
+            }
+        };
 
     debug!("Native verify: [REDACTED]");
 

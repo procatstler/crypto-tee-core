@@ -279,7 +279,8 @@ impl VendorTEE for QualcommQSEE {
         // Get key data and check auth requirements
         let auth_required = {
             let keys = self.keys.lock().unwrap();
-            let key_data = keys.get(&key.id).ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
+            let key_data =
+                keys.get(&key.id).ok_or_else(|| VendorError::KeyNotFound(key.id.clone()))?;
             key_data.auth_required
         }; // Drop lock here before await
 
