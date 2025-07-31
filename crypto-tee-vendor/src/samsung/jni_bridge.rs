@@ -6,7 +6,6 @@
 use crate::error::{VendorError, VendorResult};
 use jni::{
     objects::{GlobalRef, JObject, JValue},
-    sys::jobject,
     JNIEnv, JavaVM,
 };
 use std::sync::{Arc, Mutex, OnceLock};
@@ -545,7 +544,7 @@ impl KnoxJniContext {
         if let Ok(chain_obj) = cert_chain.l() {
             let chain_array = chain_obj.as_raw();
             let chain_len = env
-                .get_array_length(unsafe { jni::objects::JObjectArray::from_raw(chain_array) })
+                .get_array_length(unsafe { &jni::objects::JObjectArray::from_raw(chain_array) })
                 .map_err(|e| {
                     VendorError::AttestationFailed(format!("Failed to get array length: {}", e))
                 })?;
@@ -553,7 +552,7 @@ impl KnoxJniContext {
             for i in 0..chain_len {
                 let cert = env
                     .get_object_array_element(
-                        unsafe { jni::objects::JObjectArray::from_raw(chain_array) },
+                        unsafe { &jni::objects::JObjectArray::from_raw(chain_array) },
                         i,
                     )
                     .map_err(|e| {
