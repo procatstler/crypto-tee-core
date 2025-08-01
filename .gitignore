@@ -90,3 +90,6 @@ udeps-report.txt
 # Workspace temporary files
 .cargo/config.toml.bak
 rustfmt.toml.bak
+
+# Temporary deletion folder
+next-delete/
