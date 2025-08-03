@@ -43,7 +43,7 @@ harness = false
 
 # WASM support
 [target.'cfg(target_arch = "wasm32")'.dependencies]
-getrandom = { version = "0.2", features = ["js"] }
+getrandom = { version = "0.3", features = ["js"] }
 tokio = { workspace = true, features = ["sync", "time"], default-features = false }
 
 [features]
