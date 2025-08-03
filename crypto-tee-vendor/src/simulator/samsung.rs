@@ -146,7 +146,8 @@ impl SamsungTEESimulator {
 
         state.last_integrity_check = Some(SystemTime::now());
 
-        // Simulate occasional integrity violations
+        // Simulate occasional integrity violations (disabled in tests)
+        #[cfg(not(test))]
         if ::rand::random::<f32>() < 0.001 {
             // 0.1% chance
             state.security_violations += 1;
