@@ -41,7 +41,7 @@ criterion = "0.5"
 # Platform specific dependencies
 jni = "0.21"
 ndk = "0.8"
-core-foundation = "0.9"
+core-foundation = "0.10"
 security-framework = "2.9"
 security-framework-sys = "2.9"
 
