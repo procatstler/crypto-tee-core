@@ -42,7 +42,7 @@ criterion = "0.5"
 jni = "0.21"
 ndk = "0.8"
 core-foundation = "0.9"
-security-framework = "2.9"
+security-framework = "3.2"
 security-framework-sys = "2.9"
 
 # Additional dependencies
