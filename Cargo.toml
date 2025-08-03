@@ -46,7 +46,7 @@ security-framework = "2.9"
 security-framework-sys = "2.9"
 
 # Additional dependencies
-base64 = "0.21"
+base64 = "0.22"
 
 [profile.release]
 lto = true
