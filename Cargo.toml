@@ -34,9 +34,9 @@ tokio = { version = "1.35", features = ["full"], default-features = false }
 async-trait = "0.1"
 
 # Testing
-mockall = "0.12"
+mockall = "0.13"
 proptest = "1.4"
-criterion = "0.5"
+criterion = "0.7"
 
 # Platform specific dependencies
 jni = "0.21"
