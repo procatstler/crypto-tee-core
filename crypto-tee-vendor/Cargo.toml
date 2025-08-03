@@ -1,0 +1,82 @@
+[package]
+name = "crypto-tee-vendor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Vendor-specific TEE implementations for CryptoTEE"
+keywords = ["crypto", "tee", "vendor", "samsung", "apple"]
+categories = ["cryptography", "hardware-support"]
+
+[dependencies]
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+zeroize = { workspace = true }
+subtle = { workspace = true }
+async-trait = { workspace = true }
+ring = { workspace = true }
+uuid = { version = "1.6", features = ["v4", "serde"] }
+tokio = { workspace = true, features = ["sync", "time"] }
+rand = "0.8"
+
+# Performance optimization dependencies
+lru = "0.12"
+crossbeam = "0.8"
+parking_lot = "0.12"
+dashmap = "5.5"
+
+[dev-dependencies]
+mockall = { workspace = true }
+tokio = { workspace = true }
+criterion = { workspace = true, features = ["html_reports", "async_tokio"] }
+
+[[bench]]
+name = "cache_optimization"
+harness = false
+
+[[example]]
+name = "performance_demo"
+required-features = ["software-fallback"]
+
+[features]
+default = []
+software-fallback = []
+simulator = []
+# Platform-specific simulator features
+simulator-samsung = ["simulator"]
+simulator-apple = ["simulator"]
+simulator-qualcomm = ["simulator"]
+# Real platform features (only enabled on appropriate platforms)
+samsung = ["jni", "ndk"]
+apple = ["core-foundation", "security-framework", "security-framework-sys", "objc", "block"]
+qualcomm = ["jni", "ndk"]
+# WASM compatibility
+wasm = ["software-fallback"]
+
+# Platform-specific dependencies
+[target.'cfg(target_os = "android")'.dependencies]
+jni = { workspace = true, optional = true }
+ndk = { workspace = true, optional = true }
+
+[target.'cfg(target_os = "ios")'.dependencies]
+core-foundation = { workspace = true, optional = true }
+security-framework = { workspace = true, optional = true }
+security-framework-sys = { workspace = true, optional = true }
+objc = { version = "0.2", optional = true }
+block = { version = "0.1", optional = true }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = { workspace = true, optional = true }
+security-framework = { workspace = true, optional = true }
+security-framework-sys = { workspace = true, optional = true }
+objc = { version = "0.2", optional = true }
+block = { version = "0.1", optional = true }
+
+# WASM support
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom = { version = "0.2", features = ["js"] }
+tokio = { workspace = true, features = ["sync", "time"], default-features = false }

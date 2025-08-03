@@ -1,0 +1,95 @@
+# Rust
+target/
+Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude
+.claude/
+*.claude
+
+# Local configuration
+*.local
+*.local.*
+settings.local.json
+
+# Build artifacts
+/build/
+/dist/
+/out/
+performance_analysis
+*.so
+*.dylib
+*.dll
+
+# Project specific
+*.key
+*.pem
+*.p12
+/tmp/
+/temp/
+
+# Documentation
+/docs/_build/
+/docs/_site/
+
+# Testing
+tarpaulin-report.html
+cobertura.xml
+coverage/
+coverage-html/
+.coverage
+*.lcov
+coverage.lcov
+*.profraw
+*.profdata
+llvm-cov-*
+grcov-*
+
+# Benchmarks
+/benches/results/
+/bench-results/
+*.bench
+criterion/
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Generated documentation/reports
+coverage-*.md
+test-results-*.md
+performance-*.txt
+complexity-*.txt
+duplicates.txt
+dependency-tree.txt
+doc-check.log
+udeps-report.txt
+
+# CI artifacts
+/artifacts/
+/.github/artifacts/
+
+# Workspace temporary files
+.cargo/config.toml.bak
+rustfmt.toml.bak
+
+# Temporary deletion folder
+next-delete/

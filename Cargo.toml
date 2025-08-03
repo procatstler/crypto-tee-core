@@ -1,0 +1,65 @@
+[workspace]
+members = [
+    "crypto-tee",
+    "crypto-tee-vendor",
+    "crypto-tee-platform", 
+    "crypto-tee-rfc9421",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.70"
+authors = ["CryptoTEE Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/procatstler/crypto-tee-core"
+documentation = "https://docs.rs/crypto-tee"
+
+[workspace.dependencies]
+# Core dependencies
+thiserror = "1.0"
+anyhow = "1.0"
+tracing = "0.1"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Crypto dependencies
+ring = "0.17"
+zeroize = { version = "1.7", features = ["zeroize_derive"] }
+subtle = "2.5"
+
+# Async runtime
+tokio = { version = "1.35", features = ["full"], default-features = false }
+async-trait = "0.1"
+
+# Testing
+mockall = "0.12"
+proptest = "1.4"
+criterion = "0.5"
+
+# Platform specific dependencies
+jni = "0.21"
+ndk = "0.8"
+core-foundation = "0.9"
+security-framework = "2.9"
+security-framework-sys = "2.9"
+
+# Additional dependencies
+base64 = "0.21"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+strip = true
+panic = "abort"
+
+[profile.dev]
+opt-level = 0
+debug = true
+debug-assertions = true
+
+[profile.test]
+opt-level = 0
+debug = true

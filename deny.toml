@@ -1,0 +1,75 @@
+# cargo-deny configuration for CryptoTEE security and license compliance
+
+[graph]
+targets = [
+    { triple = "x86_64-unknown-linux-gnu" },
+    { triple = "aarch64-apple-darwin" },
+    { triple = "x86_64-pc-windows-msvc" },
+]
+
+[licenses]
+version = 2
+confidence-threshold = 0.8
+allow = [
+    "MIT",
+    "Apache-2.0", 
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Unicode-DFS-2016",
+    "Zlib",
+    "Unicode-3.0",
+]
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [
+    { path = "LICENSE", hash = 0xbd0eed23 }
+]
+
+[bans]
+multiple-versions = "warn"
+wildcards = "allow"
+
+# Security-critical dependencies that should be monitored
+[[bans.deny]]
+name = "openssl-sys"
+version = "*"  # Prefer ring or rustls
+
+[[bans.deny]]
+name = "native-tls"
+version = "*"  # Prefer rustls
+
+# Known problematic crates
+[[bans.deny]]
+name = "chrono"
+version = "< 0.4.20"  # CVE-2020-26235
+
+[[bans.deny]]
+name = "time"
+version = "< 0.2.23"  # CVE-2020-26235
+
+# Allow certain crates to have multiple versions
+[[bans.skip]]
+name = "windows-sys"  # Many versions used across ecosystem
+
+[[bans.skip]]
+name = "windows_x86_64_msvc"
+
+[advisories]
+version = 2
+db-path = "~/.cargo/advisory-db"
+db-urls = ["https://github.com/rustsec/advisory-db"]
+yanked = "warn"
+ignore = [
+    # Ignore specific advisories if needed
+    # "RUSTSEC-YYYY-NNNN",
+]
+
+[sources]
+unknown-registry = "warn"
+unknown-git = "warn"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]
+allow-git = []

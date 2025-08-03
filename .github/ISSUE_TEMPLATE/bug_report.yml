@@ -1,0 +1,167 @@
+name: Bug Report
+description: Report a bug or unexpected behavior
+title: "[BUG] "
+labels: ["bug", "triage"]
+assignees:
+  - procatstler
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to fill out this bug report! Please provide as much detail as possible.
+
+  - type: input
+    id: version
+    attributes:
+      label: CryptoTEE Version
+      description: What version of CryptoTEE are you using?
+      placeholder: "e.g., 0.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      description: Which component is affected?
+      options:
+        - crypto-tee (Core)
+        - crypto-tee-vendor (Vendor Layer)
+        - crypto-tee-platform (Platform Layer)
+        - crypto-tee-rfc9421 (RFC 9421 Adapter)
+        - Documentation
+        - Build/CI
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      description: What platform are you running on?
+      options:
+        - Linux (x86_64)
+        - Linux (aarch64)
+        - macOS (Intel)
+        - macOS (Apple Silicon)
+        - Windows (x86_64)
+        - Windows (ARM64)
+        - Android
+        - iOS
+        - WebAssembly
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: tee_backend
+    attributes:
+      label: TEE Backend
+      description: Which TEE backend were you using?
+      options:
+        - Mock (Software fallback)
+        - Simulator
+        - Samsung Knox
+        - Apple Secure Enclave
+        - Qualcomm QSEE
+        - Multiple
+        - Not applicable
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Bug Description
+      description: A clear and concise description of what the bug is.
+      placeholder: "Describe what happened..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Steps to reproduce the behavior
+      placeholder: |
+        1. Initialize CryptoTEE with...
+        2. Call the method...
+        3. Observe the error...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behavior
+      description: What should have happened?
+      placeholder: "Describe the expected behavior..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual Behavior
+      description: What actually happened?
+      placeholder: "Describe what actually happened..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: code
+    attributes:
+      label: Code Sample
+      description: Minimal code sample that reproduces the issue
+      render: rust
+      placeholder: |
+        use crypto_tee::*;
+        
+        #[tokio::main]
+        async fn main() -> Result<(), Box<dyn std::error::Error>> {
+            // Your code here
+            Ok(())
+        }
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error Messages/Logs
+      description: Any error messages or logs
+      render: text
+      placeholder: "Paste error messages or logs here..."
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment Information
+      description: Additional environment details
+      placeholder: |
+        - Rust version: 
+        - Cargo version:
+        - OS version:
+        - Hardware details:
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other context about the problem
+      placeholder: "Add any other context about the problem here..."
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      description: Please confirm the following
+      options:
+        - label: I have searched existing issues for similar problems
+          required: true
+        - label: I am using the latest version of CryptoTEE
+          required: false
+        - label: I have included a minimal code example
+          required: false
+        - label: This is not a security vulnerability (use security policy for those)
+          required: true
