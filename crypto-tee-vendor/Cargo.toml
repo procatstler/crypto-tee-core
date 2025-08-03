@@ -24,7 +24,7 @@ tokio = { workspace = true, features = ["sync", "time"] }
 rand = "0.8"
 
 # Performance optimization dependencies
-lru = "0.12"
+lru = "0.16"
 crossbeam = "0.8"
 parking_lot = "0.12"
 dashmap = "5.5"
