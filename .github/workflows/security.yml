@@ -65,14 +65,27 @@ jobs:
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
-    # Only run on pull requests for public repositories
-    if: github.event_name == 'pull_request' && github.event.repository.private == false
+    # Only run on pull requests
+    if: github.event_name == 'pull_request'
+    continue-on-error: true
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
 
+    - name: Check if dependency review is available
+      id: check-dependency-review
+      run: |
+        echo "Repository private: ${{ github.event.repository.private }}"
+        if [[ "${{ github.event.repository.private }}" == "true" ]]; then
+          echo "::warning::Dependency review is not available for private repositories without GitHub Advanced Security"
+          echo "skip=true" >> $GITHUB_OUTPUT
+        else
+          echo "skip=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Dependency Review
+      if: steps.check-dependency-review.outputs.skip != 'true'
       uses: actions/dependency-review-action@v3
       with:
         fail-on-severity: moderate

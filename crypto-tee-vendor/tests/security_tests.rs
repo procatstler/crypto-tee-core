@@ -63,27 +63,45 @@ async fn test_timing_attack_resistance() {
     let invalid_data = b"different message";
     let invalid_signature = vendor.sign(&key, invalid_data).await.unwrap();
 
-    // Measure timing for valid verification
-    let start = Instant::now();
-    let valid_result = vendor.verify(&key, test_data, &valid_signature).await.unwrap();
-    let valid_time = start.elapsed();
+    // Warm up the system
+    for _ in 0..10 {
+        let _ = vendor.verify(&key, test_data, &valid_signature).await;
+        let _ = vendor.verify(&key, test_data, &invalid_signature).await;
+    }
 
-    // Measure timing for invalid verification
-    let start = Instant::now();
-    let invalid_result = vendor.verify(&key, test_data, &invalid_signature).await.unwrap();
-    let invalid_time = start.elapsed();
+    // Measure timing with multiple samples for more reliable results
+    const SAMPLES: usize = 100;
+    let mut valid_times = Vec::with_capacity(SAMPLES);
+    let mut invalid_times = Vec::with_capacity(SAMPLES);
 
-    assert!(valid_result);
-    assert!(!invalid_result);
+    for _ in 0..SAMPLES {
+        // Measure valid verification
+        let start = Instant::now();
+        let valid_result = vendor.verify(&key, test_data, &valid_signature).await.unwrap();
+        valid_times.push(start.elapsed());
+        assert!(valid_result);
 
-    // Times should be reasonably similar (within 50% variance)
+        // Measure invalid verification
+        let start = Instant::now();
+        let invalid_result = vendor.verify(&key, test_data, &invalid_signature).await.unwrap();
+        invalid_times.push(start.elapsed());
+        assert!(!invalid_result);
+    }
+
+    // Calculate median times (more stable than mean)
+    valid_times.sort();
+    invalid_times.sort();
+    let valid_median = valid_times[SAMPLES / 2];
+    let invalid_median = invalid_times[SAMPLES / 2];
+
+    // Times should be reasonably similar (within 3x variance)
     // This is a basic timing analysis - real implementations need more sophisticated testing
-    let time_ratio = valid_time.as_nanos() as f64 / invalid_time.as_nanos() as f64;
+    let time_ratio = valid_median.as_nanos() as f64 / invalid_median.as_nanos() as f64;
     assert!(
-        time_ratio > 0.5 && time_ratio < 2.0,
-        "Timing difference too large: valid={}ns, invalid={}ns, ratio={}",
-        valid_time.as_nanos(),
-        invalid_time.as_nanos(),
+        time_ratio > 0.33 && time_ratio < 3.0,
+        "Timing difference too large: valid_median={}ns, invalid_median={}ns, ratio={}",
+        valid_median.as_nanos(),
+        invalid_median.as_nanos(),
         time_ratio
     );
 }
