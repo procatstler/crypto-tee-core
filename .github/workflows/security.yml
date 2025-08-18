@@ -127,7 +127,7 @@ jobs:
         fetch-depth: 0
 
     - name: Run Truffhog
-      uses: trufflesecurity/trufflehog@v3.63.2
+      uses: trufflesecurity/trufflehog@v3.90.5
       with:
         path: ./
         base: ${{ github.event.pull_request.base.sha || 'main' }}
